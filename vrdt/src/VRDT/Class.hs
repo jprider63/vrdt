@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies, TypeFamilyDependencies #-}
+
 module VRDT.Class where
 
 -- | Class for verified conflict-free replicated datatypes.
@@ -8,7 +10,9 @@ class VRDT t where
     -- | Apply an operation.
     apply :: Operation t -> t -> t
 
-    -- TODO: CmCRDT laws.
+    -- | Commutativity law.
+    {-@ lawCommutativity :: x : t -> op1 : Operation t -> op2 : Operation t -> {apply op2 (apply op1) == apply op1 (apply op2)} @-}
+    lawCommutativity :: t -> Operation t -> Operation t -> ()
 
 
 -- JP: CRDT monad? 
