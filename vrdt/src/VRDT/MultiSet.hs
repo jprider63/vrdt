@@ -1,12 +1,34 @@
-module VRDT.MultiSet where
+module VRDT.MultiSet (
+    MultiSet(..)
+  , MultiSetOp(..)
+  , null
+  , size
+  , distinctSize
+  , member
+  , notMember
+  , occur
+  , empty
+  , insert
+  , insertMany
+  , delete
+  , deleteMany
+  , deleteAll
+  ) where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Prelude hiding (null)
 
 import VRDT.Class
 
+{-@
 data MultiSet a = MultiSet {
-    unMultiSet :: Map a Integer -- JP: Maybe use a hashmap?
+    posMultiSet ::  Map a {c:Integer | c > 0}
+  , negMultiSet :: {Map a {c:Integer | c <= 0} | Map.null (Map.intersection posMultiSet negMultiSet}
+@-}
+data MultiSet a = MultiSet {
+    posMultiSet :: Map a Integer -- ^ Map for elements currently in the set.
+  , negMultiSet :: Map a Integer -- ^ Map for elements not currently in the set.
   }
 
 data MultiSetOp a = 
@@ -16,26 +38,61 @@ data MultiSetOp a =
 instance Ord a => VRDT (MultiSet a) where
     type Operation (MultiSet a) = MultiSetOp a
 
-    apply (MultiSetOpAdd e c) = MultiSet . Map.insertWith (+) e c . unMultiSet
+    apply (MultiSetOpAdd e c) MultiSet{..} 
+      | Just c' <- Map.lookup e posMultiSet = 
+          let c'' = c' + c in
+          if c'' > 0 then
+            let posMultiSet' = Map.insert e c'' posMultiSet in
+            MultiSet posMultiSet' negMultiSet
+          else
+            let posMultiSet' = Map.delete e posMultiSet in
+            let negMultiSet' = Map.insert e c'' negMultiSet in
+            MultiSet posMultiSet' negMultiSet'
+      | Just c' <- Map.lookup e negMultiSet =
+          let c'' = c' + c in
+          if c'' > 0 then
+            let posMultiSet' = Map.insert e c'' posMultiSet in
+            let negMultiSet' = Map.delete e negMultiSet in
+            MultiSet posMultiSet' negMultiSet'
+          else
+            let negMultiSet' = Map.insert e c'' negMultiSet in
+            MultiSet posMultiSet negMultiSet'
+      | c > 0 = 
+          let posMultiSet' = Map.insert e c posMultiSet in
+          MultiSet posMultiSet' negMultiSet
+      | otherwise =
+          let negMultiSet' = Map.insert e c negMultiSet in
+          MultiSet posMultiSet negMultiSet'
+    apply (MultiSetOpRemove e c) ms = apply (MultiSetOpAdd e (-c)) ms
 
-    apply (MultiSetOpRemove e c) = MultiSet . Map.insertWith (+) e (-c) . unMultiSet
+--     apply (MultiSetOpRemove e c) = MultiSet . Map.insertWith (+) e (-c) . unMultiSet
+
+    lawCommutativity MultiSet{..} op1 op2 = ()
+
 
 null :: MultiSet a -> Bool
-null = Map.foldr (\c acc -> acc && c <= 0) True . unMultiSet
+null = Map.null . posMultiSet
 
 -- TODO: Prove correctness: vrdt : VRDT.MultiSet -> {ms : Data.MultiSet | equiv vrdt ms} -> {null vrdt == null ms}
 
 size :: MultiSet a -> Integer
-distinctSize :: MultiSet a -> Integer
+size = sum . Map.elems . posMultiSet
+
+distinctSize :: MultiSet a -> Int -- Integer
+distinctSize = Map.size . posMultiSet
+
 member :: Ord a => a -> MultiSet a -> Bool
+member e = Map.member e . posMultiSet
+
 notMember :: Ord a => a -> MultiSet a -> Bool
+notMember e = not . member e
 
 
 occur :: Ord a => a -> MultiSet a -> Integer
-occur e = max 0 . Map.findWithDefault 0 e . unMultiSet
+occur e = Map.findWithDefault 0 e . posMultiSet
 
 empty :: MultiSet a
-empty = MultiSet Map.empty
+empty = MultiSet Map.empty Map.empty
 
 insert :: Ord a => a -> MultiSet a -> MultiSetOp a
 insert e = insertMany e 1

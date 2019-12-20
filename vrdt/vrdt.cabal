@@ -39,6 +39,7 @@ library
   default-language: Haskell2010
   extensions: TypeFamilies
               TypeFamilyDependencies
+              RecordWildCards
 
 test-suite vrdt-test
   type: exitcode-stdio-1.0
