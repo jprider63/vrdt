@@ -28,6 +28,8 @@ source-repository head
 library
   exposed-modules:
       VRDT.Class
+      VRDT.LWW
+      VRDT.Max
       VRDT.MultiSet
   other-modules:
       Paths_vrdt
