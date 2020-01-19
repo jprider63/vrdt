@@ -1,3 +1,5 @@
+{-@ LIQUID "--reflection" @-}
+
 {-# LANGUAGE TypeFamilies, TypeFamilyDependencies #-}
 
 module VRDT.Class where
