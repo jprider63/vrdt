@@ -13,7 +13,7 @@ class VRDT t where
     apply :: Operation t -> t -> t
 
     -- | Commutativity law.
-    {-@ lawCommutativity :: x : t -> op1 : Operation t -> op2 : Operation t -> {apply op2 (apply op1) == apply op1 (apply op2)} @-}
+    {-@ lawCommutativity :: x : t -> op1 : Operation t -> op2 : Operation t -> {apply op2 (apply op1 x) == apply op1 (apply op2 x)} @-}
     lawCommutativity :: t -> Operation t -> Operation t -> ()
 
 
