@@ -14,11 +14,15 @@ import VRDT.Class
 --   }
 
 
-instance Ord a => VRDT (Max a) where
-    type Operation (Max a) = Max a
+-- instance Ord a => VRDT (Max a) where
+--     type Operation (Max a) = Max a
+-- 
+--     apply (Max a) (Max b) = Max $ max a b
+-- 
+--     lawCommutativity max op1 op2 = ()
 
-    apply (Max a) (Max b) = Max $ max a b
 
-    lawCommutativity max op1 op2 = ()
-
+-- {-@ reflect applyMax @-}
+applyMax :: Ord a => Max a -> Max a -> Max a
+applyMax (Max a) (Max b) = Max $ max a b
 
