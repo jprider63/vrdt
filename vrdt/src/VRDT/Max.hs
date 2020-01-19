@@ -1,11 +1,17 @@
+{-@ LIQUID "--reflection" @-}
+
+{-# LANGUAGE TypeFamilies, TypeFamilyDependencies #-}
+
 module VRDT.Max where
+
+import Data.Semigroup (Max(..))
 
 import VRDT.Class
 
--- JP: Use Data.Semigroup.Max? Are there any supported operations that would make it invalid?
-newtype Max a = Max {
-    unMax :: a
-  }
+-- -- JP: Use Data.Semigroup.Max? Are there any supported operations that would make it invalid?
+-- newtype Max a = Max {
+--     unMax :: a
+--   }
 
 
 instance Ord a => VRDT (Max a) where
