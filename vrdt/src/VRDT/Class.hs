@@ -30,12 +30,12 @@ enabled2 x op1 op2 = enabled x op1 && enabled x op2  && enabled (apply x op1) op
 class SVRDT t where
     canFlowTo :: t -> t -> Bool
     join :: t -> t -> t
-    bot  :: t
+    -- bot  :: t
 
     {-@ lawJoin :: z : t -> x : t -> y : t -> w : t -> {z == join x y => (canFlowTo x z && canFlowTo y z && ((canFlowTo x w && canFlowTo y w) => canFlowTo z w))} @-}
     lawJoin :: t -> t -> t -> t -> ()
-    {-@ lawBot  :: x : t -> { canFlowTo Labels.bot x } @-}
-    lawBot  :: t -> ()
+    -- {-@ lawBot  :: x : t -> { canFlowTo Labels.bot x } @-}
+    -- lawBot  :: t -> ()
 
     {-@ lawFlowReflexivity :: t : t -> {v : () | canFlowTo t t} @-}
     lawFlowReflexivity :: t -> ()
