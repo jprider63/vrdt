@@ -1,6 +1,8 @@
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple-local" @-}
 
+{-# LANGUAGE RecordWildCards #-}
+
 module VRDT.MultiSet (
     MultiSet(..)
   , MultiSetOp(..)
@@ -22,57 +24,119 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Prelude hiding (null)
 
-import VRDT.Class
+-- import VRDT.Class
+
+{-@ type PosInteger = {c:Integer | c > 0} @-}
+{-@ type NegInteger = {c:Integer | c <= 0} @-}
 
 {-@
 data MultiSet a = MultiSet {
-    posMultiSet ::  Map a {c:Integer | c > 0}
-  , negMultiSet :: {Map a {c:Integer | c <= 0} | Map.null (Map.intersection posMultiSet negMultiSet}
+    posMultiSet ::  Map a PosInteger
+  , negMultiSet :: {v:Map a NegInteger | True}
+  }
 @-}
+  -- TODO: Is this a parser error?
+  -- , negMultiSet :: {v:Map a NegInteger | Map.null (Map.intersection posMultiSet negMultiSet}
 data MultiSet a = MultiSet {
     posMultiSet :: Map a Integer -- ^ Map for elements currently in the set.
   , negMultiSet :: Map a Integer -- ^ Map for elements not currently in the set.
   }
 
+{-@
 data MultiSetOp a = 
-    MultiSetOpAdd a Integer    -- ^ Add `n` instances of element.
-  | MultiSetOpRemove a Integer -- ^ Remove `n` instances of element.
+    MultiSetOpAdd {
+      multiSetOpValue :: a
+    , multiSetOpAdd :: PosInteger
+    }
+  | MultiSetOpRemove {
+      multiSetOpValue :: a
+    , multiSetOpRem :: NegInteger
+    }
+@-}
+data MultiSetOp a = 
+    MultiSetOpAdd {
+      multiSetOpValue :: a
+    , multiSetOpAdd :: Integer -- ^ Add `n` instances of element.
+    }
+  | MultiSetOpRemove {
+      multiSetOpValue :: a
+    , multiSetOpRem :: Integer -- ^ Remove `n` instances of element.
+    }
 
-instance Ord a => VRDT (MultiSet a) where
-    type Operation (MultiSet a) = MultiSetOp a
+-- {-@ measure multiSetOpOrder :: MultiSetOp a -> Int @-}
+{-@ reflect multiSetOpOrder @-}
+multiSetOpOrder :: MultiSetOp a -> Int
+multiSetOpOrder (MultiSetOpAdd _ _) = 0
+multiSetOpOrder (MultiSetOpRemove _ _) = 1
 
-    apply MultiSet{..}  (MultiSetOpAdd e c)
-      | Just c' <- Map.lookup e posMultiSet = 
-          let c'' = c' + c in
-          if c'' > 0 then
-            let posMultiSet' = Map.insert e c'' posMultiSet in
-            MultiSet posMultiSet' negMultiSet
-          else
-            let posMultiSet' = Map.delete e posMultiSet in
-            let negMultiSet' = Map.insert e c'' negMultiSet in
-            MultiSet posMultiSet' negMultiSet'
-      | Just c' <- Map.lookup e negMultiSet =
-          let c'' = c' + c in
-          if c'' > 0 then
-            let posMultiSet' = Map.insert e c'' posMultiSet in
-            let negMultiSet' = Map.delete e negMultiSet in
-            MultiSet posMultiSet' negMultiSet'
-          else
-            let negMultiSet' = Map.insert e c'' negMultiSet in
-            MultiSet posMultiSet negMultiSet'
-      | c > 0 = 
-          let posMultiSet' = Map.insert e c posMultiSet in
-          MultiSet posMultiSet' negMultiSet
-      | otherwise =
-          let negMultiSet' = Map.insert e c negMultiSet in
-          MultiSet posMultiSet negMultiSet'
-    apply ms (MultiSetOpRemove e c) = apply ms (MultiSetOpAdd e (-c))
+-- instance Ord a => VRDT (MultiSet a) where
+--     type Operation (MultiSet a) = MultiSetOp a
+-- 
+--     apply MultiSet{..}  (MultiSetOpAdd e c)
+--       | Just c' <- Map.lookup e posMultiSet = 
+--           let c'' = c' + c in
+--           if c'' > 0 then
+--             let posMultiSet' = Map.insert e c'' posMultiSet in
+--             MultiSet posMultiSet' negMultiSet
+--           else
+--             let posMultiSet' = Map.delete e posMultiSet in
+--             let negMultiSet' = Map.insert e c'' negMultiSet in
+--             MultiSet posMultiSet' negMultiSet'
+--       | Just c' <- Map.lookup e negMultiSet =
+--           let c'' = c' + c in
+--           if c'' > 0 then
+--             let posMultiSet' = Map.insert e c'' posMultiSet in
+--             let negMultiSet' = Map.delete e negMultiSet in
+--             MultiSet posMultiSet' negMultiSet'
+--           else
+--             let negMultiSet' = Map.insert e c'' negMultiSet in
+--             MultiSet posMultiSet negMultiSet'
+--       | c > 0 = 
+--           let posMultiSet' = Map.insert e c posMultiSet in
+--           MultiSet posMultiSet' negMultiSet
+--       | otherwise =
+--           let negMultiSet' = Map.insert e c negMultiSet in
+--           MultiSet posMultiSet negMultiSet'
+--     apply ms (MultiSetOpRemove e c) = apply ms (MultiSetOpAdd e (-c))
+-- 
+--     enabled _ _ = True
+-- 
+--     lawCommutativity MultiSet{..} op1 op2 = ()
 
-    enabled _ _ = True
+{-@ ple apply @-}
+-- {-@ reflect apply @-}
+{-@ apply :: Ord a => MultiSet a -> op : MultiSetOp a -> MultiSet a / [multiSetOpOrder op] @-}
+apply :: Ord a => MultiSet a -> MultiSetOp a -> MultiSet a
+apply MultiSet{..}  (MultiSetOpAdd e c)
+  | Just c' <- Map.lookup e posMultiSet = 
+      let c'' = c' + c in
+      if c'' > 0 then
+        let posMultiSet' = Map.insert e c'' posMultiSet in
+        MultiSet posMultiSet' negMultiSet
+      else
+        let posMultiSet' = Map.delete e posMultiSet in
+        let negMultiSet' = Map.insert e c'' negMultiSet in
+        MultiSet posMultiSet' negMultiSet'
+  | Just c' <- Map.lookup e negMultiSet =
+      let c'' = c' + c in
+      if c'' > 0 then
+        let posMultiSet' = Map.insert e c'' posMultiSet in
+        let negMultiSet' = Map.delete e negMultiSet in
+        MultiSet posMultiSet' negMultiSet'
+      else
+        let negMultiSet' = Map.insert e c'' negMultiSet in
+        MultiSet posMultiSet negMultiSet'
+  | c > 0 = 
+      let posMultiSet' = Map.insert e c posMultiSet in
+      MultiSet posMultiSet' negMultiSet
+  | otherwise =
+      let negMultiSet' = Map.insert e c negMultiSet in
+      MultiSet posMultiSet negMultiSet'
+apply ms (MultiSetOpRemove e c) = apply ms (MultiSetOpAdd e (-c))
 
---     apply (MultiSetOpRemove e c) = MultiSet . Map.insertWith (+) e (-c) . unMultiSet
-
-    lawCommutativity MultiSet{..} op1 op2 = ()
+{-@ lawCommutativity :: s : MultiSet a -> op1 : MultiSetOp a -> op2 : MultiSetOp a -> {apply op2 (apply op1 x) == apply op2 (apply op1 x)} @-}
+lawCommutativity :: MultiSet a -> MultiSetOp a -> MultiSetOp a -> ()
+lawCommutativity MultiSet{..} op1 op2 = ()
 
 
 null :: MultiSet a -> Bool

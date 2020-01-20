@@ -29,6 +29,8 @@ data Min a = Min {
 --     apply (Min a) (Min b) = Min $ min a b
 -- 
 --     lawCommutativity min op1 op2 = ()
+-- 
+--     enabled _ _ = True
 
 
 {-@ reflect applyMin @-}
