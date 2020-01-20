@@ -104,7 +104,7 @@ multiSetOpOrder (MultiSetOpRemove _ _) = 1
 --     lawCommutativity MultiSet{..} op1 op2 = ()
 
 {-@ ple apply @-}
--- {-@ reflect apply @-}
+{-@ reflect apply @-}
 {-@ apply :: Ord a => MultiSet a -> op : MultiSetOp a -> MultiSet a / [multiSetOpOrder op] @-}
 apply :: Ord a => MultiSet a -> MultiSetOp a -> MultiSet a
 apply MultiSet{..}  (MultiSetOpAdd e c)
