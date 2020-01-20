@@ -1,3 +1,6 @@
+{-@ LIQUID "--reflection" @-}
+{-@ LIQUID "--ple-local" @-}
+
 module VRDT.MultiSet (
     MultiSet(..)
   , MultiSetOp(..)
@@ -38,7 +41,7 @@ data MultiSetOp a =
 instance Ord a => VRDT (MultiSet a) where
     type Operation (MultiSet a) = MultiSetOp a
 
-    apply (MultiSetOpAdd e c) MultiSet{..} 
+    apply MultiSet{..}  (MultiSetOpAdd e c)
       | Just c' <- Map.lookup e posMultiSet = 
           let c'' = c' + c in
           if c'' > 0 then
@@ -63,7 +66,9 @@ instance Ord a => VRDT (MultiSet a) where
       | otherwise =
           let negMultiSet' = Map.insert e c negMultiSet in
           MultiSet posMultiSet negMultiSet'
-    apply (MultiSetOpRemove e c) ms = apply (MultiSetOpAdd e (-c)) ms
+    apply ms (MultiSetOpRemove e c) = apply ms (MultiSetOpAdd e (-c))
+
+    enabled _ _ = True
 
 --     apply (MultiSetOpRemove e c) = MultiSet . Map.insertWith (+) e (-c) . unMultiSet
 
