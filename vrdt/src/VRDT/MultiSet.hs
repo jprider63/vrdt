@@ -104,11 +104,11 @@ multiSetOpOrder (MultiSetOpRemove _ _) = 1
 --     lawCommutativity MultiSet{..} op1 op2 = ()
 
 {-@ ple apply @-}
--- {-@ reflect apply @-}
+{-@ reflect apply @-}
 {-@ apply :: Ord a => MultiSet a -> op : MultiSetOp a -> MultiSet a / [multiSetOpOrder op] @-}
 apply :: Ord a => MultiSet a -> MultiSetOp a -> MultiSet a
-apply MultiSet{..}  (MultiSetOpAdd e c)
-  | Just c' <- Map.lookup e posMultiSet = 
+apply MultiSet{..}  (MultiSetOpAdd e c) = case Map.lookup e posMultiSet of
+    Just c' ->
       let c'' = c' + c in
       if c'' > 0 then
         let posMultiSet' = Map.insert e c'' posMultiSet in
@@ -117,21 +117,24 @@ apply MultiSet{..}  (MultiSetOpAdd e c)
         let posMultiSet' = Map.delete e posMultiSet in
         let negMultiSet' = Map.insert e c'' negMultiSet in
         MultiSet posMultiSet' negMultiSet'
-  | Just c' <- Map.lookup e negMultiSet =
-      let c'' = c' + c in
-      if c'' > 0 then
-        let posMultiSet' = Map.insert e c'' posMultiSet in
-        let negMultiSet' = Map.delete e negMultiSet in
-        MultiSet posMultiSet' negMultiSet'
-      else
-        let negMultiSet' = Map.insert e c'' negMultiSet in
-        MultiSet posMultiSet negMultiSet'
-  | c > 0 = 
-      let posMultiSet' = Map.insert e c posMultiSet in
-      MultiSet posMultiSet' negMultiSet
-  | otherwise =
-      let negMultiSet' = Map.insert e c negMultiSet in
-      MultiSet posMultiSet negMultiSet'
+
+    Nothing -> case Map.lookup e negMultiSet of
+      Just c' ->
+        let c'' = c' + c in
+        if c'' > 0 then
+          let posMultiSet' = Map.insert e c'' posMultiSet in
+          let negMultiSet' = Map.delete e negMultiSet in
+          MultiSet posMultiSet' negMultiSet'
+        else
+          let negMultiSet' = Map.insert e c'' negMultiSet in
+          MultiSet posMultiSet negMultiSet'
+      Nothing -> 
+        if c > 0 then
+          let posMultiSet' = Map.insert e c posMultiSet in
+          MultiSet posMultiSet' negMultiSet
+        else
+          let negMultiSet' = Map.insert e c negMultiSet in
+          MultiSet posMultiSet negMultiSet'
 apply ms (MultiSetOpRemove e c) = apply ms (MultiSetOpAdd e (-c))
 
 {-@ ple lawCommutativity @-}
