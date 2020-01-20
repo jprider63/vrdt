@@ -42,24 +42,24 @@ data MultiSet a = MultiSet {
   , negMultiSet :: Map a Integer -- ^ Map for elements not currently in the set.
   }
 
-{-@
+-- {-@
+-- data MultiSetOp a = 
+--     MultiSetOpAdd {
+--       multiSetOpAddValue :: a
+--     , multiSetOpAdd :: PosInteger
+--     }
+--   | MultiSetOpRemove {
+--       multiSetOpRemValue :: a
+--     , multiSetOpRem :: NegInteger
+--     }
+-- @-}
 data MultiSetOp a = 
     MultiSetOpAdd {
-      multiSetOpValue :: a
-    , multiSetOpAdd :: PosInteger
-    }
-  | MultiSetOpRemove {
-      multiSetOpValue :: a
-    , multiSetOpRem :: NegInteger
-    }
-@-}
-data MultiSetOp a = 
-    MultiSetOpAdd {
-      multiSetOpValue :: a
+      multiSetOpAddValue :: a
     , multiSetOpAdd :: Integer -- ^ Add `n` instances of element.
     }
   | MultiSetOpRemove {
-      multiSetOpValue :: a
+      multiSetOpRemValue :: a
     , multiSetOpRem :: Integer -- ^ Remove `n` instances of element.
     }
 
@@ -134,6 +134,7 @@ apply MultiSet{..}  (MultiSetOpAdd e c)
       MultiSet posMultiSet negMultiSet'
 apply ms (MultiSetOpRemove e c) = apply ms (MultiSetOpAdd e (-c))
 
+{-@ ple lawCommutativity @-}
 {-@ lawCommutativity :: s : MultiSet a -> op1 : MultiSetOp a -> op2 : MultiSetOp a -> {apply op2 (apply op1 x) == apply op2 (apply op1 x)} @-}
 lawCommutativity :: MultiSet a -> MultiSetOp a -> MultiSetOp a -> ()
 lawCommutativity MultiSet{..} op1 op2 = ()
