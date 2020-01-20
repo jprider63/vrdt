@@ -29,12 +29,12 @@ import Prelude hiding (null)
 {-@ type PosInteger = {c:Integer | c > 0} @-}
 {-@ type NegInteger = {c:Integer | c <= 0} @-}
 
-{-@
-data MultiSet a = MultiSet {
-    posMultiSet ::  Map a PosInteger
-  , negMultiSet :: {v:Map a NegInteger | True}
-  }
-@-}
+-- {-@
+-- data MultiSet a = MultiSet {
+--     posMultiSet ::  Map a PosInteger
+--   , negMultiSet :: {v:Map a NegInteger | True}
+--   }
+-- @-}
   -- TODO: Is this a parser error?
   -- , negMultiSet :: {v:Map a NegInteger | Map.null (Map.intersection posMultiSet negMultiSet}
 data MultiSet a = MultiSet {
