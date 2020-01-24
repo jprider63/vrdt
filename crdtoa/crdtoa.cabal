@@ -1,4 +1,5 @@
 name: crdtoa
+description: CRDT oriented architecture
 version: 0
 license: PublicDomain
 build-type: Simple
