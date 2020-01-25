@@ -15,6 +15,6 @@ main = getArgs >>= \case
     _ -> do
         name <- getProgName
         putStrLn $ unlines
-            [ printf "Usage: %s (application | server[ port-num])" name
+            [ printf "Usage: %s (application|server) port-num" name
             , "    Include server or demo app mode argument."
             ]
