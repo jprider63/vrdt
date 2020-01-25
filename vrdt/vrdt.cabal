@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       ProofCombinators
+      VRDT.TwoPMap
       VRDT.Class
       VRDT.LWW
       VRDT.Max
