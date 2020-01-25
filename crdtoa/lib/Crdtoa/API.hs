@@ -19,13 +19,13 @@ type API
 --  :<|> "v1" :> (CreateV1 :<|> SendV1 :<|> ListenV1)
 --  :<|> "v2" :> (CreateV2 :<|> SendV2 :<|> ListenV2)
 
-type CreateV0 = "create" :> Capture "app-name" AppName :> Post '[JSON] StoreId
+type CreateV0 = "create" :> Post '[JSON] StoreId
 -- | The purpose of the app-name is to prevent two different apps from possibly
 -- poisoning each others logs with messages that cannot be understood.
 -- ... can we use this with namespaced uuids?
 -- ... why not just use random uuids and forego app-name?
 -- ... should app-name be provided in send or listen?
-type CreateV1 = CreateV0
+type CreateV1 = CreateV0 -- TODO: Capture "app-name" AppName
 type CreateV2 = CreateV1
 
 type SendV0 = "send" :> Capture "store-id" StoreId :> ReqBody '[OctetStream] AppData             :> Post '[JSON] NoContent

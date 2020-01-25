@@ -9,7 +9,7 @@ import qualified Servant.Types.SourceT as SourceT
 import qualified Crdtoa.API as API
 
 postStream :: [String] -> Client.ClientM (SourceT.SourceT IO String)
-createV0 :: API.AppName -> Client.ClientM API.StoreId
+createV0 :: Client.ClientM API.StoreId
 sendV0 :: API.StoreId -> API.AppData -> Client.ClientM NoContent
 listenV0 :: API.StoreId -> Client.ClientM (SourceT.SourceT IO API.AppData)
 postStream

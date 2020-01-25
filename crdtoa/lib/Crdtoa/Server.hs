@@ -43,7 +43,7 @@ endpoints
         return $ SourceT.Yield (show t <> x) (mk xs)
 
 -- TODO: when reusing this for v1, make sure to namespace to a different set of stores
-createV0 :: API.AppName -> Server.Handler API.StoreId
+createV0 :: Server.Handler API.StoreId
 createV0 = undefined
 
 sendV0 :: API.StoreId -> API.AppData -> Server.Handler Servant.NoContent
