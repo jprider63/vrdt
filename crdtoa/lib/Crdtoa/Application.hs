@@ -42,6 +42,12 @@ main port = do
                 print
                 stream
 
+-- FIXME: if the server is killed while clients are listening,
+-- there's an "incomplete headers" IO exception from the listen
+-- thread .. this is almost equivalent to the tcp disconnection case
+-- that we're building to support explicitly.. needs to be handled
+-- properly
+
 -- FIXME: on the first connection to a new store, the listen times out
 -- because the server never sends anything back.. debugging with curl, we
 -- have:
