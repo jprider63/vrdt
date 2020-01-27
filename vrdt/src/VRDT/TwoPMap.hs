@@ -29,8 +29,21 @@ data TwoPMapOp k v =
 instance (VRDT v, Ord k) => VRDT (TwoPMap k v) where
     type Operation (TwoPMap k v) = TwoPMapOp k v
 
-    enabled (TwoPMap m _p t) (TwoPMapInsert k _v) = not $ Map.member k m || Set.member k t
-    enabled (TwoPMap m _p t) (TwoPMapApply k _op) = True
+    enabled (TwoPMap m p t) (TwoPMapInsert k v) = 
+        let pendingEnabled = case Map.lookup k p of
+              Nothing ->
+                True
+              Just ops ->
+                -- Each pending op must be enabled.
+                snd $ foldr (\op (v, acc) -> (apply v op, acc && enabled v op)) (v, True) ops
+        in
+        not (Map.member k m || Set.member k t) && pendingEnabled
+    enabled (TwoPMap m _p t) (TwoPMapApply k op) = case Map.lookup k m of
+        Nothing ->
+            -- JP: What do we do here? Just return True and then require Insert to be enabled for all pending?
+            True
+        Just v ->
+            enabled v op
     enabled (TwoPMap m _p t) (TwoPMapDelete k) = True
     
     apply (TwoPMap m p t) (TwoPMapInsert k v) = 
@@ -46,12 +59,16 @@ instance (VRDT v, Ord k) => VRDT (TwoPMap k v) where
             let m' = Map.insert k v' m in
             TwoPMap m' p' t
     apply (TwoPMap m p t) (TwoPMapApply k op) = 
-        let (updatedM, m') = Map.updateLookupWithKey (\_ v -> Just $ apply v op) k m in
-        
-        -- Add to pending if not inserted.
-        let p' = if isJust updatedM then p else Map.insertWith (++) k [op] p in
+        -- Check if deleted.
+        if Set.member k t then
+            TwoPMap m p t
+        else
+            let (updatedM, m') = Map.updateLookupWithKey (\_ v -> Just $ apply v op) k m in
+            
+            -- Add to pending if not inserted.
+            let p' = if isJust updatedM then p else Map.insertWith (++) k [op] p in
 
-        TwoPMap m' p' t
+            TwoPMap m' p' t
     apply (TwoPMap m p t) (TwoPMapDelete k) =
         let m' = Map.delete k m in
         let p' = Map.delete k p in
