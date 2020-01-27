@@ -14,8 +14,7 @@ import qualified Data.Aeson as Aeson
 
 -- XXX for generating URIs elsewhere, might want to not distribute over the v0,v1 prefixes
 type API
-    = "strm" :> ReqBody '[JSON] [String] :> StreamPost NewlineFraming JSON (SourceIO String)
-    :<|> "v0" :> (CreateV0 :<|> SendV0 :<|> ListenV0)
+    =    "v0" :> (CreateV0 :<|> SendV0 :<|> ListenV0)
 --  :<|> "v1" :> (CreateV1 :<|> SendV1 :<|> ListenV1)
 --  :<|> "v2" :> (CreateV2 :<|> SendV2 :<|> ListenV2)
 
@@ -40,8 +39,8 @@ type ListenV1 = "listen" :> Capture "store-id" StoreId :> ReqBody '[JSON] (Map C
 type ListenV2 = "listen" :> Capture "store-id" StoreId :> ReqBody '[JSON] (Map ClientId LogOffset) :> StreamPost NewlineFraming OctetStream (SourceIO ServerMessage)
 
 newtype AppName = AppName Text
-newtype StoreId = StoreId Text deriving Generic
-newtype AppData = AppData ByteString deriving Generic
+newtype StoreId = StoreId Text deriving (Eq, Ord, Show, Generic)
+newtype AppData = AppData ByteString deriving (Show, Generic)
 
 instance FromHttpApiData AppName where parseUrlPiece = pure . AppName
 instance ToHttpApiData AppName where toUrlPiece (AppName t) = t
@@ -57,7 +56,7 @@ instance ToHttpApiData StoreId where toUrlPiece (StoreId t) = t
 instance Servant.MimeRender Servant.OctetStream AppData where mimeRender _ (AppData bs) = bs
 instance Servant.MimeUnrender Servant.OctetStream AppData where mimeUnrender _ = pure . AppData
 
-newtype ClientId = ClientId String -- XXX ip addr?
+newtype ClientId = ClientId String deriving (Eq, Ord) -- XXX ip addr?
 newtype LogIndex = LogIndex Int
 newtype LogOffset = LogOffset Int
 
