@@ -1,5 +1,5 @@
 {-# LANGUAGE TupleSections #-}
-module Crdtoa.Server where
+module Kwik.Server where
 
 import Control.Monad.IO.Class (liftIO)
 import Servant (Proxy(..), (:<|>)(..), NoContent(..))
@@ -13,10 +13,14 @@ import qualified Network.Wai.Middleware.RequestLogger as Logger
 import qualified Servant.Server as Server
 import qualified Servant.Types.SourceT as SourceT
 
-import qualified Crdtoa.API as API
+import           Kwik.API (API)
+import qualified Kwik.API.V0 as API -- JP: For now. Eventually should move things around.
 
-main :: Warp.Port -> IO ()
-main port = do
+-- main :: Warp.Port -> IO ()
+-- main port = do
+main :: IO ()
+main = do
+    let port = 3000 -- JP: Parse argv. XXX
     state <- MVar.newMVar mempty
     printf "Starting server on port %d\n" port
     Warp.run port

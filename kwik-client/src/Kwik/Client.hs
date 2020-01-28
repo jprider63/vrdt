@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Crdtoa.Application where
+module Kwik.Client where
 
 import Data.String (fromString)
 import Servant (Proxy(..), (:<|>)(..), NoContent)
@@ -11,12 +11,13 @@ import qualified Network.Wai.Handler.Warp as Warp
 import qualified Servant.Client.Streaming as Client
 import qualified Servant.Types.SourceT as SourceT
 
-import qualified Crdtoa.API as API
+import           Kwik.API (API)
+import qualified Kwik.API.V0 as API -- JP: For now. Update this. XXX
 
 createV0 :: Client.ClientM API.StoreId
 sendV0 :: API.StoreId -> API.AppData -> Client.ClientM NoContent
 listenV0 :: API.StoreId -> Client.ClientM (SourceT.SourceT IO API.AppData)
-createV0 :<|> sendV0 :<|> listenV0 = Client.client (Proxy :: Proxy API.API)
+createV0 :<|> sendV0 :<|> listenV0 = Client.client (Proxy :: Proxy API)
 
 main :: Warp.Port -> IO ()
 main port = do

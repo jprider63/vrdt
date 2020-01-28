@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-module Crdtoa.API where
+module Kwik.API.V0 where
 
 --import Web.HttpApiData (FromHttpApiData)
 import Data.ByteString.Lazy (ByteString)
@@ -14,7 +14,10 @@ import qualified Data.Aeson as Aeson
 
 -- XXX for generating URIs elsewhere, might want to not distribute over the v0,v1 prefixes
 type API
-    =    "v0" :> (CreateV0 :<|> SendV0 :<|> ListenV0)
+    =    CreateV0 
+    :<|> SendV0 
+    :<|> ListenV0
+
 --  :<|> "v1" :> (CreateV1 :<|> SendV1 :<|> ListenV1)
 --  :<|> "v2" :> (CreateV2 :<|> SendV2 :<|> ListenV2)
 
