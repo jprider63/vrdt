@@ -22,7 +22,8 @@ module VRDT.MultiSet (
 
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Prelude hiding (null)
+import Data.Maybe
+import Prelude hiding (null, Maybe(..))
 
 -- import VRDT.Class
 
@@ -63,8 +64,8 @@ data MultiSetOp a =
     , multiSetOpRem :: Integer -- ^ Remove `n` instances of element.
     }
 
--- {-@ measure multiSetOpOrder :: MultiSetOp a -> Int @-}
-{-@ reflect multiSetOpOrder @-}
+{-@ measure multiSetOpOrder @-}
+{-@ multiSetOpOrder :: MultiSetOp a -> Nat @-}
 multiSetOpOrder :: MultiSetOp a -> Int
 multiSetOpOrder (MultiSetOpAdd _ _) = 0
 multiSetOpOrder (MultiSetOpRemove _ _) = 1
@@ -103,7 +104,6 @@ multiSetOpOrder (MultiSetOpRemove _ _) = 1
 -- 
 --     lawCommutativity MultiSet{..} op1 op2 = ()
 
-{-@ ple apply @-}
 {-@ reflect apply @-}
 {-@ apply :: Ord a => MultiSet a -> op : MultiSetOp a -> MultiSet a / [multiSetOpOrder op] @-}
 apply :: Ord a => MultiSet a -> MultiSetOp a -> MultiSet a
