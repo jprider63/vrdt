@@ -1,7 +1,3 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 module Kwik.API.V0 where
 
 --import Web.HttpApiData (FromHttpApiData)
@@ -11,6 +7,8 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import Servant -- XXX all names unqualified
 import qualified Data.Aeson as Aeson
+
+import Kwik.Types
 
 -- XXX for generating URIs elsewhere, might want to not distribute over the v0,v1 prefixes
 type API
@@ -59,10 +57,10 @@ instance ToHttpApiData StoreId where toUrlPiece (StoreId t) = t
 instance Servant.MimeRender Servant.OctetStream AppData where mimeRender _ (AppData bs) = bs
 instance Servant.MimeUnrender Servant.OctetStream AppData where mimeUnrender _ = pure . AppData
 
-newtype ClientId = ClientId String deriving (Eq, Ord) -- XXX ip addr?
 newtype LogIndex = LogIndex Int
 newtype LogOffset = LogOffset Int
 
 data ServerMessage
     = OpaqueAppData AppData
     | RequestLogEntries [LogIndex]
+

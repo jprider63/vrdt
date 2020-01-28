@@ -2,6 +2,7 @@
 module Kwik.Server where
 
 import Control.Monad.IO.Class (liftIO)
+import qualified Data.ByteString.Char8 as BSC
 import Servant (Proxy(..), (:<|>)(..), NoContent(..))
 import Text.Printf (printf)
 import qualified Control.Concurrent.Chan as Chan
@@ -15,6 +16,7 @@ import qualified Servant.Types.SourceT as SourceT
 
 import           Kwik.API (API)
 import qualified Kwik.API.V0 as API -- JP: For now. Eventually should move things around.
+import qualified Kwik.Types as API -- JP: For now. Eventually should move things around.
 
 -- main :: Warp.Port -> IO ()
 -- main port = do
@@ -49,8 +51,8 @@ createV0 = undefined
 
 sendV0 :: MutState -> API.StoreId -> API.AppData -> Server.Handler Servant.NoContent
 sendV0 mut store update = do
-    -- FIXME: get a real client id (maybe use a hash of ip?)
-    let client = API.ClientId "foo"
+    -- FIXME: get a real client id
+    let client = API.ClientId $ BSC.pack "foo"
     -- XXX: consider doing `evaluate . force`
     liftIO . MVar.modifyMVar_ mut $ \state -> do
         -- TODO: extract pure domain functions from this
