@@ -54,7 +54,7 @@ sendV0 mut store update = do
         (logs_, chan) <- maybe emptyStore return $ Map.lookup store state
         -- XXX: logs are in reverse order .. do we care?
         -- "append or create-append log"
-        let logs = Map.alter (pure . maybe mempty (update:)) client logs_
+        let logs = Map.alter (pure . maybe [update] (update:)) client logs_
         -- "send on the channel for current listeners"
         Chan.writeChan chan update
         -- "put the modified store back"
