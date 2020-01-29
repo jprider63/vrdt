@@ -32,11 +32,11 @@ type SendV0 = "send" :> Capture "store-id" StoreId :> ReqBody '[OctetStream] App
 type SendV1 = "send" :> Capture "store-id" StoreId :> ReqBody '[OctetStream] (LogIndex, AppData) :> Post '[JSON] NoContent
 type SendV2 = SendV1
 
-type ListenV0 = "listen" :> Capture "store-id" StoreId                                             :> StreamPost NewlineFraming OctetStream (SourceIO AppData)
+type ListenV0 = "listen" :> Capture "store-id" StoreId                                             :> StreamPost NoFraming OctetStream (SourceIO AppData)
 -- | V1 includes a log-offset for each client so the server can return only those portions of the logs which the client lacks.
-type ListenV1 = "listen" :> Capture "store-id" StoreId :> ReqBody '[JSON] (Map ClientId LogOffset) :> StreamPost NewlineFraming OctetStream (SourceIO AppData)
+type ListenV1 = "listen" :> Capture "store-id" StoreId :> ReqBody '[JSON] (Map ClientId LogOffset) :> StreamPost NoFraming OctetStream (SourceIO AppData)
 -- | V2 includes the ability for the server to request specific log entries from clients.
-type ListenV2 = "listen" :> Capture "store-id" StoreId :> ReqBody '[JSON] (Map ClientId LogOffset) :> StreamPost NewlineFraming OctetStream (SourceIO ServerMessage)
+type ListenV2 = "listen" :> Capture "store-id" StoreId :> ReqBody '[JSON] (Map ClientId LogOffset) :> StreamPost NoFraming OctetStream (SourceIO ServerMessage)
 
 newtype AppName = AppName Text
 newtype StoreId = StoreId Text deriving (Eq, Ord, Show, Generic)
@@ -56,7 +56,7 @@ instance ToHttpApiData StoreId where toUrlPiece (StoreId t) = t
 instance Servant.MimeRender Servant.OctetStream AppData where mimeRender _ (AppData bs) = bs
 instance Servant.MimeUnrender Servant.OctetStream AppData where mimeUnrender _ = pure . AppData
 
-newtype ClientId = ClientId String deriving (Eq, Ord) -- XXX ip addr?
+newtype ClientId = ClientId String deriving (Eq, Ord, Show) -- XXX ip addr?
 newtype LogIndex = LogIndex Int
 newtype LogOffset = LogOffset Int
 
