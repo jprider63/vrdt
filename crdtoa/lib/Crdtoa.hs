@@ -1,17 +1,15 @@
 {-# LANGUAGE LambdaCase #-}
 module Crdtoa where
 
-import Data.String (fromString)
 import System.Environment (getArgs, getProgName)
 import Text.Printf (printf)
 
-import qualified Crdtoa.API as API
-import qualified Crdtoa.Application as Application
 import qualified Crdtoa.Server as Server
+import qualified DemoApp as DemoApp
 
 main :: IO ()
 main = getArgs >>= \case
-    ["app", server, store] -> Application.main (Application.Server server) (API.StoreId $ fromString store)
+    ["app", server, store] -> DemoApp.main server store
     ["server", port] -> Server.main $ read port
     _ -> do
         name <- getProgName

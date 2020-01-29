@@ -1,8 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Crdtoa.Application where
+module Crdtoa.Application
+(
+-- * Application abstraction
+  Server(..)
+, Send(..)
+, Recv(..)
+, runRaw
+, runSer
+-- * Reexports
+, API.StoreId(..)
+, API.AppData(..)
+, Async.Async
+, Async.cancel
+, Ser.Serialize
+) where
 
 import Servant (Proxy(..), (:<|>)(..), NoContent(..))
-import qualified Control.Concurrent as Conc
 import qualified Control.Concurrent.Async as Async
 import qualified Control.Monad as Mon
 import qualified Data.Serialize as Ser
@@ -12,43 +25,36 @@ import qualified Servant.Types.SourceT as SourceT
 
 import qualified Crdtoa.API as API
 
-createV0 :: Client.ClientM API.StoreId
+_createV0 :: Client.ClientM API.StoreId
 sendV0 :: API.StoreId -> API.AppData -> Client.ClientM NoContent
 listenV0 :: API.StoreId -> Client.ClientM (SourceT.SourceT IO API.AppData)
-createV0 :<|> sendV0 :<|> listenV0 = Client.client (Proxy :: Proxy API.API)
-
--- | A demo application (chat)
---
--- TODO move to another file
-main :: Server -> API.StoreId -> IO ()
-main server store = do
-    putStrLn "Application demo"
-    (listener, Send send) <- mainloop server store (Recv print)
-    -- send each line of stdin forever
-    (print =<<) . Conc.forkIO . Mon.forever $ do
-        x <- getLine
-        if x == "quit" then Async.cancel listener else send x
-
+_createV0 :<|> sendV0 :<|> listenV0 = Client.client (Proxy :: Proxy API.API)
 
 -- | The base URL of a server to connect with.
 newtype Server = Server String
-newtype Send a = Send (a -> IO ())
-newtype Recv a = Recv (Either String a -> IO ())
-
--- | Simple callback-based interface for an application to use.
---
--- * Pass in the server and store your application would like to connect with.
---
--- * Pass in a receiver function which will be called for each message received
--- from your network.
---
--- * Returns an async to stop the listener thread from calling the receiver
--- function.
---
--- * Returns a send function which can be called to broadcast a message to your
+-- | A receiver function which will be called for each message received from
+-- your network.
+newtype Recv a = Recv (a -> IO ())
+-- | A send function which can be called to broadcast a message to your
 -- network.
-mainloop :: Ser.Serialize a => Server -> API.StoreId -> Recv a -> IO (Async.Async (), Send a)
-mainloop (Server server) store (Recv recv) = do
+newtype Send a = Send (a -> IO ())
+
+-- | A callback-based interface for an application which sends and receives
+-- 'API.AppData' values to the store via the server.
+--
+-- TODO: change to receive a Maybe Server to signal the need to call createV0
+runRaw
+    :: Server
+    -> API.StoreId
+    -- ^ The store your application instance should communicate with.
+    -> Recv API.AppData
+    -> IO (Async.Async (), Send API.AppData)
+    -- ^ This async represents the listener thread. Cancel the async to stop it
+    -- from calling the receiver function and recover the associated resources.
+    --
+    -- FIXME: this doesn't work at all, probably because the receiving thread
+    -- is masking interrupts while receiving on the TCP socket
+runRaw (Server server) store (Recv recv) = do
     env <- Client.mkClientEnv
         <$> HTTP.newManager HTTP.defaultManagerSettings
         <*> Client.parseBaseUrl server
@@ -58,22 +64,41 @@ mainloop (Server server) store (Recv recv) = do
             env
         $ either
             handleListenReqErr
-            (SourceT.foreach handleMidstreamErr decodeAndDeliver)
-        -- TODO: handle IO errors from failed requests & disconnections
+            (SourceT.foreach handleMidstreamErr recv)
     let send x = do
             Client.runClientM
-                (sendV0 store . API.AppData . Ser.encodeLazy $ x)
+                (sendV0 store x)
                 env
             >>= either
                 handleSendReqErr
-                acceptNoContent
+                (\NoContent -> return ())
     return (listener, Send send)
   where
     handleSendReqErr e = putStrLn $ "Error in making send request: " <> show e
     handleListenReqErr e = putStrLn $ "Error in making stream request: " <> show e
     handleMidstreamErr e = putStrLn $ "Error receiving stream: " <> e
-    decodeAndDeliver (API.AppData bs) = recv . Ser.decodeLazy $ bs
-    acceptNoContent NoContent = return ()
+
+-- | A callback-based interface for an application which sends and receives
+-- 'Serialize'able values to the store via the server.
+--
+-- See 'runRaw' for information about the parameters.
+runSer :: Ser.Serialize a => Server -> API.StoreId
+    -> Recv (Either String a)
+    -- ^ This receive function exposes deserialization errors so that the
+    -- application can be made aware of error cases, such as receiving data
+    -- from an incompatible version. The package /safecopy/ can be used to
+    -- mitigate some data structure versioning issues.
+    -> IO (Async.Async (), Send a)
+    -- ^ This send function will serialize data before writing to the wire.
+    -- See 'runRaw' for an explanation of the 'Async.Async'.
+runSer server store (Recv recvSer) = do
+    let recvRaw = recvSer . Ser.decodeLazy . \(API.AppData bs) -> bs
+    (listener, Send sendRaw) <- runRaw server store (Recv recvRaw)
+    let sendSer = sendRaw . API.AppData . Ser.encodeLazy
+    return (listener, Send sendSer)
+
+-- TODO: make a pipes or conduit based interface? what about other
+-- serialization libraries?
 
 -- FIXME: if the server is killed while clients are listening,
 -- there's an "incomplete headers" IO exception from the listen
@@ -102,7 +127,6 @@ mainloop (Server server) store (Recv recv) = do
 -- == Info: Connection #0 to host localhost left intact
 -- curl: (52) Empty reply from server
 -- ? 52
-
 
 -- FIXME: on launch with a server that doesn't exist, an IO acception that is
 -- thrown.. that should be caught and conveyed to the application code through
