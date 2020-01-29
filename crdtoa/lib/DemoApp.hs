@@ -19,7 +19,7 @@ main server store = do
     putStrLn "What is your name? "
     name <- getLine
     putStrLn "Type and press enter at any time. Say 'quit' to exit."
-    (listener, App.Send send) <- App.runSer
+    (cancel, App.Send send) <- App.runSer
         (App.Server server)
         (App.StoreId $ fromString store)
         (App.Recv $ either
@@ -29,5 +29,5 @@ main server store = do
         line <- getLine
         case line of
             "" -> return ()
-            "quit" -> putStrLn "Shutting down.." >> App.cancel listener
+            "quit" -> putStrLn "Shutting down.." >> cancel
             _ -> send ChatMessage{handle=name, message=line}

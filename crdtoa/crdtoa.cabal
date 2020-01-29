@@ -11,7 +11,6 @@ data-files:
 library
   build-depends:        base
                       , aeson
-                      , async
                       , bytestring
                       , cereal
                       , containers
