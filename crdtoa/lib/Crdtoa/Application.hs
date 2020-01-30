@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Crdtoa.Application
 (
 -- * Application abstraction
@@ -79,7 +80,7 @@ runRaw (Server server) requestStore (Recv recv) = do
         , send = send
         }
   where
-    -- TODO: bring this inside sender?
+    -- TODO: bring inside sender?
     handleSendReqErr e = putStrLn $ "Error in making send request: " <> show e
     -- TODO: bring these inside listener?
     handleListenReqErr e = putStrLn $ "Error in making stream request: " <> show e
@@ -149,9 +150,9 @@ withRaw
 withRaw server store recv = Exc.bracket acquire release
   where
     acquire = runRaw server store recv
-    release client = do
-        Async.cancel (background client)
-        Async.wait (background client) `Exc.catch` ignoreAsyncCancelled
+    release Client{background} = do
+        Async.cancel background
+        Async.wait background -- TODO: `Exc.catch` ignoreAsyncCancelled
 
 -- | A callback-based interface for an application which sends and receives
 -- 'Ser.Serialize'able values to the store via the server and follows the
