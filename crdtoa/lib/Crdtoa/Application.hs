@@ -2,10 +2,11 @@ module Crdtoa.Application
 (
 -- * Application abstraction
   Server(..)
-, Send(..)
 , Recv(..)
+, Client(..)
+, withSer
+, withRaw
 , runRaw
-, runSer
 -- * Reexports
 , API.StoreId(..)
 , API.AppData(..)
@@ -14,6 +15,7 @@ module Crdtoa.Application
 
 import Servant (Proxy(..), (:<|>)(..), NoContent(..))
 import qualified Control.Concurrent as Conc
+import qualified Control.Exception as Exc
 import qualified Control.Monad as Mon
 import qualified Data.Serialize as Ser
 import qualified Network.HTTP.Client as HTTP
@@ -35,26 +37,26 @@ newtype Server = Server String
 -- | A receiver function which will be called for each message received from
 -- your network.
 newtype Recv a = Recv (a -> IO ())
--- | A send function which can be called to broadcast a message to your
--- network.
-newtype Send a = Send (a -> IO ())
 -- | A function which cancels a backing thread.
 type Cancel = IO ()
 
+data Client a = Client
+    { listener :: IO ()
+    , store :: API.StoreId
+    , send :: a -> IO ()
+    }
+
 -- | A callback-based interface for an application which sends and receives
 -- 'API.AppData' values to the store via the server.
+--
+-- Prefer one of the @with*@ variants such as 'withSer' or 'withRaw' over use
+-- of this function. If you do use this function, you'll need to clean up the
+-- background resources yourself.
 runRaw
     :: Server
     -> Maybe API.StoreId
-    -- ^ The store your application instance should communicate with. If none
-    -- is specified, the server will generate one.
     -> Recv API.AppData
-    -> IO (API.StoreId, Cancel, Send API.AppData)
-    -- ^ This async represents the listener thread. Cancel the async to stop it
-    -- from calling the receiver function and recover the associated resources.
-    --
-    -- FIXME: this doesn't work at all, probably because the receiving thread
-    -- is masking interrupts while receiving on the TCP socket
+    -> IO (Client API.AppData)
 runRaw (Server server) requestStore (Recv recv) = do
     env <- Client.mkClientEnv
         <$> HTTP.newManager HTTP.defaultManagerSettings
@@ -71,7 +73,11 @@ runRaw (Server server) requestStore (Recv recv) = do
             >>= either
                 handleSendReqErr
                 acceptNoContent
-    return (store, Conc.killThread listener, Send send)
+    return Client
+        { listener = Conc.killThread listener
+        , store = store
+        , send = send
+        }
   where
     handleSendReqErr e = putStrLn $ "Error in making send request: " <> show e
     handleListenReqErr e = putStrLn $ "Error in making stream request: " <> show e
@@ -79,23 +85,39 @@ runRaw (Server server) requestStore (Recv recv) = do
     acceptNoContent NoContent = return ()
 
 -- | A callback-based interface for an application which sends and receives
--- 'Serialize'able values to the store via the server.
+-- 'API.AppData' values to the store via the server. 
 --
--- See 'runRaw' for information about the parameters.
-runSer :: Ser.Serialize a => Server -> Maybe API.StoreId
-    -> Recv (Either String a)
-    -- ^ This receive function exposes deserialization errors so that the
-    -- application can be made aware of error cases, such as receiving data
-    -- from an incompatible version. The package /safecopy/ can be used to
-    -- mitigate some data structure versioning issues.
-    -> IO (API.StoreId, Cancel, Send a)
-    -- ^ This send function will serialize data before writing to the wire.
-    -- See 'runRaw' for an explanation of the 'Async.Async'.
-runSer server requestStore (Recv recvSer) = do
-    let recvRaw = recvSer . Ser.decodeLazy . \(API.AppData bs) -> bs
-    (store, cancel, Send sendRaw) <- runRaw server requestStore (Recv recvRaw)
-    let sendSer = sendRaw . API.AppData . Ser.encodeLazy
-    return (store, cancel, Send sendSer)
+-- This follows the bracket pattern to ensure that internal resources are
+-- cleaned up.
+withRaw
+    :: Server
+    -> Maybe API.StoreId
+    -> Recv API.AppData
+    -> (Client API.AppData -> IO a)
+    -> IO a
+withRaw server store recv = Exc.bracket acquire release
+  where
+    acquire = runRaw server store recv
+    release = listener
+
+-- | A callback-based interface for an application which sends and receives
+-- 'Serialize'able values to the store via the server.
+withSer
+    :: Ser.Serialize u
+    => Server
+    -> Maybe API.StoreId
+    -> Recv (Either String u)
+    -- ^ Deserialization errors are exposed to the receive function so that the
+    -- application can be made aware of error cases, eg. receiving data from an
+    -- incompatible version. The package /safecopy/ can be used to mitigate
+    -- some data structure versioning issues.
+    -> (Client u -> IO a)
+    -- ^ The send function will serialize data before writing to the wire.
+    -> IO a
+withSer server store (Recv recvSer) actionSer = withRaw server store (Recv recvRaw) actionRaw
+  where
+    recvRaw = recvSer . Ser.decodeLazy . \(API.AppData bs) -> bs
+    actionRaw client@Client{send=sendRaw} = actionSer client{send=sendRaw . API.AppData . Ser.encodeLazy}
 
 -- TODO: make a pipes or conduit based interface? what about other
 -- serialization libraries?

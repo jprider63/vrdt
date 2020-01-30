@@ -15,20 +15,24 @@ data ChatMessage = ChatMessage
 -- | A demo application (barebones chat)
 main :: String -> Maybe String -> IO ()
 main server requestStore = do
-    putStrLn "Chat application demo"
     putStrLn "What is your name? "
     name <- getLine
     putStrLn "Type and press enter at any time. Say 'quit' to exit."
-    (store, cancel, App.Send send) <- App.runSer
+    App.withSer
         (App.Server server)
         (App.StoreId . fromString <$> requestStore)
         (App.Recv $ either
             (\e -> putStrLn $ "Serialization error: " <> e)
             (\m -> putStrLn $ "[" <> handle m <> "]: " <> message m))
-    putStrLn $ "Connected to store " <> show store
-    Mon.forever $ do
+        $ \client -> do
+            putStrLn $ "Connected to store " <> show (App.store client)
+            chat client ChatMessage{handle=name, message=""}
+  where
+    chat client state = do
         line <- getLine
         case line of
-            "" -> return ()
-            "quit" -> putStrLn "Shutting down.." >> cancel
-            _ -> send ChatMessage{handle=name, message=line}
+            "quit" -> putStrLn "Shutting down.."
+            "" -> chat client state
+            _ -> do
+                App.send client state{message=line}
+                chat client state
