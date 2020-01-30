@@ -4,7 +4,6 @@ module DemoApp where
 
 import Data.String (fromString)
 import GHC.Generics (Generic)
-import qualified Control.Monad as Mon
 import qualified Crdtoa.Application as App
 
 data ChatMessage = ChatMessage

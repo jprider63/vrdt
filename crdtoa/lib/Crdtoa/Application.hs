@@ -15,6 +15,7 @@ module Crdtoa.Application
 
 import Servant (Proxy(..), (:<|>)(..), NoContent(..))
 import qualified Control.Concurrent as Conc
+import qualified Control.Concurrent.Async as Async
 import qualified Control.Exception as Exc
 import qualified Control.Monad as Mon
 import qualified Data.Serialize as Ser
@@ -41,7 +42,7 @@ newtype Recv a = Recv (a -> IO ())
 type Cancel = IO ()
 
 data Client a = Client
-    { listener :: IO ()
+    { background :: Async.Async ()
     , store :: API.StoreId
     , send :: a -> IO ()
     }
@@ -62,7 +63,7 @@ runRaw (Server server) requestStore (Recv recv) = do
         <$> HTTP.newManager HTTP.defaultManagerSettings
         <*> Client.parseBaseUrl server
     let Just store = requestStore -- FIXME: call createV0
-    listener <- Conc.forkIO . Mon.forever $ do
+    background <- Async.async . Mon.forever $ do
             Client.withClientM (listenV0 store) env
             $ either
                 handleListenReqErr
@@ -74,7 +75,7 @@ runRaw (Server server) requestStore (Recv recv) = do
                 handleSendReqErr
                 acceptNoContent
     return Client
-        { listener = Conc.killThread listener
+        { background = background
         , store = store
         , send = send
         }
@@ -98,7 +99,7 @@ withRaw
 withRaw server store recv = Exc.bracket acquire release
   where
     acquire = runRaw server store recv
-    release = listener
+    release = Async.cancel . background
 
 -- | A callback-based interface for an application which sends and receives
 -- 'Serialize'able values to the store via the server.
