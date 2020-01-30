@@ -33,7 +33,7 @@ import Prelude hiding (null, Maybe(..))
 {-@
 data MultiSet a = MultiSet {
     posMultiSet ::  Map a PosInteger
-  , negMultiSet :: {v:Map a NegInteger | Map.null (Map.intersection posMultiSet v) }
+  , negMultiSet :: {v:Map a NegInteger | Map.disjoint posMultiSet v }
   }
 @-}
 data MultiSet a = MultiSet {

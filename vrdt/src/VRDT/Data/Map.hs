@@ -4,6 +4,7 @@ module Data.Map where
 
 import Prelude hiding (Maybe(..), lookup)
 import Data.Maybe 
+import qualified Data.Set as S
 
 data Map k v = Tip | Map k v (Map k v)
 
@@ -59,9 +60,12 @@ findWithDefault v k m
      Just v' -> v' 
      Nothing -> v  
 
-{-@ reflect intersection @-}
-intersection :: Eq k => Map k v -> Map k v -> Map k v 
-intersection Tip _ = Tip 
-intersection (Map k v m1) m2
-  | Just _ <- lookup k m2 = Map k v (intersection m1 m2)
-  | otherwise             = intersection m1 m2 
+
+{-@ measure keys @-}
+keys :: Ord k => Map k v -> S.Set k 
+keys Tip = S.empty 
+keys (Map k _ m) = S.singleton k `S.union` keys m
+
+{-@ inline disjoint @-}
+disjoint :: Ord k => Map k v -> Map k v -> Bool 
+disjoint m1 m2 = S.null (S.intersection (keys m1) (keys m2))
