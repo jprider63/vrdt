@@ -6,7 +6,7 @@
 module VRDT.Max where
 
 -- import Data.Semigroup (Max(..))
-import Language.Haskell.Liquid.ProofCombinators
+-- import Language.Haskell.Liquid.ProofCombinators
 -- import ProofCombinators
 
 -- import VRDT.Class
