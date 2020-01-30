@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Crdtoa.Application
 (
 -- * Application abstraction
@@ -38,8 +39,6 @@ newtype Server = Server String
 -- | A receiver function which will be called for each message received from
 -- your network.
 newtype Recv a = Recv (a -> IO ())
--- | A function which cancels a backing thread.
-type Cancel = IO ()
 
 data Client a = Client
     { background :: Async.Async ()
@@ -62,13 +61,13 @@ runRaw (Server server) requestStore (Recv recv) = do
     env <- Client.mkClientEnv
         <$> HTTP.newManager HTTP.defaultManagerSettings
         <*> Client.parseBaseUrl server
+
     let Just store = requestStore -- FIXME: call createV0
-    background <- Async.async . Mon.forever $ do
-            Client.withClientM (listenV0 store) env
-            $ either
-                handleListenReqErr
-                (SourceT.foreach handleMidstreamErr recv)
+
+    background <- Async.async $ beManager env store
+
     -- TODO: insert into a channel, then attempt to drain the channel
+    -- TODO: move this to beSender
     let send x = do
             Client.runClientM (sendV0 store x) env
             >>= either
@@ -80,16 +79,67 @@ runRaw (Server server) requestStore (Recv recv) = do
         , send = send
         }
   where
+    -- TODO: bring this inside sender?
     handleSendReqErr e = putStrLn $ "Error in making send request: " <> show e
+    -- TODO: bring these inside listener?
     handleListenReqErr e = putStrLn $ "Error in making stream request: " <> show e
     handleMidstreamErr e = putStrLn $ "Error receiving stream: " <> e
-    acceptNoContent NoContent = return ()
+
+    -- The manager runs the sender and listener once. It will complain if
+    -- either of them quits or throws an exception. An additional exception
+    -- will be raised when the application quits.
+    beManager env store
+        = action `Exc.catches` handlers
+      where
+        action = do
+            Async.withAsync (beSender) $ \sender -> do
+                Async.withAsync (beListener env store) $ \listener -> do
+                    (a, _) <- Async.waitAny [sender, listener]
+                    case a of
+                        _ | a == sender -> fail "sender thread exited early"
+                          | a == listener -> fail "sender thread exited early"
+                          | otherwise -> fail "an unknown thread exited early"
+        handlers =
+            [ Exc.Handler $ \(exc :: Exc.SomeException) -> do
+                putStrLn $ "[BUG] An exception reached the manager: " <> show exc
+                Exc.throwIO exc
+            -- TODO: ignoreAsyncCancelled?
+            ]
+
+    beSender = do
+        return () -- FIXME
+
+    -- The listener attempts to listen forever, handling its own error cases
+    -- internally.
+    beListener env store
+        = Mon.forever
+        $ action `Exc.catches` handlers
+        -- FIXME: consider the rate of retries, once every 2s should be good to
+        -- start and later think about exponential backoff
+      where
+        action
+            = Client.withClientM (listenV0 store) env
+            $ either handleListenReqErr (SourceT.foreach handleMidstreamErr recv)
+        handlers =
+            [ Exc.Handler $ \(HTTP.HttpExceptionRequest req (HTTP.ConnectionFailure exc)) -> do
+                putStrLn $ "[DEBUG] Request failed: " <> show req
+                putStrLn $ "[ERROR] Stream request connection error: " <> show exc
+            , Exc.Handler $ \(HTTP.HttpExceptionRequest req HTTP.ResponseTimeout) -> do
+                putStrLn $ "[DEBUG] Request failed: " <> show req
+                putStrLn $ "[ERROR] Stream request timeout"
+            ]
+
 
 -- | A callback-based interface for an application which sends and receives
--- 'API.AppData' values to the store via the server. 
+-- 'API.AppData' values.
 --
--- This follows the bracket pattern to ensure that internal resources are
--- cleaned up.
+-- Connect with the server to exchange updates in the store. If no store is
+-- specified, the server will generate one. It is available in the returned
+-- 'Client'.
+-- 
+-- This function follows the bracket-pattern to ensure that internal resources
+-- are cleaned up.  If an exception occurred in a background thread, it will be
+-- re-raised when this returns.
 withRaw
     :: Server
     -> Maybe API.StoreId
@@ -99,10 +149,13 @@ withRaw
 withRaw server store recv = Exc.bracket acquire release
   where
     acquire = runRaw server store recv
-    release = Async.cancel . background
+    release client = do
+        Async.cancel (background client)
+        Async.wait (background client) `Exc.catch` ignoreAsyncCancelled
 
 -- | A callback-based interface for an application which sends and receives
--- 'Serialize'able values to the store via the server.
+-- 'Ser.Serialize'able values to the store via the server and follows the
+-- bracket-pattern to ensure that internal resources are cleaned up.
 withSer
     :: Ser.Serialize u
     => Server
@@ -176,3 +229,9 @@ withSer server store (Recv recvSer) actionSer = withRaw server store (Recv recvR
 --   requestVersion       = HTTP/1.1
 -- }
 --  (ConnectionFailure Network.Socket.connect: <socket: 23>: does not exist (Connection refused))
+
+ignoreAsyncCancelled :: Monad m => Async.AsyncCancelled -> m ()
+ignoreAsyncCancelled Async.AsyncCancelled = return ()
+
+acceptNoContent :: Monad m => NoContent -> m ()
+acceptNoContent NoContent = return ()
