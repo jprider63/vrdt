@@ -58,3 +58,10 @@ findWithDefault v k m
   = case lookup k m of
      Just v' -> v' 
      Nothing -> v  
+
+{-@ reflect intersection @-}
+intersection :: Eq k => Map k v -> Map k v -> Map k v 
+intersection Tip _ = Tip 
+intersection (Map k v m1) m2
+  | Just _ <- lookup k m2 = Map k v (intersection m1 m2)
+  | otherwise             = intersection m1 m2 
