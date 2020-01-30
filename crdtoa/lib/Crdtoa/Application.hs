@@ -22,6 +22,9 @@ import qualified Servant.Types.SourceT as SourceT
 
 import qualified Crdtoa.API as API
 
+-- TODO: generate a clientid with uuid:Data.UUID.V4.nextRandom
+-- TODO: buffer sends when network is down, and return the size of the buffer
+
 _createV0 :: Client.ClientM API.StoreId
 sendV0 :: API.StoreId -> API.AppData -> Client.ClientM NoContent
 listenV0 :: API.StoreId -> Client.ClientM (SourceT.SourceT IO API.AppData)
@@ -40,34 +43,35 @@ type Cancel = IO ()
 
 -- | A callback-based interface for an application which sends and receives
 -- 'API.AppData' values to the store via the server.
---
--- TODO: change to receive a Maybe Server to signal the need to call createV0
 runRaw
     :: Server
-    -> API.StoreId
-    -- ^ The store your application instance should communicate with.
+    -> Maybe API.StoreId
+    -- ^ The store your application instance should communicate with. If none
+    -- is specified, the server will generate one.
     -> Recv API.AppData
-    -> IO (Cancel, Send API.AppData)
+    -> IO (API.StoreId, Cancel, Send API.AppData)
     -- ^ This async represents the listener thread. Cancel the async to stop it
     -- from calling the receiver function and recover the associated resources.
     --
     -- FIXME: this doesn't work at all, probably because the receiving thread
     -- is masking interrupts while receiving on the TCP socket
-runRaw (Server server) store (Recv recv) = do
+runRaw (Server server) requestStore (Recv recv) = do
     env <- Client.mkClientEnv
         <$> HTTP.newManager HTTP.defaultManagerSettings
         <*> Client.parseBaseUrl server
+    let Just store = requestStore -- FIXME: call createV0
     listener <- Conc.forkIO . Mon.forever $ do
             Client.withClientM (listenV0 store) env
             $ either
                 handleListenReqErr
                 (SourceT.foreach handleMidstreamErr recv)
+    -- TODO: insert into a channel, then attempt to drain the channel
     let send x = do
             Client.runClientM (sendV0 store x) env
             >>= either
                 handleSendReqErr
                 acceptNoContent
-    return (Conc.killThread listener , Send send)
+    return (store, Conc.killThread listener, Send send)
   where
     handleSendReqErr e = putStrLn $ "Error in making send request: " <> show e
     handleListenReqErr e = putStrLn $ "Error in making stream request: " <> show e
@@ -78,20 +82,20 @@ runRaw (Server server) store (Recv recv) = do
 -- 'Serialize'able values to the store via the server.
 --
 -- See 'runRaw' for information about the parameters.
-runSer :: Ser.Serialize a => Server -> API.StoreId
+runSer :: Ser.Serialize a => Server -> Maybe API.StoreId
     -> Recv (Either String a)
     -- ^ This receive function exposes deserialization errors so that the
     -- application can be made aware of error cases, such as receiving data
     -- from an incompatible version. The package /safecopy/ can be used to
     -- mitigate some data structure versioning issues.
-    -> IO (Cancel, Send a)
+    -> IO (API.StoreId, Cancel, Send a)
     -- ^ This send function will serialize data before writing to the wire.
     -- See 'runRaw' for an explanation of the 'Async.Async'.
-runSer server store (Recv recvSer) = do
+runSer server requestStore (Recv recvSer) = do
     let recvRaw = recvSer . Ser.decodeLazy . \(API.AppData bs) -> bs
-    (cancel, Send sendRaw) <- runRaw server store (Recv recvRaw)
+    (store, cancel, Send sendRaw) <- runRaw server requestStore (Recv recvRaw)
     let sendSer = sendRaw . API.AppData . Ser.encodeLazy
-    return (cancel, Send sendSer)
+    return (store, cancel, Send sendSer)
 
 -- TODO: make a pipes or conduit based interface? what about other
 -- serialization libraries?

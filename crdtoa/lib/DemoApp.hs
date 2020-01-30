@@ -13,18 +13,19 @@ data ChatMessage = ChatMessage
     } deriving (Generic, App.Serialize)
 
 -- | A demo application (barebones chat)
-main :: String -> String -> IO ()
-main server store = do
+main :: String -> Maybe String -> IO ()
+main server requestStore = do
     putStrLn "Chat application demo"
     putStrLn "What is your name? "
     name <- getLine
     putStrLn "Type and press enter at any time. Say 'quit' to exit."
-    (cancel, App.Send send) <- App.runSer
+    (store, cancel, App.Send send) <- App.runSer
         (App.Server server)
-        (App.StoreId $ fromString store)
+        (App.StoreId . fromString <$> requestStore)
         (App.Recv $ either
             (\e -> putStrLn $ "Serialization error: " <> e)
             (\m -> putStrLn $ "[" <> handle m <> "]: " <> message m))
+    putStrLn $ "Connected to store " <> show store
     Mon.forever $ do
         line <- getLine
         case line of
