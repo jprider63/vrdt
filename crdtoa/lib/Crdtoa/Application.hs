@@ -27,6 +27,8 @@ import qualified Servant.Types.SourceT as SourceT
 
 import qualified Crdtoa.API as API
 
+maxBackoffSec :: Int
+maxBackoffSec = 600 -- five minutes
 -- TODO: generate a clientid with uuid:Data.UUID.V4.nextRandom
 -- TODO: buffer sends when network is down, and return the size of the buffer
 
@@ -94,41 +96,52 @@ runRaw (Server server) requestStore (Recv recv) = do
       where
         action = do
             Async.withAsync (beSender) $ \sender -> do
-                Async.withAsync (beListener env store) $ \listener -> do
+                Async.withAsync (beListener env store 0) $ \listener -> do
                     (a, _) <- Async.waitAny [sender, listener]
                     case a of
                         _ | a == sender -> fail "sender thread exited early"
                           | a == listener -> fail "sender thread exited early"
                           | otherwise -> fail "an unknown thread exited early"
         handlers =
-            [ Exc.Handler $ \(exc :: Exc.SomeException) -> do
-                putStrLn $ "[BUG] An exception reached the manager: " <> show exc
-                Exc.throwIO exc
-            -- TODO: ignoreAsyncCancelled?
+            [ Exc.Handler ignoreAsyncCancelled -- Don't complain when exiting
+            , Exc.Handler $ complainAndRethrowSomeException "manager"
             ]
 
     beSender = do
+        Conc.threadDelay (round $ 60 * 1e6 :: Int)
         return () -- FIXME
+        -- james says don't block
+        --
+        -- send :: a -> IO ()
+        --  1) enqueue
+        --  2) trigger background drain
+        --  3) return
+        --
+        -- onListen :: IO ()
+        --  1) trigger background drain
+        --  2) return
 
     -- The listener attempts to listen forever, handling its own error cases
     -- internally.
-    beListener env store
-        = Mon.forever
-        $ action `Exc.catches` handlers
-        -- FIXME: consider the rate of retries, once every 2s should be good to
-        -- start and later think about exponential backoff
+    beListener env store errors
+        = print errors
+        >> exponentialBackoff maxBackoffSec errors
+        >> (action `Exc.catches` handlers)
+        >>= beListener env store
       where
-        action
-            = Client.withClientM (listenV0 store) env
-            $ either handleListenReqErr (SourceT.foreach handleMidstreamErr recv)
+        ret errors act a = act a >>= \() -> return errors
+        action =
+            Client.withClientM (listenV0 store) env
+                $ either
+                    (ret (errors + 1) $ complainClientError "listener,either")
+                    (ret 0 $ SourceT.foreach complainMidstream recv)
         handlers =
-            [ Exc.Handler $ \(HTTP.HttpExceptionRequest req (HTTP.ConnectionFailure exc)) -> do
-                putStrLn $ "[DEBUG] Request failed: " <> show req
-                putStrLn $ "[ERROR] Stream request connection error: " <> show exc
-            , Exc.Handler $ \(HTTP.HttpExceptionRequest req HTTP.ResponseTimeout) -> do
-                putStrLn $ "[DEBUG] Request failed: " <> show req
-                putStrLn $ "[ERROR] Stream request timeout"
+            [ Exc.Handler . ret (errors + 1) $ complainHttpException "listener,catches"
+            , Exc.Handler . ret (errors + 1) $ complainClientError "listener,catches"
             ]
+        -- This handles an error sent intentionally by the stream producer.
+        -- Instead of treating it like an exception it's special cased here.
+        complainMidstream = putStrLn . ("[ERROR] Received from stream: " <>)
 
 
 -- | A callback-based interface for an application which sends and receives
@@ -231,8 +244,68 @@ withSer server store (Recv recvSer) actionSer = withRaw server store (Recv recvR
 -- }
 --  (ConnectionFailure Network.Socket.connect: <socket: 23>: does not exist (Connection refused))
 
+-- | @exponentialBackoffSec cap n@ computes the number of seconds, up to @cap@,
+-- to backoff after @n@ failures.
+--
+-- >>> exponentialBackoffSec 30 <$> [0..5]
+-- [0,2,6,19,30,30]
+--
+-- >>> exponentialBackoffSec 600 <$> [0..10]
+-- [0,2,6,19,54,147,402,600,600,600,600]
+--
+-- >>> exponentialBackoffSec -600 <$> [0..10]
+-- [0,2,6,19,54,147,402,600,600,600,600]
+--
+-- >>> exponentialBackoffSec 600 <$> reverse [-10..0]
+-- [0,2,6,19,54,147,402,600,600,600,600]
+exponentialBackoffSec :: Int -> Float -> Int
+exponentialBackoffSec cap = min (abs cap) . subtract 1 . round . exp . abs
+
+exponentialBackoff :: Int -> Float -> IO ()
+exponentialBackoff cap = Conc.threadDelay . secToMicrosec . exponentialBackoffSec cap
+  where
+    secToMicrosec = (* round 1e6)
+
+-- | Log a message about an 'HTTP.HttpExceptionRequest' exception.
+--
+-- 'HTTP.HttpExceptionContent' values seen:
+--
+-- * @HTTP.ConnectionFailure _@ when connecting to server or a port that doesn't exist.
+-- * @HTTP.ResponseTimeout@ when a server doesn't send any data back (eg. netcat).
+-- * @HTTP.IncompleteHeaders@ when a server disconnects midstream.
+complainHttpException :: String -> HTTP.HttpException -> IO ()
+complainHttpException loc (HTTP.HttpExceptionRequest _req info) =
+    putStrLn $ "[ERROR] " <> loc <> ": HttpException with " <> (head . words . show $ info)
+complainHttpException loc (HTTP.InvalidUrlException url reason) =
+    putStrLn $ "[ERROR] " <> loc <> ": HttpException for bad url '" <> url <> "': " <> reason
+{-# INLINE complainHttpException #-}
+
+-- | Log a message about a 'Client.ClientError' exception.
+--
+-- 'Client.FailureResponse' values seen:
+--
+-- * @Client.FailureResponse@ in a cafe and received a 406 from a network gatekeeper.
+complainClientError :: String -> Client.ClientError -> IO ()
+complainClientError loc exc =
+    putStrLn $ "[ERROR] " <> loc <> ": Servant ClientError." <> (head . words . show $ exc)
+{-# INLINE complainClientError #-}
+
+-- | Log a message and rethrow a 'Exc.SomeException' exception.
+--
+-- We rethrow because this could be an OOM or a SigInt or another thing that
+-- must be handled by killing the thread/process.
+complainAndRethrowSomeException :: String -> Exc.SomeException -> IO ()
+complainAndRethrowSomeException loc exc = do
+    putStrLn $ "[BUG] Exception reached " <> loc <> ": " <> show exc
+    Exc.throwIO exc
+{-# INLINE complainAndRethrowSomeException #-}
+
+-- | Do nothing about an 'Async.AsyncCancelled' exception.
 ignoreAsyncCancelled :: Monad m => Async.AsyncCancelled -> m ()
 ignoreAsyncCancelled Async.AsyncCancelled = return ()
+{-# INLINE ignoreAsyncCancelled #-}
 
+-- | Do nothing about a 'NoContent' response.
 acceptNoContent :: Monad m => NoContent -> m ()
 acceptNoContent NoContent = return ()
+{-# INLINE acceptNoContent #-}
