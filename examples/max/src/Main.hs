@@ -16,9 +16,10 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.NodeId
+import Data.Functor
 import Data.Functor.Misc
 import Data.Map (Map)
-import Data.Maybe
+import Data.Maybe (isJust)
 import qualified Data.Map as Map
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -28,14 +29,52 @@ import Reflex
 import Reflex.Network
 import Reflex.Class.Switchable
 import Reflex.Vty
+import Text.Read (readMaybe)
+
+import VRDT.Max
+
+main :: IO ()
+main = do
+    -- Parse settings.
+    -- Load store.
+    
+    -- Run FRP.
+    runApp
+
+runApp = mainWidget $ do
+  inp <- input
+  maxApp
+  return $ fforMaybe inp $ \case
+    V.EvKey (V.KChar 'c') [V.MCtrl] -> Just ()
+    _ -> Nothing
+
+
+maxApp :: (Reflex t, MonadHold t m, MonadFix m, Adjustable t m, NotReady t m, PostBuild t m, MonadNodeId m)
+       => VtyWidget t m ()
+maxApp = col $ do
+    rec v <- foldDyn (flip applyMax) v0 vOpE
+        fixed 1 (text $ displayMax v)
+        textI <- fixed 1 $ textInput $ def
+        -- a <- fixed 3 $ textButtonStatic def "Submit"
+        let vParsedM = parseMax textI
+        let vOpE = fmapMaybe id $ updated vParsedM
+    return ()
+
+  where
+    v0 = Max 0
+
+    displayMax v = current $ (T.pack . show . unMax) <$> v
+    parseMax textI = (fmap Max . readMaybe . T.unpack) <$> _textInput_value textI
+
+
+
 
 data Example = Example_TextEditor
              | Example_Todo
              | Example_ScrollableTextDisplay
   deriving (Show, Read, Eq, Ord, Enum, Bounded)
 
-main :: IO ()
-main = mainWidget $ do
+exampleApp = mainWidget $ do
   inp <- input
   let buttons = col $ do
         fixed 4 $ col $ do
