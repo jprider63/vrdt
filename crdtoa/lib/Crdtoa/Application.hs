@@ -18,8 +18,8 @@ module Crdtoa.Application
 import Servant (Proxy(..), (:<|>)(..), NoContent(..))
 import qualified Control.Concurrent as Conc
 import qualified Control.Concurrent.Async as Async
+import Control.Monad ((>=>))
 import qualified Control.Exception as Exc
-import qualified Control.Monad as Mon
 import qualified Data.Serialize as Ser
 import qualified Network.HTTP.Client as HTTP
 import qualified Network.HTTP.Client.TLS as TLS
@@ -85,9 +85,6 @@ runRaw (Server server) requestStore (Recv recv) = do
   where
     -- TODO: bring inside sender?
     handleSendReqErr e = putStrLn $ "Error in making send request: " <> show e
-    -- TODO: bring these inside listener?
-    handleListenReqErr e = putStrLn $ "Error in making stream request: " <> show e
-    handleMidstreamErr e = putStrLn $ "Error receiving stream: " <> e
 
     -- The manager runs the sender and listener once. It will complain if
     -- either of them quits or throws an exception. An additional exception
@@ -124,26 +121,33 @@ runRaw (Server server) requestStore (Recv recv) = do
 
     -- The listener attempts to listen forever, handling its own error cases
     -- internally.
-    beListener env store errors
-        = print errors
-        >> exponentialBackoff maxBackoffSec errors
-        >> (action `Exc.catches` handlers)
-        >>= beListener env store
+    beListener env store errors = do
+        putStrLn $ "[DEBUG] Errors:" <> show errors <> ", BackoffSec:" <> show (exponentialBackoffSec maxBackoffSec errors)
+        exponentialBackoff maxBackoffSec errors
+        beListener env store =<< (action `Exc.catches` handlers)
       where
-        ret errors act a = act a >>= \() -> return errors
         action =
             Client.withClientM (listenV0 store) env
                 $ either
-                    (ret (errors + 1) $ complainClientError "listener,either")
-                    (ret 0 $ SourceT.foreach complainMidstream recv)
+                    (complainClientError "listener,either" >=> demerit)
+                    (SourceT.foreach complainMidstream recv >=> reset)
         handlers =
-            [ Exc.Handler . ret (errors + 1) $ complainHttpException "listener,catches"
-            , Exc.Handler . ret (errors + 1) $ complainClientError "listener,catches"
+            [ Exc.Handler $ complainClientError "listener,catches" >=> demerit
+            , Exc.Handler $ \exc -> case exc of
+                HTTP.HttpExceptionRequest _ HTTP.IncompleteHeaders ->
+                    putStrLn "Disconnect midstream. Reconnecting.." >> reset ()
+                HTTP.HttpExceptionRequest _ HTTP.NoResponseDataReceived ->
+                    putStrLn "Disconnect before stream. Reconnecting.." >> reset ()
+                _ ->
+                    complainHttpException "listener,catches" exc >> demerit ()
             ]
-        -- This handles an error sent intentionally by the stream producer.
-        -- Instead of treating it like an exception it's special cased here.
-        complainMidstream = putStrLn . ("[ERROR] Received from stream: " <>)
-
+        -- reset and demerit are shorthand for adjusting the error count which
+        -- is used to compute backoff.
+        demerit = const . return $ errors + 1
+        reset = const . return $ 1
+        -- This handles an error sent intentionally by the stream producer
+        -- instead of treating it like a generic exception.
+        complainMidstream err = putStrLn $ "[ERROR] Received from stream: " <> err
 
 -- | A callback-based interface for an application which sends and receives
 -- 'API.AppData' values.
@@ -248,13 +252,15 @@ withSer server store (Recv recvSer) actionSer = withRaw server store (Recv recvR
 -- | @exponentialBackoffSec cap n@ computes the number of seconds, up to @cap@,
 -- to backoff after @n@ failures.
 --
+-- FIXME: use the max in the power so that it takes the same number of failures to reach any max
+--
 -- >>> exponentialBackoffSec 30 <$> [0..5]
 -- [0,2,6,19,30,30]
 --
 -- >>> exponentialBackoffSec 600 <$> [0..10]
 -- [0,2,6,19,54,147,402,600,600,600,600]
 --
--- >>> exponentialBackoffSec -600 <$> [0..10]
+-- >>> exponentialBackoffSec (-600) <$> [0..10]
 -- [0,2,6,19,54,147,402,600,600,600,600]
 --
 -- >>> exponentialBackoffSec 600 <$> reverse [-10..0]
@@ -265,7 +271,8 @@ exponentialBackoffSec cap = min (abs cap) . subtract 1 . round . exp . abs
 exponentialBackoff :: Int -> Float -> IO ()
 exponentialBackoff cap = Conc.threadDelay . secToMicrosec . exponentialBackoffSec cap
   where
-    secToMicrosec = (* round 1e6)
+    round' = round :: Float -> Int
+    secToMicrosec = (* round' 1e6)
 
 -- | Log a message about an 'HTTP.HttpExceptionRequest' exception.
 --
