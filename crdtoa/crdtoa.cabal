@@ -17,6 +17,7 @@ library
                       , containers
                       , http-api-data
                       , http-client
+                      , http-client-tls
                       , servant
                       , servant-client
                       , servant-server

@@ -22,6 +22,7 @@ import qualified Control.Exception as Exc
 import qualified Control.Monad as Mon
 import qualified Data.Serialize as Ser
 import qualified Network.HTTP.Client as HTTP
+import qualified Network.HTTP.Client.TLS as TLS
 import qualified Servant.Client.Streaming as Client
 import qualified Servant.Types.SourceT as SourceT
 
@@ -62,7 +63,7 @@ runRaw
     -> IO (Client API.AppData)
 runRaw (Server server) requestStore (Recv recv) = do
     env <- Client.mkClientEnv
-        <$> HTTP.newManager HTTP.defaultManagerSettings
+        <$> HTTP.newManager TLS.tlsManagerSettings
         <*> Client.parseBaseUrl server
 
     let Just store = requestStore -- FIXME: call createV0
