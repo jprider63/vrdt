@@ -21,6 +21,7 @@ library
                       , servant
                       , servant-client
                       , servant-server
+                      , stm
                       , text
                       , time
                       , wai-extra

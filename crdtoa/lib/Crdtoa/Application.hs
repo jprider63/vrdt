@@ -1,24 +1,19 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE LambdaCase #-}
 module Crdtoa.Application
 (
 -- * Application abstraction
-  Server(..)
-, Recv(..)
-, Client(..)
-, withSer
-, withRaw
-, runRaw
--- * Reexports
+  module Crdtoa.Application
 , API.StoreId(..)
 , API.AppData(..)
 , Ser.Serialize
 ) where
 
+import Control.Monad (when, forever, (>=>))
 import Servant (Proxy(..), (:<|>)(..), NoContent(..))
 import qualified Control.Concurrent as Conc
 import qualified Control.Concurrent.Async as Async
-import Control.Monad ((>=>))
+import qualified Control.Concurrent.STM as STM
 import qualified Control.Exception as Exc
 import qualified Data.Serialize as Ser
 import qualified Network.HTTP.Client as HTTP
@@ -30,8 +25,16 @@ import qualified Crdtoa.API as API
 
 maxBackoffSec :: Int
 maxBackoffSec = 600 -- five minutes
+
+-- FIXME: when connecting to an empty store, no data is sent to the client and
+-- so the client reaches ResponseTimeout
+--
+-- FIXME: when the sender becomes active, the listener should become active too
+--      TODO: pull the wakeup tmvar out as an abstraction
+--
+-- TODO: log to stderr; look up logging libraries; monad-logger maybe?
+--
 -- TODO: generate a clientid with uuid:Data.UUID.V4.nextRandom
--- TODO: buffer sends when network is down, and return the size of the buffer
 
 _createV0 :: Client.ClientM API.StoreId
 sendV0 :: API.StoreId -> API.AppData -> Client.ClientM NoContent
@@ -68,33 +71,26 @@ runRaw (Server server) requestStore (Recv recv) = do
 
     let Just store = requestStore -- FIXME: call createV0
 
-    background <- Async.async $ beManager env store
-
-    -- TODO: insert into a channel, then attempt to drain the channel
-    -- TODO: move this to beSender
-    let send x = do
-            Client.runClientM (sendV0 store x) env
-            >>= either
-                handleSendReqErr
-                acceptNoContent
+    outbox <- STM.atomically $ STM.newTQueue
+    wakeup <- STM.atomically $ STM.newEmptyTMVar
+    background <- Async.async $ beManager env store outbox wakeup
     return Client
         { background = background
         , store = store
-        , send = send
+        , send = \a -> STM.atomically $ do
+            _ <- STM.tryPutTMVar wakeup ()
+            STM.writeTQueue outbox a
         }
   where
-    -- TODO: bring inside sender?
-    handleSendReqErr e = putStrLn $ "Error in making send request: " <> show e
-
     -- The manager runs the sender and listener once. It will complain if
     -- either of them quits or throws an exception. An additional exception
     -- will be raised when the application quits.
-    beManager env store
+    beManager env store outbox wakeup
         = action `Exc.catches` handlers
       where
         action = do
-            Async.withAsync (beSender) $ \sender -> do
-                Async.withAsync (beListener env store 0) $ \listener -> do
+            Async.withAsync (beSender env store outbox wakeup) $ \sender -> do
+                Async.withAsync (beListener env store wakeup 0) $ \listener -> do
                     (a, _) <- Async.waitAny [sender, listener]
                     case a of
                         _ | a == sender -> fail "sender thread exited early"
@@ -104,33 +100,48 @@ runRaw (Server server) requestStore (Recv recv) = do
             [ Exc.Handler ignoreAsyncCancelled -- Don't complain when exiting
             , Exc.Handler $ complainAndRethrowSomeException "manager"
             ]
-
-    beSender = do
-        Conc.threadDelay (round $ 60 * 1e6 :: Int)
-        return () -- FIXME
-        -- james says don't block
-        --
-        -- send :: a -> IO ()
-        --  1) enqueue
-        --  2) trigger background drain
-        --  3) return
-        --
-        -- onListen :: IO ()
-        --  1) trigger background drain
-        --  2) return
-
+    -- The sender blocks on outbox and sends things forever, until there's an
+    -- error. Then it blocks on wakeup until either the listener or a send
+    -- action wakes it up.
+    beSender env store outbox wakeup = forever $ do
+        putStrLn "[DEBUG] Sender waiting for item"
+        item <- STM.atomically $ do
+            _ <- STM.tryTakeTMVar wakeup
+            STM.readTQueue outbox
+        putStrLn "[DEBUG] Sender working"
+        sentItem <- (action item `Exc.catches` handlers)
+        when (not sentItem) $ do
+            putStrLn "[DEBUG] Sender going to sleep"
+            STM.atomically $ do
+                STM.unGetTQueue outbox item
+                STM.takeTMVar wakeup
+      where
+        action item =
+            Client.runClientM (sendV0 store item) env
+                >>= either
+                    (complainClientError "sender,either" >=> unsent)
+                    (acceptNoContent >=> sent)
+        handlers =
+            [ -- TODO: fill in handlers when we see exceptions reach the manager
+            ]
+        sent = const . return $ True
+        unsent = const . return $ False
     -- The listener attempts to listen forever, handling its own error cases
-    -- internally.
-    beListener env store errors = do
+    -- internally. It counts how many errors since it last heard back from the
+    -- server, and backs off.
+    beListener env store wakeupSender errors = do
         putStrLn $ "[DEBUG] Errors:" <> show errors <> ", BackoffSec:" <> show (exponentialBackoffSec maxBackoffSec errors)
         exponentialBackoff maxBackoffSec errors
-        beListener env store =<< (action `Exc.catches` handlers)
+        (action `Exc.catches` handlers)
+            >>= beListener env store wakeupSender
       where
         action =
             Client.withClientM (listenV0 store) env
-                $ either
-                    (complainClientError "listener,either" >=> demerit)
-                    (SourceT.foreach complainMidstream recv >=> reset)
+            . either (complainClientError "listener,either" >=> demerit)
+            $ \stream -> do
+                _ <- STM.atomically $ STM.tryPutTMVar wakeupSender ()
+                SourceT.foreach complainMidstream recv stream
+                reset ()
         handlers =
             [ Exc.Handler $ complainClientError "listener,catches" >=> demerit
             , Exc.Handler $ \case
@@ -195,12 +206,6 @@ withSer server store (Recv recvSer) actionSer = withRaw server store (Recv recvR
 -- TODO: make a pipes or conduit based interface? what about other
 -- serialization libraries?
 
--- FIXME: if the server is killed while clients are listening,
--- there's an "incomplete headers" IO exception from the listen
--- thread .. this is almost equivalent to the tcp disconnection case
--- that we're building to support explicitly.. needs to be handled
--- properly
-
 -- FIXME: on the first connection to a new store, the listen times out
 -- because the server never sends anything back.. debugging with curl, we
 -- have:
@@ -222,32 +227,6 @@ withSer server store (Recv recvSer) actionSer = withRaw server store (Recv recvR
 -- == Info: Connection #0 to host localhost left intact
 -- curl: (52) Empty reply from server
 -- ? 52
-
--- FIXME: on launch with a server that doesn't exist, an IO acception that is
--- thrown.. that should be caught and conveyed to the application code through
--- the tbd application library abstraction
---
--- $ cabal v2-run crdtoa app 8090
--- /usr/bin/cabal ['/usr/bin/cabal', 'v2-run', 'crdtoa', 'app', '8090']
--- Up to date
--- Application demo
--- ThreadId 9
--- Listening on store StoreId "demo-store-id"
--- crdtoa: HttpExceptionRequest Request {
---   host                 = "localhost"
---   port                 = 8090
---   secure               = False
---   requestHeaders       = [("Accept","application/octet-stream")]
---   path                 = "/v0/listen/demo-store-id"
---   queryString          = ""
---   method               = "POST"
---   proxy                = Nothing
---   rawBody              = False
---   redirectCount        = 10
---   responseTimeout      = ResponseTimeoutDefault
---   requestVersion       = HTTP/1.1
--- }
---  (ConnectionFailure Network.Socket.connect: <socket: 23>: does not exist (Connection refused))
 
 -- | @exponentialBackoffSec cap n@ computes the number of seconds, up to @cap@,
 -- to backoff after @n@ failures.
