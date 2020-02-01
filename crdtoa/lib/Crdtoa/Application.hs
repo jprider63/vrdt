@@ -133,12 +133,12 @@ runRaw (Server server) requestStore (Recv recv) = do
                     (SourceT.foreach complainMidstream recv >=> reset)
         handlers =
             [ Exc.Handler $ complainClientError "listener,catches" >=> demerit
-            , Exc.Handler $ \exc -> case exc of
+            , Exc.Handler $ \case
                 HTTP.HttpExceptionRequest _ HTTP.IncompleteHeaders ->
                     putStrLn "Disconnect midstream. Reconnecting.." >> reset ()
                 HTTP.HttpExceptionRequest _ HTTP.NoResponseDataReceived ->
                     putStrLn "Disconnect before stream. Reconnecting.." >> reset ()
-                _ ->
+                exc ->
                     complainHttpException "listener,catches" exc >> demerit ()
             ]
         -- reset and demerit are shorthand for adjusting the error count which
