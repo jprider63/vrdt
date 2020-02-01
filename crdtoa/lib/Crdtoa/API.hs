@@ -41,7 +41,7 @@ type ListenV2 = "listen" :> Capture "store-id" StoreId :> ReqBody '[JSON] (Map C
 type StreamV0 = "stream" :> Capture "store-id" StoreId
     :> ReqBody '[JSON] ClientId
     :> StreamBody NoFraming OctetStream (SourceIO AppData)
-    :> StreamPost NoFraming OctetStream (SourceIO AppData)
+    :> StreamPost NoFraming OctetStream (SourceIO AppData) -- TODO: include clientid in return stream?
 
 newtype AppName = AppName Text
 newtype StoreId = StoreId Text deriving (Eq, Ord, Show, Generic)
