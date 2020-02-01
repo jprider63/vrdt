@@ -183,7 +183,7 @@ withRaw server store recv = Exc.bracket acquire release
     acquire = runRaw server store recv
     release Client{background} = do
         Async.cancel background
-        Async.wait background -- TODO: `Exc.catch` ignoreAsyncCancelled
+        Async.wait background `Exc.catch` ignoreAsyncCancelled -- Don't complain when exiting
 
 -- | A callback-based interface for an application which sends and receives
 -- 'Ser.Serialize'able values to the store via the server and follows the
