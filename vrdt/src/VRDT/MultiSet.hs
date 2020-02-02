@@ -33,7 +33,7 @@ import Prelude hiding (null, Maybe(..))
 {-@
 data MultiSet a = MultiSet {
     posMultiSet ::  Map a PosInteger
-  , negMultiSet :: {v:Map a NegInteger | Map.null (Map.intersection posMultiSet negMultiSet}
+  , negMultiSet :: {v:Map a NegInteger | Map.disjoint posMultiSet v }
   }
 @-}
 data MultiSet a = MultiSet {
@@ -102,6 +102,11 @@ multiSetOpOrder (MultiSetOpRemove _ _) = 1
 -- 
 --     lawCommutativity MultiSet{..} op1 op2 = ()
 
+{-@ reflect enabled @-}
+enabled :: MultiSet k -> MultiSetOp k -> Bool 
+enabled _ _ = True 
+
+
 {-@ reflect apply @-}
 {-@ apply :: Ord a => MultiSet a -> op : MultiSetOp a -> MultiSet a / [multiSetOpOrder op] @-}
 apply :: Ord a => MultiSet a -> MultiSetOp a -> MultiSet a
@@ -136,6 +141,12 @@ apply ms (MultiSetOpRemove e c) = apply ms (MultiSetOpAdd e (-c))
 {-@ lawCommutativity :: s : MultiSet a -> op1 : MultiSetOp a -> op2 : MultiSetOp a -> {apply op2 (apply op1 x) == apply op2 (apply op1 x)} @-}
 lawCommutativity :: MultiSet a -> MultiSetOp a -> MultiSetOp a -> ()
 lawCommutativity MultiSet{..} op1 op2 = ()
+
+
+{-@ ple lawNonCausal @-}
+{-@ lawNonCausal :: x : MultiSet t -> {op1 : MultiSetOp t | enabled x op1} -> {op2 : MultiSetOp t | enabled x op2} -> {enabled (apply x op1) op2 <=> enabled (apply x op2) op1} @-}
+lawNonCausal :: MultiSet t -> MultiSetOp t -> MultiSetOp t -> ()
+lawNonCausal _ _ _ = () 
 
 
 null :: MultiSet a -> Bool
