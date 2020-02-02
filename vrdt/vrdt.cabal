@@ -46,9 +46,11 @@ library
     , liquidhaskell
     , time
   default-language: Haskell2010
-  extensions: TypeFamilies
-              TypeFamilyDependencies
+  extensions: 
+              BangPatterns
               RecordWildCards
+              TypeFamilies
+              TypeFamilyDependencies
 
 test-suite vrdt-test
   type: exitcode-stdio-1.0

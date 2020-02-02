@@ -12,6 +12,7 @@ data ClientId = ClientId {
 data ClientId = ClientId {
     rawClientId :: ByteString -- 128 bits
   }
+    deriving (Eq, Ord)
 
 -- | Randomly generate a `ClientId`.
 generateClientId :: m ClientId
