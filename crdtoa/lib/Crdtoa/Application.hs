@@ -39,7 +39,7 @@ maxBackoffSec = 600 -- five minutes
 _createV0 :: Client.ClientM API.StoreId
 sendV0 :: API.StoreId -> API.AppData -> Client.ClientM NoContent
 listenV0 :: API.StoreId -> Client.ClientM (SourceT.SourceT IO API.AppData)
-streamV0 :: API.StoreId -> API.ClientId -> SourceT.SourceT IO API.AppData -> Client.ClientM (SourceT.SourceT IO API.AppData)
+streamV0 :: API.StoreId -> API.ClientId -> SourceT.SourceT IO API.AppData -> Client.ClientM (SourceT.SourceT IO API.ServerMessage)
 _createV0 :<|> sendV0 :<|> listenV0 :<|> streamV0 = Client.client (Proxy :: Proxy API.API)
 
 -- | The base URL of a server to connect with.

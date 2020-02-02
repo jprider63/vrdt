@@ -44,13 +44,13 @@ createV0 :: MutState -> Server.Handler API.StoreId
 createV0 = undefined
     -- TODO: look into random words? uuid? for this.. words are nice because they're share-able
 
-streamV0 :: MutState -> API.StoreId -> API.ClientId -> SourceT.SourceT IO API.AppData -> Server.Handler (SourceT.SourceT IO API.AppData)
+streamV0 :: MutState -> API.StoreId -> API.ClientId -> SourceT.SourceT IO API.AppData -> Server.Handler (SourceT.SourceT IO API.ServerMessage)
 streamV0 = undefined
 
 sendV0 :: MutState -> API.StoreId -> API.AppData -> Server.Handler Servant.NoContent
 sendV0 mut store update = do
     -- FIXME: get a real client id (maybe use a hash of ip?)
-    let client = API.ClientId $ fromString "foo"
+    let client = API.ClientId undefined -- was $ fromString "foo"
     -- XXX: consider doing `evaluate . force`
     liftIO . MVar.modifyMVar_ mut $ \state -> do
         -- TODO: extract pure domain functions from this
