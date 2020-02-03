@@ -24,6 +24,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
 import Prelude hiding (null, Maybe(..))
+import qualified Data.Set as S
 
 -- import VRDT.Class
 
@@ -35,7 +36,7 @@ data MultiSet a = MultiSet {
     posMultiSet ::  Map a PosInteger
   , negMultiSet :: {v:Map a NegInteger | Map.disjoint posMultiSet v }
   }
-@-}
+@-} 
 data MultiSet a = MultiSet {
     posMultiSet :: Map a Integer -- ^ Map for elements currently in the set.
   , negMultiSet :: Map a Integer -- ^ Map for elements not currently in the set.
@@ -106,11 +107,10 @@ multiSetOpOrder (MultiSetOpRemove _ _) = 1
 enabled :: MultiSet k -> MultiSetOp k -> Bool 
 enabled _ _ = True 
 
-
 {-@ reflect apply @-}
 {-@ apply :: Ord a => MultiSet a -> op : MultiSetOp a -> MultiSet a / [multiSetOpOrder op] @-}
 apply :: Ord a => MultiSet a -> MultiSetOp a -> MultiSet a
-apply MultiSet{..}  (MultiSetOpAdd e c)
+apply MultiSet{..} (MultiSetOpAdd e c)
   | Just c' <- Map.lookup e posMultiSet = 
       let c'' = c' + c in
       if c'' > 0 then
@@ -147,7 +147,6 @@ lawCommutativity MultiSet{..} op1 op2 = ()
 {-@ lawNonCausal :: x : MultiSet t -> {op1 : MultiSetOp t | enabled x op1} -> {op2 : MultiSetOp t | enabled x op2} -> {enabled (apply x op1) op2 <=> enabled (apply x op2) op1} @-}
 lawNonCausal :: MultiSet t -> MultiSetOp t -> MultiSetOp t -> ()
 lawNonCausal _ _ _ = () 
-
 
 null :: MultiSet a -> Bool
 null = Map.null . posMultiSet

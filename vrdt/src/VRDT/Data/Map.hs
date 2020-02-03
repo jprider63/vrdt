@@ -10,6 +10,7 @@ data Map k v = Tip | Map k v (Map k v)
 
 {-@ reflect empty @-}
 empty :: Map k v 
+{-@ empty :: {m:Map k v | S.null (keys m) } @-}
 empty = Tip 
 
 
@@ -35,10 +36,12 @@ size Tip = 0
 size (Map _ _ m) = 1 + size m  
 
 {-@ reflect insert @-}
-insert :: k -> v -> Map k v -> Map k v 
+{-@ insert :: k:k -> v -> m:Map k v -> {v:Map k v | keys v == S.union (S.singleton k) (keys m) } @-}
+insert :: k -> v -> Map k v -> Map k v
 insert k v m = Map k v m  
 
 {-@ reflect delete @-}
+{-@ delete :: k:k -> m:Map k v -> {v:Map k v | if (S.member k (keys m)) then (keys v == S.difference (keys m) (S.singleton k)) else (keys m == keys v) } @-}
 delete :: Ord k => k -> Map k v -> Map k v 
 delete _ Tip  = Tip 
 delete k' (Map k v m)
@@ -47,6 +50,7 @@ delete k' (Map k v m)
 
 {-@ reflect lookup @-}
 lookup :: Eq k => k -> Map k v -> Maybe v 
+{-@ lookup :: Eq k => k:k -> m:Map k v -> {v:Maybe {vv:v | S.member k (keys m)} | isJust v <=> S.member k (keys m)} @-}
 lookup _ Tip  = Nothing 
 lookup k' (Map k v m)
   | k == k'   = Just v 
