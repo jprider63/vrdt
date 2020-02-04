@@ -69,7 +69,7 @@ instance Servant.FromHttpApiData StoreId where parseUrlPiece = pure . StoreId
 -- RequestResendUpdates, but its Update constructor would likely not have
 -- ClientId unless we trust a client to resend anothers' updates
 data ServerMessage
-    = Update AppData ClientId -- update and sender
+    = Update ClientId AppData -- sender and update
     | RequestResendUpdates -- TODO bloom-filter of entries the server already has
     deriving
     (Show, Eq, Ord, Generic)

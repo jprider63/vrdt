@@ -36,6 +36,7 @@ library
                       , Crdtoa.API
                       , Crdtoa.Application
                       , Crdtoa.Server
+                      , Crdtoa.Server.Store
                       , Crdtoa.Types
                       , DemoApp
   other-modules:
