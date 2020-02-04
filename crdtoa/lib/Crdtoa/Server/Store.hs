@@ -101,7 +101,9 @@ listen client Store{chan} = do
         | client == sender = Nothing
         | otherwise = Just pair
 
--- | Emit elements from a channel to a stream.
+-- * Integrations
+
+-- | Emit elements from an 'STM.TChan' channel to a 'SourecT.StepT' stream.
 --
 -- FIXME: what are the stopping semantics of TChan that we could use here? See
 -- 33f4e9a for the last version of this that caught exceptions to emit Stop.
@@ -109,6 +111,8 @@ tchanStepT :: STM.TChan a -> SourceT.StepT IO a
 tchanStepT c = SourceT.Effect $ do
     v <- STM.atomically $ STM.readTChan c
     return $ SourceT.Yield v (tchanStepT c)
+
+-- * Extensions to STM
 
 -- | Take, apply, and put. The user function may modify the contents and/or
 -- return a digest value. This will block when empty.

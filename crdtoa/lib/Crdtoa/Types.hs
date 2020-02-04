@@ -17,11 +17,11 @@ import qualified Data.Binary as Binary hiding (Binary)
 import qualified Data.Serialize as Serialize hiding (Serialize)
 import qualified Servant as Servant
 
--- | TODO: extensions to reduce overcommunication:
+-- TODO: extensions to reduce overcommunication:
 --
 --  1. identify each update with a client-generated uuid
 --
---      * ??? consider placing the new UpdateId directly in AppData
+--      * XXX: consider placing the new UpdateId directly in AppData
 --
 --  2. persist updates in both client and server
 --  3. send a bloom-filter of persisted updates' uuids for those..
@@ -36,9 +36,9 @@ import qualified Servant as Servant
 --      
 --  5. change client to send what it has when requested, excluding those in the server's bloom-filter
 --
---      * ??? should the client be trusted to resend updates which came from a different client?
---      * ??? (correspondingly) should the server's bloom-filter only include updates from the client it's requested resends from?
---      * ??? how can we use hashes, signatures, or encryption to validate resends? do we care?
+--      * XXX: should the client be trusted to resend updates which came from a different client?
+--      * XXX: (correspondingly) should the server's bloom-filter only include updates from the client it's requested resends from?
+--      * XXX: how can we use hashes, signatures, or encryption to validate resends? do we care?
 
 newtype AppData
     = AppData ByteString
@@ -65,7 +65,7 @@ instance Servant.FromHttpApiData StoreId where parseUrlPiece = pure . StoreId
 
 -- | A message sent by the server to a client.
 --
--- ??? what would a ClientMessage look like? It would have a
+-- XXX: what would a ClientMessage look like? It would have a
 -- RequestResendUpdates, but its Update constructor would likely not have
 -- ClientId unless we trust a client to resend anothers' updates
 data ServerMessage

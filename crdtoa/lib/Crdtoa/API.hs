@@ -13,8 +13,6 @@ import Servant -- XXX all names unqualified
 -- XXX for generating URIs elsewhere, might want to not distribute over the v0,v1 prefixes
 type API
     =    "v0" :> (CreateV0 :<|> SendV0 :<|> ListenV0 :<|> StreamV0)
---  :<|> "v1" :> (CreateV1 :<|> SendV1 :<|> ListenV1)
---  :<|> "v2" :> (CreateV2 :<|> SendV2 :<|> ListenV2)
 
 type CreateV0 = "create"
     :> Post '[JSON] StoreId
