@@ -36,9 +36,12 @@ size Tip = 0
 size (Map _ _ m) = 1 + size m  
 
 {-@ reflect insert @-}
-{-@ insert :: k:k -> v -> m:Map k v -> {v:Map k v | keys v == S.union (S.singleton k) (keys m) } @-}
-insert :: k -> v -> Map k v -> Map k v
-insert k v m = Map k v m  
+{-@ insert :: Eq k => k:k -> v -> m:Map k v -> {v:Map k v | keys v == S.union (S.singleton k) (keys m) } @-}
+insert :: Eq k => k -> v -> Map k v -> Map k v
+insert k v Tip = Map k v Tip
+insert k' v' (Map k v m)
+  | k == k'   = Map k v' m
+  | otherwise = Map k v (insert k' v' m)
 
 {-@ reflect delete @-}
 {-@ delete :: k:k -> m:Map k v -> {v:Map k v | if (S.member k (keys m)) then (keys v == S.difference (keys m) (S.singleton k)) else (keys m == keys v) } @-}
