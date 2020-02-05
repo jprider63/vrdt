@@ -33,6 +33,7 @@ library
       VRDT.LWW
       VRDT.Max
       VRDT.MultiSet
+      VRDT.MultiSet.Proof
       VRDT.Types
       VRDT.TwoPMap
   other-modules:
