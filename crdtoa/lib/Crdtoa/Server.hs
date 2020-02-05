@@ -4,6 +4,7 @@ module Crdtoa.Server where
 import Control.Monad.IO.Class (liftIO)
 import Servant (Proxy(..), (:<|>)(..))
 import Text.Printf (printf)
+import qualified Control.Concurrent as Conc
 import qualified Control.Concurrent.Async as Async
 import qualified Control.Concurrent.STM as STM
 import qualified Network.Wai.Handler.Warp as Warp
@@ -33,14 +34,19 @@ createV0 = undefined
 streamV0 :: Store.MutState -> API.StoreId -> API.ClientId -> SourceT.SourceT IO API.AppData -> Server.Handler (SourceT.SourceT IO API.ServerMessage)
 streamV0 mut store client incoming
     = liftIO . Async.withAsync (receiveBroadcastStream mut store client incoming) $ \bcast -> do
+        _ <- Async.async $ debug bcast
         resp <- generateResponseStream mut store client
-        return $ SourceT.mapStepT (manage bcast) resp
+        return $ SourceT.mapStepT (Store.interlaceStepT $ manage bcast) resp
   where
+    debug async = do
+        Conc.threadDelay $ round (1e6 :: Float)
+        r <- Async.poll async
+        putStrLn $ "[DEBUG] " <> show r
+        case r of
+            Nothing -> print "[DEBUG] done"
+            Just _ -> debug async
     -- On each step, poll the broadcast thread to see if it is finished.
-    manage async step = SourceT.Effect $ do
-        -- FIXME: make this execute on each step?
-        print =<< Async.poll async
-        return step
+    manage async _ = putStrLn . ("[INFO] " <>) . show =<< Async.poll async
 
 -- | Generate a response stream with a backlog followed by live updates for the
 -- client.

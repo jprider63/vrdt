@@ -112,6 +112,41 @@ tchanStepT c = SourceT.Effect $ do
     v <- STM.atomically $ STM.readTChan c
     return $ SourceT.Yield v (tchanStepT c)
 
+-- | Interlace an effect into each 'SourceT.StepT' in a stream.
+--
+-- >>> import Control.Monad.Except (runExceptT)
+-- >>> import Servant.Types.SourceT (runSourceT, mapStepT, source, fromStepT, StepT(..))
+-- >>> run = runExceptT . runSourceT
+-- >>> run . mapStepT (interlaceStepT print) . fromStepT $ Stop
+-- Right []
+-- >>> run . mapStepT (interlaceStepT print) . fromStepT $ Error "oops"
+-- Left "oops"
+-- >>> run . mapStepT (interlaceStepT print) . fromStepT $ Skip Stop
+-- Nothing
+-- Right []
+-- >>> run . mapStepT (interlaceStepT print) . fromStepT $ Effect (print 123 >> return Stop)
+-- 123
+-- Nothing
+-- Right []
+-- >>> run . mapStepT (interlaceStepT print) . source $ [1..4]
+-- Just 1
+-- Just 2
+-- Just 3
+-- Just 4
+-- Right [1,2,3,4]
+interlaceStepT :: Monad m => (Maybe a -> m ()) -> SourceT.StepT m a -> SourceT.StepT m a
+interlaceStepT action step = case step of
+    SourceT.Stop -> step
+    SourceT.Error _ -> step
+    SourceT.Skip next -> SourceT.Skip $ rec Nothing next
+    SourceT.Yield item next -> SourceT.Yield item $ rec (Just item) next
+    SourceT.Effect genNext -> SourceT.Effect $ genNext >>= return . rec Nothing
+  where
+    -- run our effect and inject interlace into the continuation
+    rec item next = SourceT.Effect $ do
+        action item
+        return $ interlaceStepT action next
+
 -- * Extensions to STM
 
 -- | Take, apply, and put. The user function may modify the contents and/or
