@@ -1,6 +1,7 @@
 {-# LANGUAGE TupleSections #-}
 module Kwik.Server where
 
+import Data.String (fromString)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8 as BSC
 import Servant (Proxy(..), (:<|>)(..), NoContent(..))
@@ -41,7 +42,7 @@ emptyStore :: IO Store
 emptyStore = return . (mempty,) =<< Chan.newChan
 
 endpoints :: MutState -> Server.Server API.API
-endpoints state = createV0 state :<|> sendV0 state :<|> listenV0 state
+endpoints state = createV0 state :<|> sendV0 state :<|> listenV0 state :<|> streamV0 state
 
 -- TODO: when reusing this for v1, make sure to namespace to a different set of
 -- stores
@@ -49,10 +50,15 @@ createV0 :: MutState -> Server.Handler API.StoreId
 createV0 = undefined
     -- TODO: look into random words? uuid? for this.. words are nice because they're share-able
 
+streamV0 :: MutState -> API.StoreId -> API.ClientId -> SourceT.SourceT IO API.AppData -> Server.Handler (SourceT.SourceT IO API.AppData)
+streamV0 = undefined
+
 sendV0 :: MutState -> API.StoreId -> API.AppData -> Server.Handler Servant.NoContent
 sendV0 mut store update = do
-    -- FIXME: get a real client id
-    let client = API.ClientId $ BSC.pack "foo"
+    -- -- FIXME: get a real client id
+    -- let client = API.ClientId $ BSC.pack "foo"
+    -- FIXME: get a real client id (maybe use a hash of ip?)
+    let client = API.ClientId $ fromString "foo"
     -- XXX: consider doing `evaluate . force`
     liftIO . MVar.modifyMVar_ mut $ \state -> do
         -- TODO: extract pure domain functions from this
@@ -60,7 +66,7 @@ sendV0 mut store update = do
         (logs_, chan) <- maybe emptyStore return $ Map.lookup store state
         -- XXX: logs are in reverse order .. do we care?
         -- "append or create-append log"
-        let logs = Map.alter (pure . maybe mempty (update:)) client logs_
+        let logs = Map.alter (pure . maybe [update] (update:)) client logs_
         -- "send on the channel for current listeners"
         Chan.writeChan chan update
         -- "put the modified store back"
@@ -93,6 +99,7 @@ listenV0 mut store = do
             ( Map.insert store (logs, chan) state
             , (concat $ Map.elems logs, bChan)
             )
+    -- TODO: filter from clientid
     return
         $ SourceT.source updates
         <> SourceT.fromStepT (chanStepT chan)

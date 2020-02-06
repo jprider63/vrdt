@@ -11,13 +11,17 @@ data-files:
 library
   build-depends:        base
                       , aeson
+                      , async
                       , bytestring
+                      , cereal
                       , containers
                       , http-api-data
                       , http-client
+                      , http-client-tls
                       , servant
                       , servant-client
                       , servant-server
+                      , stm
                       , text
                       , time
                       , wai-extra
@@ -30,6 +34,7 @@ library
                       , Crdtoa.API
                       , Crdtoa.Application
                       , Crdtoa.Server
+                      , DemoApp
   other-modules:
 
 test-suite crdtoa_test
