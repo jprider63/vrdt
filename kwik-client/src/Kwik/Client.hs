@@ -9,7 +9,6 @@ module Kwik.Client
 , API.AppData(..)
 , Ser.Serialize
 ) where
->>>>>>> crdtoa:crdtoa/lib/Crdtoa/Application.hs
 
 import Control.Monad (when, forever, (>=>))
 import Servant (Proxy(..), (:<|>)(..), NoContent(..))
@@ -25,6 +24,7 @@ import qualified Servant.Types.SourceT as SourceT
 
 import           Kwik.API (API)
 import qualified Kwik.API.V0 as API -- JP: For now. Update this. XXX
+import           Kwik.Types (ClientId)
 
 maxBackoffSec :: Int
 maxBackoffSec = 600 -- five minutes
@@ -75,7 +75,7 @@ listenV0 :: API.StoreId -> Client.ClientM (SourceT.SourceT IO API.AppData)
 -- -- that we're building to support explicitly.. needs to be handled
 -- -- properly
 -- =======
-streamV0 :: API.StoreId -> API.ClientId -> SourceT.SourceT IO API.AppData -> Client.ClientM (SourceT.SourceT IO API.AppData)
+streamV0 :: API.StoreId -> ClientId -> SourceT.SourceT IO API.AppData -> Client.ClientM (SourceT.SourceT IO API.AppData)
 _createV0 :<|> sendV0 :<|> listenV0 :<|> streamV0 = Client.client (Proxy :: Proxy API.API)
 
 -- | The base URL of a server to connect with.

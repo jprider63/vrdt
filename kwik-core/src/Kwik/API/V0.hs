@@ -63,11 +63,6 @@ instance ToHttpApiData StoreId where toUrlPiece (StoreId t) = t
 instance Servant.MimeRender Servant.OctetStream AppData where mimeRender _ (AppData bs) = bs
 instance Servant.MimeUnrender Servant.OctetStream AppData where mimeUnrender _ = pure . AppData
 
-newtype ClientId = ClientId Text deriving (Eq, Ord, Show, Generic) -- XXX ip addr?
-
-instance Aeson.ToJSON ClientId
-instance Aeson.FromJSON ClientId
-
 newtype LogIndex = LogIndex Int
 newtype LogOffset = LogOffset Int
 
