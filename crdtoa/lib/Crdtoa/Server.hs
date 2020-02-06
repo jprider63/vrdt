@@ -12,6 +12,8 @@ import qualified Network.Wai.Middleware.RequestLogger as Logger
 import qualified Servant.Server as Server
 import qualified Servant.Types.SourceT as SourceT
 
+import qualified Control.Concurrent.STM.Extras as STME
+import qualified Servant.Extras as ServantE
 import qualified Crdtoa.API as API
 import qualified Crdtoa.Server.Store as Store
 
@@ -36,7 +38,7 @@ streamV0 mut store client incoming
     = liftIO . Async.withAsync (receiveBroadcastStream mut store client incoming) $ \bcast -> do
         _ <- Async.async $ debug bcast
         resp <- generateResponseStream mut store client
-        return $ SourceT.mapStepT (Store.interlaceStepT $ manage bcast) resp
+        return $ SourceT.mapStepT (ServantE.interlaceStepT $ manage bcast) resp
   where
     debug async = do
         Conc.threadDelay $ round (1e6 :: Float)
@@ -53,7 +55,7 @@ streamV0 mut store client incoming
 generateResponseStream :: Store.MutState -> API.StoreId -> API.ClientId -> IO (SourceT.SourceT IO API.ServerMessage)
 generateResponseStream mut store client
     = STM.atomically
-        . Store.modifyTMVar mut
+        . STME.modifyTMVar mut
         $ Store.modifyStore (with responseStream) store
   where
     responseStream storeVal = do
@@ -67,9 +69,9 @@ generateResponseStream mut store client
 receiveBroadcastStream :: Store.MutState -> API.StoreId -> API.ClientId -> SourceT.SourceT IO API.AppData -> IO ()
 receiveBroadcastStream mut store client incoming
     = SourceT.foreach
-        (\err -> putStrLn $ "[ERROR] Error in client stream: " <> err)
+        (\err -> putStrLn $ "[ERROR] in client stream: " <> err)
         (\update -> STM.atomically
-            . Store.modifyTMVar_ mut
+            . STME.modifyTMVar_ mut
             $ Store.mapStore (broadcast update) store)
         incoming
   where

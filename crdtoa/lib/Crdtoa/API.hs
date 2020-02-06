@@ -29,5 +29,8 @@ type ListenV0 = "listen"
 type StreamV0 = "stream"
     :> Capture "store-id" StoreId
     :> ReqBody '[JSON] ClientId
-    :> StreamBody NoFraming OctetStream (SourceIO AppData)
-    :> StreamPost NoFraming OctetStream (SourceIO ServerMessage)
+    :> StreamBody NoFraming OctetStream UpStream
+    :> StreamPost NoFraming OctetStream DownStream
+
+type UpStream = SourceIO AppData
+type DownStream = SourceIO ServerMessage

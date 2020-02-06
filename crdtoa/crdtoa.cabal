@@ -26,6 +26,7 @@ library
                       , stm
                       , text
                       , time
+                      , uuid
                       , uuid-types
                       , wai-extra
                       , warp
@@ -33,6 +34,7 @@ library
   hs-source-dirs:       lib
 
   exposed-modules:      Paths_crdtoa
+                      , Control.Concurrent.STM.Extras
                       , Crdtoa
                       , Crdtoa.API
                       , Crdtoa.Application
@@ -40,6 +42,7 @@ library
                       , Crdtoa.Server.Store
                       , Crdtoa.Types
                       , DemoApp
+                      , Servant.Extras
   other-modules:
 
 test-suite crdtoa_test

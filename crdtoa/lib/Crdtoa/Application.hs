@@ -1,5 +1,6 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Crdtoa.Application
 (
 -- * Application abstraction
@@ -12,6 +13,7 @@ module Crdtoa.Application
 import Control.Monad (when, forever, (>=>))
 import Servant (Proxy(..), (:<|>)(..), NoContent(..))
 import qualified Control.Concurrent as Conc
+import qualified Servant as Servant hiding (Proxy, (:<|>))
 import qualified Control.Concurrent.Async as Async
 import qualified Control.Concurrent.STM as STM
 import qualified Control.Exception as Exc
@@ -20,7 +22,10 @@ import qualified Network.HTTP.Client as HTTP
 import qualified Network.HTTP.Client.TLS as TLS
 import qualified Servant.Client.Streaming as Client
 import qualified Servant.Types.SourceT as SourceT
+import qualified Data.UUID.V4 as UUIDv4
 
+import Servant.Extras ()
+import qualified Control.Concurrent.STM.Extras as STME
 import qualified Crdtoa.API as API
 
 maxBackoffSec :: Int
@@ -36,11 +41,11 @@ maxBackoffSec = 600 -- five minutes
 --
 -- TODO: generate a clientid with uuid:Data.UUID.V4.nextRandom
 
-_createV0 :: Client.ClientM API.StoreId
+createV0 :: Client.ClientM API.StoreId
 sendV0 :: API.StoreId -> API.AppData -> Client.ClientM NoContent
 listenV0 :: API.StoreId -> Client.ClientM (SourceT.SourceT IO API.AppData)
-streamV0 :: API.StoreId -> API.ClientId -> SourceT.SourceT IO API.AppData -> Client.ClientM (SourceT.SourceT IO API.ServerMessage)
-_createV0 :<|> sendV0 :<|> listenV0 :<|> streamV0 = Client.client (Proxy :: Proxy API.API)
+streamV0 :: API.StoreId -> API.ClientId -> API.UpStream -> Client.ClientM API.DownStream
+createV0 :<|> sendV0 :<|> listenV0 :<|> streamV0 = Client.client (Proxy :: Proxy API.API)
 
 -- | The base URL of a server to connect with.
 newtype Server = Server String
@@ -53,6 +58,96 @@ data Client a = Client
     , store :: API.StoreId
     , send :: a -> IO ()
     }
+
+runRaw'
+    :: Server
+    -> Maybe API.StoreId
+    -> Maybe API.ClientId
+    -> Recv API.AppData
+    -> IO (Client API.AppData)
+runRaw' (Server server) storeSpec clientSpec recv = do
+    env <- Client.mkClientEnv
+        <$> HTTP.newManager TLS.tlsManagerSettings
+        <*> Client.parseBaseUrl server
+    store <- maybe (createStore env) return storeSpec
+    client <- maybe createClient return clientSpec
+    outbox <- STM.newTQueueIO
+    pillow <- STME.newWakeupIO
+    background <- Async.async $ beManager env store client outbox pillow
+    return Client
+        { background = background
+        , store = store
+        , send = \a -> STM.atomically $ do
+            STME.wakeup pillow
+            STM.writeTQueue outbox a
+        }
+  where
+    createClient
+        = API.ClientId <$> UUIDv4.nextRandom
+    createStore env
+        = Client.withClientM createV0 env
+        $ either (error "createStore,either") return
+    -- The manager runs the sender and listener once. It will complain if
+    -- either of them quits or throws an exception. An additional exception
+    -- will be raised when the application quits.
+    beManager env store client outbox pillow
+        = connectLoop (justConnect env store client (send outbox) (receive recv)) pillow 0
+        `Exc.catches`
+        [ Exc.Handler ignoreAsyncCancelled -- Don't complain when exiting
+        , Exc.Handler $ complainAndRethrowSomeException "beManager (stream)"
+        ]
+    send outbox = Servant.toSourceIO outbox
+
+receive :: Recv API.AppData -> API.DownStream -> IO ()
+receive (Recv recv) = 
+    (SourceT.foreach complainMidstream recv . SourceT.mapMaybe justUpdates)
+  where
+    -- Filter to only Update messages until we can cache locally and resend.
+    justUpdates = \case
+        API.Update _ update -> Just update
+        API.RequestResendUpdates -> Nothing
+    -- This handles an error sent intentionally by the stream producer. Since
+    -- we don't expect any errors from the stream producer currently, we just
+    -- report it.
+    complainMidstream err = putStrLn $ "[ERROR] Received from stream: " <> err
+
+-- | Describe whether a connection attempt showed the existence of a server at
+-- the other end which responds positively to the request we sent.
+data ConnectionAttempt = Ok | Demerit
+
+justConnect :: Client.ClientEnv -> API.StoreId -> API.ClientId -> API.UpStream -> (API.DownStream -> IO ()) -> IO ConnectionAttempt
+justConnect env store client source sink = action `Exc.catches` handlers
+  where
+    constM = const . return
+    action
+        = Client.withClientM (streamV0 store client source) env
+        $ either
+            (complainClientError "connect,either" >=> constM Demerit)
+            (sink >=> constM Ok)
+    handlers=
+        [ Exc.Handler $ complainClientError "listener,catches" >=> constM Demerit
+        , Exc.Handler $ \case
+            HTTP.HttpExceptionRequest _ HTTP.IncompleteHeaders ->
+                putStrLn "Disconnect midstream. Reconnecting.." >> return Ok
+            HTTP.HttpExceptionRequest _ HTTP.NoResponseDataReceived ->
+                putStrLn "Disconnect before stream. Reconnecting.." >> return Ok
+            exc ->
+                complainHttpException "listener,catches" exc >> return Demerit
+        ]
+
+connectLoop :: IO ConnectionAttempt -> STME.Wakeup -> Float -> IO ()
+connectLoop action wakeup demerits = do
+    backoff wakeup demerits
+    action >>= \case
+        Ok -> connectLoop action wakeup 0
+        Demerit -> connectLoop action wakeup $ 1 + demerits
+
+backoff :: STME.Wakeup -> Float -> IO ()
+backoff wakeup demerits = do
+    putStrLn $ "[DEBUG] Demerits:" <> show demerits <> ", BackoffSec:" <> show backoffSec
+    STME.sleepSec wakeup $ fromIntegral backoffSec
+  where
+    backoffSec = exponentialBackoffSec maxBackoffSec demerits
 
 -- | A callback-based interface for an application which sends and receives
 -- 'API.AppData' values to the store via the server.

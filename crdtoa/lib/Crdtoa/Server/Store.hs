@@ -1,14 +1,15 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# OPTIONS_GHC -Wno-orphans #-} -- to define Show for TChan
 module Crdtoa.Server.Store where
 
 import Control.Concurrent.STM (STM)
 import Servant.Types.SourceT (SourceT)
 import qualified Control.Concurrent.STM as STM hiding (STM)
 import qualified Data.Map as Map
+import qualified Servant
 import qualified Servant.Types.SourceT as SourceT hiding (SourceT)
 
+import Servant.Extras ()
 import qualified Crdtoa.API as API
 
 -- * Data model
@@ -24,7 +25,7 @@ data Store = Store
 emptyStore :: STM Store
 emptyStore = Store
     <$> return Map.empty
-    <*> STM.newTChan
+    <*> STM.newBroadcastTChan
 
 -- * State functions
 
@@ -95,77 +96,8 @@ backlog client Store{logs} = SourceT.source . concatMap mkPairs . Map.toList . M
 listen :: API.ClientId -> Store -> STM (SourceT IO (API.ClientId, API.AppData))
 listen client Store{chan} = do
     broadcastChan <- STM.dupTChan chan
-    return . SourceT.mapMaybe notOwn . SourceT.fromStepT . tchanStepT $ broadcastChan
+    return . SourceT.mapMaybe notOwn . Servant.toSourceIO $ broadcastChan
   where
     notOwn pair@(sender, _)
         | client == sender = Nothing
         | otherwise = Just pair
-
--- * Integrations
-
--- | Emit elements from an 'STM.TChan' channel to a 'SourecT.StepT' stream.
---
--- FIXME: what are the stopping semantics of TChan that we could use here? See
--- 33f4e9a for the last version of this that caught exceptions to emit Stop.
-tchanStepT :: STM.TChan a -> SourceT.StepT IO a
-tchanStepT c = SourceT.Effect $ do
-    v <- STM.atomically $ STM.readTChan c
-    return $ SourceT.Yield v (tchanStepT c)
-
--- | Interlace an effect into each 'SourceT.StepT' in a stream.
---
--- >>> import Control.Monad.Except (runExceptT)
--- >>> import Servant.Types.SourceT (runSourceT, mapStepT, source, fromStepT, StepT(..))
--- >>> run = runExceptT . runSourceT
--- >>> run . mapStepT (interlaceStepT print) . fromStepT $ Stop
--- Right []
--- >>> run . mapStepT (interlaceStepT print) . fromStepT $ Error "oops"
--- Left "oops"
--- >>> run . mapStepT (interlaceStepT print) . fromStepT $ Skip Stop
--- Nothing
--- Right []
--- >>> run . mapStepT (interlaceStepT print) . fromStepT $ Effect (print 123 >> return Stop)
--- 123
--- Nothing
--- Right []
--- >>> run . mapStepT (interlaceStepT print) . source $ [1..4]
--- Just 1
--- Just 2
--- Just 3
--- Just 4
--- Right [1,2,3,4]
-interlaceStepT :: Monad m => (Maybe a -> m ()) -> SourceT.StepT m a -> SourceT.StepT m a
-interlaceStepT action step = case step of
-    SourceT.Stop -> step
-    SourceT.Error _ -> step
-    SourceT.Skip next -> SourceT.Skip $ rec Nothing next
-    SourceT.Yield item next -> SourceT.Yield item $ rec (Just item) next
-    SourceT.Effect genNext -> SourceT.Effect $ genNext >>= return . rec Nothing
-  where
-    -- run our effect and inject interlace into the continuation
-    rec item next = SourceT.Effect $ do
-        action item
-        return $ interlaceStepT action next
-
--- * Extensions to STM
-
--- | Take, apply, and put. The user function may modify the contents and/or
--- return a digest value. This will block when empty.
-modifyTMVar :: STM.TMVar a -> (a -> STM (a, b)) -> STM b
-modifyTMVar v f = do
-    (a, b) <- f =<< STM.takeTMVar v
-    STM.putTMVar v a
-    return b
-
--- | Take, apply, and put. The user function may only modify the contents. This
--- will block when empty.
-modifyTMVar_ :: STM.TMVar a -> (a -> STM a) -> STM ()
-modifyTMVar_ v f = STM.putTMVar v =<< f =<< STM.takeTMVar v
-
--- | Take, apply, and put. The user function may only return a digest value.
--- This will block when empty.
-queryTMVar :: STM.TMVar a -> (a -> STM b) -> STM b
-queryTMVar v f = STM.readTMVar v >>= f
-
-instance Show (STM.TChan a) where
-    show _ = "TChan ?"
