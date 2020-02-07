@@ -13,18 +13,24 @@
 module Main where
 
 import Control.Applicative
+import Control.Concurrent
 import Control.Monad
 import Control.Monad.Fix
+import Control.Monad.IO.Class
 import Control.Monad.NodeId
+import Control.Monad.Trans.Class
 import Data.Functor
 import Data.Functor.Misc
+import qualified Data.Aeson as Aeson
 import Data.Map (Map)
 import Data.Maybe (isJust)
 import qualified Data.Map as Map
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Zipper as TZ
+import Data.These
 import qualified Graphics.Vty as V
+import qualified Kwik.Client as Client
 import Reflex
 import Reflex.Network
 import Reflex.Class.Switchable
@@ -36,7 +42,7 @@ import VRDT.Max
 main :: IO ()
 main = do
     -- Parse settings.
-    -- Load store.
+    -- Connect to server.
     
     -- Run FRP.
     runApp
@@ -49,10 +55,19 @@ runApp = mainWidget $ do
     _ -> Nothing
 
 
-maxApp :: (Reflex t, MonadHold t m, MonadFix m, Adjustable t m, NotReady t m, PostBuild t m, MonadNodeId m)
+maxApp :: (Reflex t, MonadHold t m, MonadFix m, Adjustable t m, NotReady t m, PostBuild t m, MonadNodeId m, TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), PostBuild t m)
        => VtyWidget t m ()
 maxApp = col $ do
-    rec v <- foldDyn (flip applyMax) v0 vOpE
+    -- (cE, cCallback) <- newTriggerEvent
+    -- liftIO $ forkIO $ cCallback 32
+    -- performEvent_ $ fmap ($ cCallback) $ 
+    
+
+    rec -- v <- foldDyn (flip applyMax) v0 vOpE
+        -- printId $ fmap pure vOpE
+        -- performEvent_ $ liftIO . print . unMax <$> vOpE
+        v <- lift $ loadStore () vOpE
+
         fixed 1 (text $ displayMax v)
         textI <- fixed 1 $ textInput $ def
         -- a <- fixed 3 $ textButtonStatic def "Submit"
@@ -66,6 +81,96 @@ maxApp = col $ do
     displayMax v = current $ (T.pack . show . unMax) <$> v
     parseMax textI = (fmap Max . readMaybe . T.unpack) <$> _textInput_value textI
 
+    printId e = performEventAsync $ ffor e $ \hrs cb -> do
+        r <- hrs
+        liftIO $ print r
+        liftIO $ cb ()
+        -- resps <- forM rs $ \r -> do
+        --     liftIO $ print r
+        --     liftIO $ cb ()
+        return ()
+
+
+-- connectToBackend 
+
+-- TODO: This should all go in the (reflex?) client library.
+-- loadStore :: Kyowon.Backend a -> Event t (Operation a) -> m (Dynamic t a)
+-- loadStore :: () -> Event t (Max Integer) -> m (Dynamic t (Max Integer))
+loadStore () opsE = do
+    (cE, cCallback) <- newTriggerEvent
+
+    performEvent_ $ ffor opsE $ \op -> liftIO $ 
+        print $ unMax op
+
+    -- Create channel (once).
+    opChanE <- runOnLoad $ liftIO newChan
+    opChanOpesE <- zipEvents opChanE opsE
+    performEvent_ $ ffor opChanOpesE $ \(opChan, op) -> liftIO $ do
+        print "writing to chan"
+        writeChan opChan $ Left op
+
+    performEvent_ $ ffor opChanE $ \opChan -> liftIO $ void $ forkIO $ do
+      Client.withRaw
+        (Client.Server "http://127.0.0.1:3000") 
+        (Just $ Client.StoreId "TODO") 
+        (Client.Recv $ \(Client.AppData bs) -> do
+            case Aeson.decode bs of
+                Nothing -> 
+                    error "TODO"
+                Just op -> 
+                    writeChan opChan $ Right op
+          ) 
+        $ run init opChan cCallback
+
+    holdDyn init cE
+  
+  where
+    init = Max 0 -- TODO
+
+    run :: Max Integer -> Chan (Either (Max Integer) (Max Integer)) -> (Max Integer -> IO ()) -> Client.Client Client.AppData -> IO ()
+    run st opChan cCallback client = do
+        -- Wait for operations.
+        opE <- readChan opChan
+        
+        op <- case opE of 
+              Left op -> do
+                -- Send operation over network.
+                let serialized = Client.AppData $ Aeson.encode op
+                Client.send client serialized
+
+                return op
+              Right op ->
+                -- Don't send back over the network. 
+                return op
+          
+        -- Update state.
+        let st' = applyMax st op
+        cCallback st'
+
+        -- Loop.
+        run st' opChan cCallback client
+
+    zipEvents a b = do
+        dynA <- holdDyn Nothing (Just <$> a)
+        dynB <- holdDyn Nothing (Just <$> b)
+        pure $ fmapMaybe id $ updated $ (liftA2 . liftA2) (,) dynA dynB
+
+
+
+runOnLoad m = do
+    builtE <- getPostBuild
+    performEvent $ ffor builtE $ \() -> m
+
+runOnLoad_ m = do
+    builtE <- getPostBuild
+    performEvent_ $ ffor builtE $ \() -> m
+
+
+instance Aeson.ToJSON (Max Integer) where
+    toJSON (Max a) = Aeson.toJSON a
+
+instance Aeson.FromJSON (Max Integer) where
+    parseJSON x = Max <$> Aeson.parseJSON x
 
 
 
