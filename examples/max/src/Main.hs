@@ -57,7 +57,9 @@ runApp = mainWidget $ do
 
 maxApp :: (Reflex t, MonadHold t m, MonadFix m, Adjustable t m, NotReady t m, PostBuild t m, MonadNodeId m, TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), PostBuild t m)
        => VtyWidget t m ()
-maxApp = col $ do
+maxApp = do
+  nav <- tabNavigation
+  runLayout (pure Orientation_Column) 1 nav $ do
     -- (cE, cCallback) <- newTriggerEvent
     -- liftIO $ forkIO $ cCallback 32
     -- performEvent_ $ fmap ($ cCallback) $ 
