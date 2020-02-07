@@ -37,7 +37,7 @@ executable max
       aeson
     , base >=4.7 && <5
     , containers
-    , kwik-client
+    , kyowon-client
     , reflex
     , reflex-vty
     , text

@@ -1,10 +1,10 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Kwik.Client
+module Kyowon.Client
 (
 -- * Application abstraction
-  module Kwik.Client -- Application
+  module Kyowon.Client -- Application
 , API.StoreId(..)
 , API.AppData(..)
 , Ser.Serialize
@@ -22,9 +22,9 @@ import qualified Network.HTTP.Client.TLS as TLS
 import qualified Servant.Client.Streaming as Client
 import qualified Servant.Types.SourceT as SourceT
 
-import           Kwik.API (API)
-import qualified Kwik.API.V0 as API -- JP: For now. Update this. XXX
-import           Kwik.Types (ClientId)
+import           Kyowon.API (API)
+import qualified Kyowon.API.V0 as API -- JP: For now. Update this. XXX
+import           Kyowon.Types (ClientId)
 
 maxBackoffSec :: Int
 maxBackoffSec = 600 -- five minutes

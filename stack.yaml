@@ -30,9 +30,9 @@ resolver: lts-14.21
 #   - wai
 packages:
 - vrdt
-- kwik-core
-- kwik-client
-- kwik-server
+- kyowon-core
+- kyowon-client
+- kyowon-server
 - examples/max
 
 # Dependency packages to be pulled from upstream that are not in the resolver.

@@ -1,5 +1,5 @@
 {-# LANGUAGE TupleSections #-}
-module Kwik.Server where
+module Kyowon.Server where
 
 import Data.String (fromString)
 import Control.Monad.IO.Class (liftIO)
@@ -15,9 +15,9 @@ import qualified Network.Wai.Middleware.RequestLogger as Logger
 import qualified Servant.Server as Server
 import qualified Servant.Types.SourceT as SourceT
 
-import           Kwik.API (API)
-import qualified Kwik.API.V0 as API -- JP: For now. Eventually should move things around.
-import qualified Kwik.Types as API -- JP: For now. Eventually should move things around.
+import           Kyowon.API (API)
+import qualified Kyowon.API.V0 as API -- JP: For now. Eventually should move things around.
+import qualified Kyowon.Types as API -- JP: For now. Eventually should move things around.
 
 -- main :: Warp.Port -> IO ()
 -- main port = do

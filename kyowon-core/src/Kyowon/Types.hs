@@ -1,4 +1,4 @@
-module Kwik.Types where
+module Kyowon.Types where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS

@@ -1,4 +1,4 @@
-module Kwik.API.V0 where
+module Kyowon.API.V0 where
 
 --import Web.HttpApiData (FromHttpApiData)
 import Data.ByteString.Lazy (ByteString)
@@ -8,7 +8,7 @@ import GHC.Generics (Generic)
 import Servant -- XXX all names unqualified
 import qualified Data.Aeson as Aeson
 
-import Kwik.Types
+import Kyowon.Types
 
 -- XXX for generating URIs elsewhere, might want to not distribute over the v0,v1 prefixes
 type API

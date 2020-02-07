@@ -30,7 +30,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Zipper as TZ
 import Data.These
 import qualified Graphics.Vty as V
-import qualified Kwik.Client as Client
+import qualified Kyowon.Client as Client
 import Reflex
 import Reflex.Network
 import Reflex.Class.Switchable
