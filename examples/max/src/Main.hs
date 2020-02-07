@@ -106,7 +106,6 @@ loadStore () opsE = do
     opChanE <- runOnLoad $ liftIO newChan
     opChanOpesE <- zipEvents opChanE opsE
     performEvent_ $ ffor opChanOpesE $ \(opChan, op) -> liftIO $ do
-        print "writing to chan"
         writeChan opChan $ Left op
 
     performEvent_ $ ffor opChanE $ \opChan -> liftIO $ void $ forkIO $ do
