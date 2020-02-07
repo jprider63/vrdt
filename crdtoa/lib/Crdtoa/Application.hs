@@ -37,6 +37,10 @@ maxBackoffSec = 600 -- five minutes
 --
 -- TODO: make a pipes or conduit based interface? what about other
 -- serialization libraries?
+--
+-- FIXME: when we disconnect the last sent message may have been lost
+--
+-- FIXME: the clientid in the post body of stream breaks servant server?
 
 createV0 :: Client.ClientM API.StoreId
 sendV0 :: API.StoreId -> API.AppData -> Client.ClientM NoContent
