@@ -26,6 +26,11 @@ import           Kyowon.API (API)
 import qualified Kyowon.API.V0 as API -- JP: For now. Update this. XXX
 import           Kyowon.Types (ClientId)
 
+data StoreRef a = StoreRef {
+    storeRefServer :: Server
+  , storeRefStore  :: API.StoreId
+  }
+
 maxBackoffSec :: Int
 maxBackoffSec = 600 -- five minutes
 

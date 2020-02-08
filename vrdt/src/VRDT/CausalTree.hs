@@ -19,6 +19,7 @@ data CausalTreeOp a = CausalTreeOp {
   , causalTreeOpAtom   :: CausalTreeAtom a    -- Invariant: Cannot be CausalTreeLetterRoot
   }
 
+-- JP: Maybe we should leave this abstract.
 data AtomId = AtomId UTCTime ClientId
     deriving (Eq, Ord)
 

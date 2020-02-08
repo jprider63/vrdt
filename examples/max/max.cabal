@@ -45,6 +45,7 @@ executable max
     , transformers
     , vrdt
     , vty
+  extensions: TypeFamilies
   default-language: Haskell2010
 
 test-suite max-test

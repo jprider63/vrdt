@@ -28,22 +28,27 @@ source-repository head
 library
   exposed-modules:
       Kyowon.Client
+      Kyowon.Reflex
   other-modules:
       Paths_kyowon_client
   hs-source-dirs:
       src
   build-depends:
       async
+    , aeson
     , base >=4.7 && <5
     , cereal
     , http-client
     , http-client-tls
     , kyowon-core
+    , reflex
     , servant
     , servant-client
     , servant-server
     , stm
+    , vrdt
     , warp
+  extensions: FlexibleContexts
   default-language: Haskell2010
 
 test-suite kyowon-client-test

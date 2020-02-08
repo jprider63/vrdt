@@ -37,6 +37,8 @@ import Reflex.Class.Switchable
 import Reflex.Vty
 import Text.Read (readMaybe)
 
+import Kyowon.Reflex (connectToStore)
+import VRDT.Class (VRDT(..))
 import VRDT.Max
 
 main :: IO ()
@@ -68,7 +70,7 @@ maxApp = do
     rec -- v <- foldDyn (flip applyMax) v0 vOpE
         -- printId $ fmap pure vOpE
         -- performEvent_ $ liftIO . print . unMax <$> vOpE
-        v <- lift $ loadStore () vOpE
+        v <- lift $ connectToStore storeRef v0 vOpE
 
         fixed 1 (text $ displayMax v)
         textI <- fixed 1 $ textInput $ def
@@ -78,7 +80,9 @@ maxApp = do
     return ()
 
   where
-    v0 = Max 0
+    storeRef = Client.StoreRef (Client.Server "http://localhost:3000") (Client.StoreId "TODO")
+
+    v0 = Max (0 :: Integer)
 
     displayMax v = current $ (T.pack . show . unMax) <$> v
     parseMax textI = (fmap Max . readMaybe . T.unpack) <$> _textInput_value textI
@@ -92,79 +96,16 @@ maxApp = do
         --     liftIO $ cb ()
         return ()
 
+instance Ord a => VRDT (Max a) where
+    type Operation (Max a) = Max a
 
--- connectToBackend 
+    enabled _ _ = True
+    apply       = applyMax
 
--- TODO: This should all go in the (reflex?) client library.
--- loadStore :: Kyowon.Backend a -> Event t (Operation a) -> m (Dynamic t a)
--- loadStore :: () -> Event t (Max Integer) -> m (Dynamic t (Max Integer))
-loadStore () opsE = do
-    (cE, cCallback) <- newTriggerEvent
-
-    performEvent_ $ ffor opsE $ \op -> liftIO $ 
-        print $ unMax op
-
-    -- Create channel (once).
-    opChanE <- runOnLoad $ liftIO newChan
-    opChanOpesE <- zipEvents opChanE opsE
-    performEvent_ $ ffor opChanOpesE $ \(opChan, op) -> liftIO $ do
-        writeChan opChan $ Left op
-
-    performEvent_ $ ffor opChanE $ \opChan -> liftIO $ void $ forkIO $ do
-      Client.withRaw
-        (Client.Server "http://127.0.0.1:3000") 
-        (Just $ Client.StoreId "TODO") 
-        (Client.Recv $ \(Client.AppData bs) -> do
-            case Aeson.decode bs of
-                Nothing -> 
-                    error "TODO"
-                Just op -> 
-                    writeChan opChan $ Right op
-          ) 
-        $ run init opChan cCallback
-
-    holdDyn init cE
-  
-  where
-    init = Max 0 -- TODO
-
-    run :: Max Integer -> Chan (Either (Max Integer) (Max Integer)) -> (Max Integer -> IO ()) -> Client.Client Client.AppData -> IO ()
-    run st opChan cCallback client = do
-        -- Wait for operations.
-        opE <- readChan opChan
-        
-        op <- case opE of 
-              Left op -> do
-                -- Send operation over network.
-                let serialized = Client.AppData $ Aeson.encode op
-                Client.send client serialized
-
-                return op
-              Right op ->
-                -- Don't send back over the network. 
-                return op
-          
-        -- Update state.
-        let st' = applyMax st op
-        cCallback st'
-
-        -- Loop.
-        run st' opChan cCallback client
-
-    zipEvents a b = do
-        dynA <- holdDyn Nothing (Just <$> a)
-        dynB <- holdDyn Nothing (Just <$> b)
-        pure $ fmapMaybe id $ updated $ (liftA2 . liftA2) (,) dynA dynB
+    lawCommutativity _ _ _ = ()
+    lawNonCausal _ _ _     = ()
 
 
-
-runOnLoad m = do
-    builtE <- getPostBuild
-    performEvent $ ffor builtE $ \() -> m
-
-runOnLoad_ m = do
-    builtE <- getPostBuild
-    performEvent_ $ ffor builtE $ \() -> m
 
 
 instance Aeson.ToJSON (Max Integer) where
