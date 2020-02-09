@@ -3,7 +3,7 @@
 
 {-# LANGUAGE RecordWildCards #-}
 
-module VRDT.MultiSet (
+module MultiSet (
     MultiSet(..)
   , MultiSetOp(..)
   , null
@@ -18,6 +18,10 @@ module VRDT.MultiSet (
   , delete
   , deleteMany
   , deleteAll
+
+  , enabled
+  , apply
+  , multiSetOpOrder
   ) where
 
 import Data.Map (Map)
@@ -41,7 +45,7 @@ data MultiSet a = MultiSet {
     posMultiSet :: Map a Integer -- ^ Map for elements currently in the set.
   , negMultiSet :: Map a Integer -- ^ Map for elements not currently in the set.
   }
-
+  
 -- {-@
 -- data MultiSetOp a = 
 --     MultiSetOpAdd {
@@ -159,6 +163,7 @@ size = sum . Map.elems . posMultiSet
 distinctSize :: MultiSet a -> Int -- Integer
 distinctSize = Map.size . posMultiSet
 
+-- NV to JP: why member only checks posMultiSet???
 member :: Ord a => a -> MultiSet a -> Bool
 member e = Map.member e . posMultiSet
 
