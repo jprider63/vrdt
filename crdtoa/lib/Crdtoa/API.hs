@@ -12,25 +12,20 @@ import Servant -- XXX all names unqualified
 
 -- XXX for generating URIs elsewhere, might want to not distribute over the v0,v1 prefixes
 type API
-    =    "v0" :> (CreateV0 :<|> SendV0 :<|> ListenV0 :<|> StreamV0)
+    =    "v0" :> (CreateV0 :<|> SendV0 :<|> ListenV0)
 
 type CreateV0 = "create"
     :> Post '[JSON] StoreId
 
 type SendV0 = "send"
     :> Capture "store-id" StoreId
-    :> ReqBody '[OctetStream] AppData
+    :> ReqBody '[OctetStream] (ClientId, AppData)
     :> Post '[JSON] NoContent
+-- TODO: instead of a tuple, define an Update type to match ServerMessage(Update)
 
 type ListenV0 = "listen"
     :> Capture "store-id" StoreId
-    :> StreamPost NoFraming OctetStream (SourceIO AppData)
+    :> ReqBody '[OctetStream] ClientId
+    :> StreamPost NoFraming OctetStream ServerStream
 
-type StreamV0 = "stream"
-    :> Capture "store-id" StoreId
-    :> ReqBody '[JSON] ClientId
-    :> StreamBody NoFraming OctetStream UpStream
-    :> StreamPost NoFraming OctetStream DownStream
-
-type UpStream = SourceIO AppData
-type DownStream = SourceIO ServerMessage
+type ServerStream = SourceIO ServerMessage

@@ -38,6 +38,7 @@ library
                       , Crdtoa
                       , Crdtoa.API
                       , Crdtoa.Application
+                      , Crdtoa.Log
                       , Crdtoa.Server
                       , Crdtoa.Server.Store
                       , Crdtoa.Types
