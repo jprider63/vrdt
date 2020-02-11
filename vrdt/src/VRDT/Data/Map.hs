@@ -7,6 +7,14 @@ import Data.Maybe
 import qualified Data.Set as S
 
 data Map k v = Tip | Map k v (Map k v)
+{-@ data Map k v = Tip | Map {k::k,  v::v, m::Map {kk:k | kk /= k} v} @-}
+
+
+
+{-@ reflect toList @-}
+toList :: Map k v -> [(k,v)]
+toList Tip = [] 
+toList (Map k v m) = (k,v):toList m 
 
 {-@ reflect empty @-}
 empty :: Map k v 
@@ -15,8 +23,9 @@ empty = Tip
 
 
 {-@ reflect member @-}
-member :: k -> Map k v -> Bool 
-member _ _ = False 
+member :: Eq k => k -> Map k v -> Bool 
+member _ Tip = False 
+member x (Map k _ m) = x == k || member x m 
 
 {-@ reflect elems @-}
 elems :: Map k v -> [v]
