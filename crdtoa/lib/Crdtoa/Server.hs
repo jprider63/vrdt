@@ -2,18 +2,14 @@
 module Crdtoa.Server where
 
 import Control.Monad.IO.Class (liftIO)
-import Servant (Proxy(..), (:<|>)(..))
+import Servant (Proxy(..), (:<|>)(..), NoContent(..))
 import Text.Printf (printf)
-import qualified Control.Concurrent as Conc
-import qualified Control.Concurrent.Async as Async
 import qualified Control.Concurrent.STM as STM
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Network.Wai.Middleware.RequestLogger as Logger
 import qualified Servant.Server as Server
-import qualified Servant.Types.SourceT as SourceT
 
 import qualified Control.Concurrent.STM.Extras as STME
-import qualified Servant.Extras as ServantE
 import qualified Crdtoa.API as API
 import qualified Crdtoa.Server.Store as Store
 
@@ -27,55 +23,39 @@ main port = do
         $ endpoints state
 
 endpoints :: Store.MutState -> Server.Server API.API
-endpoints mut = createV0 mut :<|> undefined :<|> undefined :<|> streamV0 mut
+endpoints mut = createV0 mut :<|> sendV0 mut :<|> listenV0 mut
 
 createV0 :: Store.MutState -> Server.Handler API.StoreId
 createV0 = undefined
     -- TODO: look into random words? uuid? for this.. words are nice because they're share-able
 
-streamV0 :: Store.MutState -> API.StoreId -> API.ClientId -> SourceT.SourceT IO API.AppData -> Server.Handler (SourceT.SourceT IO API.ServerMessage)
-streamV0 mut store client incoming
-    = liftIO . Async.withAsync (receiveBroadcastStream mut store client incoming) $ \bcast -> do
-        _ <- Async.async $ debug bcast
-        resp <- generateResponseStream mut store client
-        return $ SourceT.mapStepT (ServantE.interlaceStepT $ manage bcast) resp
-  where
-    debug async = do
-        Conc.threadDelay $ round (1e6 :: Float)
-        r <- Async.poll async
-        putStrLn $ "[DEBUG] " <> show r
-        case r of
-            Nothing -> print "[DEBUG] done"
-            Just _ -> debug async
-    -- On each step, poll the broadcast thread to see if it is finished.
-    manage async _ = putStrLn . ("[INFO] " <>) . show =<< Async.poll async
-
 -- | Generate a response stream with a backlog followed by live updates for the
 -- client.
-generateResponseStream :: Store.MutState -> API.StoreId -> API.ClientId -> IO (SourceT.SourceT IO API.ServerMessage)
-generateResponseStream mut store client
-    = STM.atomically
+listenV0 :: Store.MutState -> API.StoreId -> API.ClientId -> Server.Handler API.ServerStream
+listenV0 mut store client = do
+    liftIO
+        . STM.atomically
         . STME.modifyTMVar mut
         $ Store.modifyStore (with responseStream) store
   where
     responseStream storeVal = do
         backlog <- return $ Store.backlog client storeVal
         live <- Store.listen client storeVal
+        -- concatenate SourceTs and apply Update to the tuples within
         return (uncurry API.Update <$> backlog <> live)
-    -- Make sure x is returned alongside the result of applying it to f.
+    -- Apply x to f for the effect. Return x alongside of the result.
     with f x = f x >>= return . (x,)
 
--- | Receive a stream by logging and broadcasting every update.
-receiveBroadcastStream :: Store.MutState -> API.StoreId -> API.ClientId -> SourceT.SourceT IO API.AppData -> IO ()
-receiveBroadcastStream mut store client incoming
-    = SourceT.foreach
-        (\err -> putStrLn $ "[ERROR] in client stream: " <> err)
-        (\update -> STM.atomically
-            . STME.modifyTMVar_ mut
-            $ Store.mapStore (broadcast update) store)
-        incoming
+-- | Log and broadcast every update.
+sendV0 :: Store.MutState -> API.StoreId -> (API.ClientId, API.AppData) -> Server.Handler NoContent
+sendV0 mut store (client, update) = do
+    liftIO
+        . STM.atomically
+        . STME.modifyTMVar_ mut
+        $ Store.mapStore broadcast store
+    return NoContent
   where
-    broadcast update storeVal
+    broadcast storeVal
         = Store.broadcast client update
         . Store.log client update
         $ storeVal
