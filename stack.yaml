@@ -33,6 +33,7 @@ packages:
 - kyowon-core
 - kyowon-client
 - kyowon-server
+- examples/event
 - examples/max
 
 # Dependency packages to be pulled from upstream that are not in the resolver.

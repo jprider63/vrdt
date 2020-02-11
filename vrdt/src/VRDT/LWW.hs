@@ -3,7 +3,11 @@
 
 module VRDT.LWW where
 
+import           Data.Aeson (FromJSON(..), ToJSON(..), (.=), (.:))
+import qualified Data.Aeson as Aeson
+
 -- import VRDT.Class
+import           VRDT.Types
 
 {-@
 data LWW t a = LWW {
@@ -15,6 +19,18 @@ data LWW t a = LWW {
     lwwTime  :: t
   , lwwValue :: a
   }
+
+type LWWU a = LWW UTCTimestamp a
+
+instance (FromJSON t, FromJSON a) => FromJSON (LWW t a) where
+    parseJSON = Aeson.withObject "LWW" $ \o -> 
+        LWW <$> o .: "time" <*> o .: "value"
+
+instance (ToJSON t, ToJSON a) => ToJSON (LWW t a) where
+    toJSON (LWW t a) = Aeson.object [
+        "time" .= t
+      , "value" .= a
+      ]
 
 -- instance Ord t => VRDT (LWW t a) where
 --     type Operation (LWW t a) = LWW t a
