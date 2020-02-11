@@ -3,7 +3,7 @@
 
 {-# LANGUAGE RecordWildCards #-}
 
-module MultiSet (
+module VRDT.MultiSet (
     MultiSet(..)
   , MultiSetOp(..)
   , null
