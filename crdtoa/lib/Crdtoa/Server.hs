@@ -8,6 +8,7 @@ import qualified Control.Concurrent.STM as STM
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Network.Wai.Middleware.RequestLogger as Logger
 import qualified Servant.Server as Server
+import qualified Servant.Types.SourceT as SourceT
 
 import qualified Control.Concurrent.STM.Extras as STME
 import qualified Crdtoa.API as API
@@ -42,7 +43,10 @@ listenV0 mut store client = do
         backlog <- return $ Store.backlog client storeVal
         live <- Store.listen client storeVal
         -- concatenate SourceTs and apply Update to the tuples within
-        return (uncurry API.Update <$> backlog <> live)
+        let stream = (uncurry API.Update <$> backlog <> live)
+        -- unconditionally prepend the stream with a welcome message to prevent response timeouts
+        -- TODO: make the welcome message specify which messages the server has (bloom filter; see Types.hs)
+        return $ SourceT.source [API.RequestResendUpdates] <> stream
     -- Apply x to f for the effect. Return x alongside of the result.
     with f x = f x >>= return . (x,)
 

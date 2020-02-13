@@ -50,9 +50,6 @@ maxBackoffSec = 600 -- five minutes
 -- 1. connect to a store, kill the server, send something, start the server, observe draining
 -- 1. connect to a store, kill the server, start the server, observe listener reconnect
 
--- FIXME: when connecting to an empty store, no data is sent to the client and
--- so the client reaches ResponseTimeout
---
 -- TODO: make a pipes or conduit based interface? what about other
 -- serialization libraries?
 --
@@ -186,10 +183,8 @@ connectListen env store client sink = action `Exc.catches` handlers
         [ Exc.Handler $ \exc ->
             complainClientError "connectListen,catches" exc >> return Demerit
         , Exc.Handler $ \exc -> case exc of
---          HTTP.HttpExceptionRequest _ HTTP.IncompleteHeaders ->
---              slowLog INFO "Disconnect midstream. Reconnecting.." >> return Ok
---          HTTP.HttpExceptionRequest _ HTTP.NoResponseDataReceived ->
---              slowLog INFO "Disconnect before stream. Reconnecting.." >> return Ok
+            HTTP.HttpExceptionRequest _ HTTP.IncompleteHeaders ->
+                slowLog INFO "Disconnect midstream. Reconnecting.." >> return Ok
             _ ->
                 complainHttpException "connectListen,catches" exc >> return Demerit
         ]
