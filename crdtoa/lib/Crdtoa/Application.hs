@@ -93,6 +93,7 @@ data Client a = Client
     , store :: API.StoreId
     , send :: a -> IO ()
     }
+-- TODO: jp says to expose the clientid, like storeid, because it's generated
 
 -- | A callback-based interface for an application which sends and receives
 -- 'API.AppData' values.
