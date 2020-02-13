@@ -2,7 +2,12 @@
 module Crdtoa.Application
 (
 -- * Application abstraction
-  module Crdtoa.Application
+  withSer
+, withRaw
+, runRaw
+, Server(..)
+, Recv(..)
+, Client(store, send)
 , API.StoreId(..)
 , API.AppData(..)
 , Ser.Serialize
