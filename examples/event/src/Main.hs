@@ -14,6 +14,7 @@ import           Reflex.Vty hiding (apply, Event)
 import qualified Kyowon.Client as Client
 import qualified Kyowon.Reflex as Reflex
 import           VRDT.Class
+import           VRDT.Class.TH
 import           VRDT.LWW (LWWU, LWW(..))
 import qualified VRDT.LWW as LWW
 import qualified VRDT.Types as VRDT
@@ -26,16 +27,18 @@ data Event = Event {
   , eventLocation :: LWWU Text
   }
 
-data EventOp = 
-    EventTitleOp (Operation (LWWU Text))
-  | EventDescriptionOp (Operation (LWWU Text))
-  | EventStartTimeOp (Operation (LWWU UTCTime))
-  | EventEndTimeOp (Operation (LWWU UTCTime))
-  | EventLocationOp (Operation (LWWU Text))
-  deriving (Generic)
+$(deriveVRDT ''Event)
 
-instance Aeson.ToJSON EventOp
-instance Aeson.FromJSON EventOp
+-- data EventOp = 
+--     EventTitleOp (Operation (LWWU Text))
+--   | EventDescriptionOp (Operation (LWWU Text))
+--   | EventStartTimeOp (Operation (LWWU UTCTime))
+--   | EventEndTimeOp (Operation (LWWU UTCTime))
+--   | EventLocationOp (Operation (LWWU Text))
+--   deriving (Generic)
+-- 
+-- instance Aeson.ToJSON EventOp
+-- instance Aeson.FromJSON EventOp
 
 instance VRDT Event where
     type Operation Event = EventOp

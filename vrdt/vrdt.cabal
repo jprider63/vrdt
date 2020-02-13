@@ -30,6 +30,7 @@ library
       ProofCombinators
       VRDT.CausalTree
       VRDT.Class
+      VRDT.Class.TH
       VRDT.LWW
       VRDT.Max
       VRDT.MultiSet
@@ -47,11 +48,13 @@ library
     , bytestring
     , containers
     -- , liquidhaskell
+    , template-haskell
     , text
     , time
   default-language: Haskell2010
   extensions: 
               BangPatterns
+              LambdaCase
               OverloadedStrings
               RecordWildCards
               TypeFamilies
