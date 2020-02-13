@@ -19,7 +19,7 @@ import qualified Network.HTTP.Client.TLS as TLS
 import qualified Servant.Client.Streaming as Client
 import qualified Servant.Types.SourceT as SourceT
 
-import Crdtoa.Log (slowLog, LogLevel(..))
+import Crdtoa.Log (slowLog, LogLevel(..), setupLogger)
 import Servant.Extras ()
 import qualified Control.Concurrent.STM.Extras as STME
 import qualified Crdtoa.API as API
@@ -87,6 +87,7 @@ runRaw
     -> Recv API.AppData
     -> IO (Client API.AppData)
 runRaw (Server server) storeSpec clientSpec recv = do
+    () <- setupLogger
     env <- Client.mkClientEnv
         <$> HTTP.newManager TLS.tlsManagerSettings
         <*> Client.parseBaseUrl server
