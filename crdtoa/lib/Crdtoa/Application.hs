@@ -30,30 +30,45 @@ maxBackoffSec = 600 -- five minutes
 -- error cases
 --
 -- 1. connect to a netcat listener and don't send anything, wait 30s
+--      -> ResponseTimeout, backoff, ConnnectionError, backoff..
 -- 1. connect to a new store and don't send anything, wait 30s
+--      -> Listener stays connected
 -- 1. connect to a store with some data, assert that it is received, don't send anything, wait 30s
+--      -> Received, Listener stays connected
 --
 -- happy path
 --
--- 1. connect to a store, send something, assert that it is forwarded
+-- 1. connect to a store, send something, assert that it is forwarded -> OK
 --
 -- offline behavior
 --
 -- 1. connect to a store, kill the server, observe listener backoff
+--      -> OK
 -- 1. connect to a store, kill the server, send something, observe backoff
+--      -> OK
 -- 1. without starting the server, connect to a store, observe listener backoff
+--      -> OK, kinda
+--      -> FIXME: The shared wakeup abstraction means that both threads wake up, but
+--      since they have different demerit counts, they race to set the next
+--      sleep time.
 -- 1. without starting the server, connect to a store, send something, observer backoff
+--      -> OK, kinda
+--      -> FIXME: The shared wakeup abstraction means that both threads wake up, but
+--      since they have different demerit counts, they race to set the next
+--      sleep time.
 --
 -- reconnection
 --
--- 1. connect to a store with some data, kill the server, start the server, observe listener reconnect, assert that data is received
--- 1. connect to a store, kill the server, send something, start the server, observe draining
 -- 1. connect to a store, kill the server, start the server, observe listener reconnect
+--      -> OK
+-- 1. connect to a store, kill the server, send something, start the server, observe draining
+--      -> OK
+-- 1. connect to a store with some data, kill the server, start the server, observe listener reconnect, assert that data is received
+--      -> This test doesn't make sense. Since the server doesn't persist the
+--      data yet, it won't resend it to the client.
 
 -- TODO: make a pipes or conduit based interface? what about other
 -- serialization libraries?
---
--- FIXME: the clientid in the post body of stream breaks servant server?
 
 createV0 :: Client.ClientM API.StoreId
 sendV0 :: API.StoreId -> (API.ClientId, API.AppData) -> Client.ClientM NoContent
