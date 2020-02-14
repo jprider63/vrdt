@@ -28,22 +28,34 @@ source-repository head
 library
   exposed-modules:
       ProofCombinators
+      VRDT.CausalTree
       VRDT.Class
       VRDT.LWW
       VRDT.Max
       VRDT.MultiSet
+      -- VRDT.MultiSet.Proof
+      VRDT.Types
+      VRDT.TwoPMap
   other-modules:
       Paths_vrdt
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , base64-bytestring
+    , bytestring
     , containers
-    , liquidhaskell
+    -- , liquidhaskell
+    , text
+    , time
   default-language: Haskell2010
-  extensions: TypeFamilies
-              TypeFamilyDependencies
+  extensions: 
+              BangPatterns
+              OverloadedStrings
               RecordWildCards
+              TypeFamilies
+              TypeFamilyDependencies
 
 test-suite vrdt-test
   type: exitcode-stdio-1.0

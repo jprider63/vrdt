@@ -1,0 +1,7 @@
+packages:
+    vrdt
+    kyowon-core
+    kyowon-client
+    kyowon-server
+    examples/event
+    examples/max

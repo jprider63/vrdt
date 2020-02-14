@@ -19,6 +19,10 @@ class VRDT t where
     {-@ lawCommutativity :: x : t -> op1 : Operation t -> op2 : Operation t -> {enabled2 x op1 op2 => apply (apply op1 x) op2 == apply (apply op2 x) op1} @-}
     lawCommutativity :: t -> Operation t -> Operation t -> ()
 
+    {-@ lawNonCausal :: x : t -> {op1 : Operation t | enabled x op1} -> {op2 : Operation t | enabled x op2} -> {enabled (apply x op1) op2 <=> enabled (apply x op2) op1} @-}
+    lawNonCausal :: t -> Operation t -> Operation t -> ()
+
+
 {-@ reflect enabled2 @-}
 enabled2 :: VRDT t => t -> Operation t -> Operation t -> Bool
 enabled2 x op1 op2 = enabled x op1 && enabled x op2  && enabled (apply x op1) op2 && enabled (apply x op2) op1

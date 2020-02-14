@@ -18,30 +18,34 @@ module VRDT.MultiSet (
   , delete
   , deleteMany
   , deleteAll
+
+  , enabled
+  , apply
+  , multiSetOpOrder
   ) where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Prelude hiding (null)
+import Data.Maybe
+import Prelude hiding (null, Maybe(..))
+import qualified Data.Set as S
 
 -- import VRDT.Class
 
 {-@ type PosInteger = {c:Integer | c > 0} @-}
 {-@ type NegInteger = {c:Integer | c <= 0} @-}
 
--- {-@
--- data MultiSet a = MultiSet {
---     posMultiSet ::  Map a PosInteger
---   , negMultiSet :: {v:Map a NegInteger | True}
---   }
--- @-}
-  -- TODO: Is this a parser error?
-  -- , negMultiSet :: {v:Map a NegInteger | Map.null (Map.intersection posMultiSet negMultiSet}
+{-@
+data MultiSet a = MultiSet {
+    posMultiSet ::  Map a PosInteger
+  , negMultiSet :: {v:Map a NegInteger | Map.disjoint posMultiSet v }
+  }
+@-} 
 data MultiSet a = MultiSet {
     posMultiSet :: Map a Integer -- ^ Map for elements currently in the set.
   , negMultiSet :: Map a Integer -- ^ Map for elements not currently in the set.
   }
-
+  
 -- {-@
 -- data MultiSetOp a = 
 --     MultiSetOpAdd {
@@ -63,8 +67,8 @@ data MultiSetOp a =
     , multiSetOpRem :: Integer -- ^ Remove `n` instances of element.
     }
 
--- {-@ measure multiSetOpOrder :: MultiSetOp a -> Int @-}
-{-@ reflect multiSetOpOrder @-}
+{-@ measure multiSetOpOrder @-}
+{-@ multiSetOpOrder :: MultiSetOp a -> Nat @-}
 multiSetOpOrder :: MultiSetOp a -> Int
 multiSetOpOrder (MultiSetOpAdd _ _) = 0
 multiSetOpOrder (MultiSetOpRemove _ _) = 1
@@ -103,11 +107,14 @@ multiSetOpOrder (MultiSetOpRemove _ _) = 1
 -- 
 --     lawCommutativity MultiSet{..} op1 op2 = ()
 
-{-@ ple apply @-}
+{-@ reflect enabled @-}
+enabled :: MultiSet k -> MultiSetOp k -> Bool 
+enabled _ _ = True 
+
 {-@ reflect apply @-}
 {-@ apply :: Ord a => MultiSet a -> op : MultiSetOp a -> MultiSet a / [multiSetOpOrder op] @-}
 apply :: Ord a => MultiSet a -> MultiSetOp a -> MultiSet a
-apply MultiSet{..}  (MultiSetOpAdd e c)
+apply MultiSet{..} (MultiSetOpAdd e c)
   | Just c' <- Map.lookup e posMultiSet = 
       let c'' = c' + c in
       if c'' > 0 then
@@ -140,6 +147,11 @@ lawCommutativity :: MultiSet a -> MultiSetOp a -> MultiSetOp a -> ()
 lawCommutativity MultiSet{..} op1 op2 = ()
 
 
+{-@ ple lawNonCausal @-}
+{-@ lawNonCausal :: x : MultiSet t -> {op1 : MultiSetOp t | enabled x op1} -> {op2 : MultiSetOp t | enabled x op2} -> {enabled (apply x op1) op2 <=> enabled (apply x op2) op1} @-}
+lawNonCausal :: MultiSet t -> MultiSetOp t -> MultiSetOp t -> ()
+lawNonCausal _ _ _ = () 
+
 null :: MultiSet a -> Bool
 null = Map.null . posMultiSet
 
@@ -151,6 +163,7 @@ size = sum . Map.elems . posMultiSet
 distinctSize :: MultiSet a -> Int -- Integer
 distinctSize = Map.size . posMultiSet
 
+-- NV to JP: why member only checks posMultiSet???
 member :: Ord a => a -> MultiSet a -> Bool
 member e = Map.member e . posMultiSet
 
