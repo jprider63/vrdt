@@ -40,34 +40,34 @@ $(deriveVRDT ''Event)
 -- instance Aeson.ToJSON EventOp
 -- instance Aeson.FromJSON EventOp
 
-instance VRDT Event where
-    type Operation Event = EventOp
-
-    enabled e (EventTitleOp op)       = enabled (eventTitle e) op
-    enabled e (EventDescriptionOp op) = enabled (eventDescription e) op
-    enabled e (EventStartTimeOp op)     = enabled (eventStartTime e) op
-    enabled e (EventEndTimeOp op)       = enabled (eventEndTime e) op
-    enabled e (EventLocationOp op)      = enabled (eventLocation e) op
-
-    apply e (EventTitleOp op)       = e {eventTitle = apply (eventTitle e) op}
-    apply e (EventDescriptionOp op) = e {eventDescription = apply (eventDescription e) op}
-    apply e (EventStartTimeOp op)     = e {eventStartTime = apply (eventStartTime e) op}
-    apply e (EventEndTimeOp op)       = e {eventEndTime = apply (eventEndTime e) op}
-    apply e (EventLocationOp op)      = e {eventLocation = apply (eventLocation e) op}
-
-    lawCommutativity e (EventTitleOp op1) (EventTitleOp op2)             = lawCommutativity (eventTitle e) op1 op2
-    lawCommutativity e (EventDescriptionOp op1) (EventDescriptionOp op2) = lawCommutativity (eventDescription e) op1 op2
-    lawCommutativity e (EventStartTimeOp op1) (EventStartTimeOp op2)         = lawCommutativity (eventStartTime e) op1 op2
-    lawCommutativity e (EventEndTimeOp op1) (EventEndTimeOp op2)             = lawCommutativity (eventEndTime e) op1 op2
-    lawCommutativity e (EventLocationOp op1) (EventLocationOp op2)           = lawCommutativity (eventLocation e) op1 op2
-    lawCommutativity _ _ _                                               = ()
-
-    lawNonCausal e (EventTitleOp op1) (EventTitleOp op2)             = lawNonCausal (eventTitle e) op1 op2
-    lawNonCausal e (EventDescriptionOp op1) (EventDescriptionOp op2) = lawNonCausal (eventDescription e) op1 op2
-    lawNonCausal e (EventStartTimeOp op1) (EventStartTimeOp op2)         = lawNonCausal (eventStartTime e) op1 op2
-    lawNonCausal e (EventEndTimeOp op1) (EventEndTimeOp op2)             = lawNonCausal (eventEndTime e) op1 op2
-    lawNonCausal e (EventLocationOp op1) (EventLocationOp op2)           = lawNonCausal (eventLocation e) op1 op2
-    lawNonCausal _ _ _                                               = ()
+-- instance VRDT Event where
+--     type Operation Event = EventOp
+-- 
+--     enabled e (EventTitleOp op)       = enabled (eventTitle e) op
+--     enabled e (EventDescriptionOp op) = enabled (eventDescription e) op
+--     enabled e (EventStartTimeOp op)     = enabled (eventStartTime e) op
+--     enabled e (EventEndTimeOp op)       = enabled (eventEndTime e) op
+--     enabled e (EventLocationOp op)      = enabled (eventLocation e) op
+-- 
+--     apply e (EventTitleOp op)       = e {eventTitle = apply (eventTitle e) op}
+--     apply e (EventDescriptionOp op) = e {eventDescription = apply (eventDescription e) op}
+--     apply e (EventStartTimeOp op)     = e {eventStartTime = apply (eventStartTime e) op}
+--     apply e (EventEndTimeOp op)       = e {eventEndTime = apply (eventEndTime e) op}
+--     apply e (EventLocationOp op)      = e {eventLocation = apply (eventLocation e) op}
+-- 
+--     lawCommutativity e (EventTitleOp op1) (EventTitleOp op2)             = lawCommutativity (eventTitle e) op1 op2
+--     lawCommutativity e (EventDescriptionOp op1) (EventDescriptionOp op2) = lawCommutativity (eventDescription e) op1 op2
+--     lawCommutativity e (EventStartTimeOp op1) (EventStartTimeOp op2)         = lawCommutativity (eventStartTime e) op1 op2
+--     lawCommutativity e (EventEndTimeOp op1) (EventEndTimeOp op2)             = lawCommutativity (eventEndTime e) op1 op2
+--     lawCommutativity e (EventLocationOp op1) (EventLocationOp op2)           = lawCommutativity (eventLocation e) op1 op2
+--     lawCommutativity _ _ _                                               = ()
+-- 
+--     lawNonCausal e (EventTitleOp op1) (EventTitleOp op2)             = lawNonCausal (eventTitle e) op1 op2
+--     lawNonCausal e (EventDescriptionOp op1) (EventDescriptionOp op2) = lawNonCausal (eventDescription e) op1 op2
+--     lawNonCausal e (EventStartTimeOp op1) (EventStartTimeOp op2)         = lawNonCausal (eventStartTime e) op1 op2
+--     lawNonCausal e (EventEndTimeOp op1) (EventEndTimeOp op2)             = lawNonCausal (eventEndTime e) op1 op2
+--     lawNonCausal e (EventLocationOp op1) (EventLocationOp op2)           = lawNonCausal (eventLocation e) op1 op2
+--     lawNonCausal _ _ _                                               = ()
 
 instance Ord t => VRDT (LWW t a) where
     type Operation (LWW t a) = LWW t a
