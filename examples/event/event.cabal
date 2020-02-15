@@ -49,6 +49,7 @@ executable event
     LambdaCase
     OverloadedStrings
     RecursiveDo
+    TemplateHaskell
     TypeFamilies
   default-language: Haskell2010
 
