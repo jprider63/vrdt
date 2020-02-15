@@ -17,7 +17,7 @@ main = getArgs >>= \argv -> case argv of
         name <- getProgName
         putStrLn $ unlines
             [ printf "USAGE: %s server-url [store-id]" name
-            , "The start the demo with a URL and an optional store name."
+            , "Start the demo with a URL and an optional store name."
             ]
 
 
