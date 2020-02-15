@@ -33,6 +33,7 @@ packages:
 - kyowon-core
 - kyowon-client
 - kyowon-server
+- kyowon-reflex
 - examples/event
 - examples/max
 

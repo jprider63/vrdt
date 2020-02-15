@@ -3,5 +3,6 @@ packages:
     kyowon-core
     kyowon-client
     kyowon-server
-    examples/event
-    examples/max
+    kyowon-reflex
+--  examples/event
+--  examples/max
