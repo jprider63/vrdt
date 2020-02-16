@@ -55,6 +55,7 @@ connectToStore storeRef init opsE = do
       Client.withRaw
         (storeRefServer storeRef)-- "http://127.0.0.1:3000") 
         (Just $ storeRefStore storeRef) -- Client.StoreId "TODO") 
+        Nothing
         (Client.Recv $ \(Client.AppData bs) -> do
             case Aeson.decode bs of
                 Nothing -> 
