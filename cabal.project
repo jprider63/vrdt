@@ -6,3 +6,5 @@ packages:
     kyowon-reflex
     examples/event
     examples/max
+constraints:
+    reflex-vty == 0.1.3.0
