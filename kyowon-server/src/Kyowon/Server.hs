@@ -1,20 +1,17 @@
 {-# LANGUAGE TupleSections #-}
 module Kyowon.Server where
 
-import Data.String (fromString)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8 as BSC
 import Servant (Proxy(..), (:<|>)(..), NoContent(..))
 import Text.Printf (printf)
-import qualified Control.Concurrent.Chan as Chan
-import qualified Control.Concurrent.MVar as MVar
-import qualified Control.Exception as Exc
-import qualified Data.Map as Map
+import qualified Control.Concurrent.STM as STM
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Network.Wai.Middleware.RequestLogger as Logger
 import qualified Servant.Server as Server
 import qualified Servant.Types.SourceT as SourceT
 
+<<<<<<< HEAD:kyowon-server/src/Kyowon/Server.hs
 import           Kyowon.API (API)
 import qualified Kyowon.API.V0 as API -- JP: For now. Eventually should move things around.
 import qualified Kyowon.Types as API -- JP: For now. Eventually should move things around.
@@ -25,34 +22,49 @@ main :: IO ()
 main = do
     let port = 3000 -- JP: Parse argv. XXX
     state <- MVar.newMVar mempty
+=======
+import qualified Control.Concurrent.STM.Extras as STME
+import qualified Crdtoa.API as API
+import qualified Crdtoa.Server.Store as Store
+
+main :: Warp.Port -> IO ()
+main port = do
+    state <- STM.newTMVarIO mempty
+>>>>>>> da18ca4454fce5f25dcb862fd7964265cd95561f:crdtoa/lib/Crdtoa/Server.hs
     printf "Starting server on port %d\n" port
     Warp.run port
         . Logger.logStdoutDev -- XXX switch to logStdout later
         . Server.serve (Proxy :: Proxy API.API)
         $ endpoints state
 
--- TODO: when reusing this code for different incompatible API versions, make
--- sure to namespace stores under their namespaces
---
--- TOOD: switch to STM instead
-type MutState = MVar.MVar State
-type State = Map.Map API.StoreId Store
-type Store = (Map.Map API.ClientId [API.AppData], Chan.Chan API.AppData)
-emptyStore :: IO Store
-emptyStore = return . (mempty,) =<< Chan.newChan
+endpoints :: Store.MutState -> Server.Server API.API
+endpoints mut = createV0 mut :<|> sendV0 mut :<|> listenV0 mut
 
-endpoints :: MutState -> Server.Server API.API
-endpoints state = createV0 state :<|> sendV0 state :<|> listenV0 state :<|> streamV0 state
-
--- TODO: when reusing this for v1, make sure to namespace to a different set of
--- stores
-createV0 :: MutState -> Server.Handler API.StoreId
+createV0 :: Store.MutState -> Server.Handler API.StoreId
 createV0 = undefined
     -- TODO: look into random words? uuid? for this.. words are nice because they're share-able
 
-streamV0 :: MutState -> API.StoreId -> API.ClientId -> SourceT.SourceT IO API.AppData -> Server.Handler (SourceT.SourceT IO API.AppData)
-streamV0 = undefined
+-- | Generate a response stream with a backlog followed by live updates for the
+-- client.
+listenV0 :: Store.MutState -> API.StoreId -> API.ClientId -> Server.Handler API.ServerStream
+listenV0 mut store client = do
+    liftIO
+        . STM.atomically
+        . STME.modifyTMVar mut
+        $ Store.modifyStore (with responseStream) store
+  where
+    responseStream storeVal = do
+        backlog <- return $ Store.backlog client storeVal
+        live <- Store.listen client storeVal
+        -- concatenate SourceTs and apply Update to the tuples within
+        let stream = (uncurry API.Update <$> backlog <> live)
+        -- unconditionally prepend the stream with a welcome message to prevent response timeouts
+        -- TODO: make the welcome message specify which messages the server has (bloom filter; see Types.hs)
+        return $ SourceT.source [API.RequestResendUpdates] <> stream
+    -- Apply x to f for the effect. Return x alongside of the result.
+    with f x = f x >>= return . (x,)
 
+<<<<<<< HEAD:kyowon-server/src/Kyowon/Server.hs
 sendV0 :: MutState -> API.StoreId -> API.AppData -> Server.Handler Servant.NoContent
 sendV0 mut store update = do
     -- -- FIXME: get a real client id
@@ -71,47 +83,18 @@ sendV0 mut store update = do
         Chan.writeChan chan update
         -- "put the modified store back"
         return $ Map.insert store (logs, chan) state
+=======
+-- | Log and broadcast every update.
+sendV0 :: Store.MutState -> API.StoreId -> (API.ClientId, API.AppData) -> Server.Handler NoContent
+sendV0 mut store (client, update) = do
+    liftIO
+        . STM.atomically
+        . STME.modifyTMVar_ mut
+        $ Store.mapStore broadcast store
+>>>>>>> da18ca4454fce5f25dcb862fd7964265cd95561f:crdtoa/lib/Crdtoa/Server.hs
     return NoContent
-
--- | Fetch the store. Duplicate its channel and concatenate all of its old
--- logs. Emit the old logs and the channel contents as a stream to the client.
--- No optimization of the communication is performed, and so the logs sent may
--- be extensive.
---
--- XXX: Race potential: if another thread holds a reference to the channel
--- outside of the MVar and sends on that reference, then this function may miss
--- that element. To remove this potential for a race, use cloneChan in this
--- function.
---
--- XXX: Currently it's not clear how the stream is meant to end, or whether the
--- runtime will correctly GC the channel. Need to read about MVars and GC.
---
--- FIXME: currently this echos from client A back to A,B,C... it shouldn't send
--- back to A .. same goes for the logs, i guess
-listenV0 :: MutState -> API.StoreId -> Server.Handler (SourceT.SourceT IO API.AppData)
-listenV0 mut store = do
-    (updates, chan) <- liftIO . MVar.modifyMVar mut $ \state -> do
-        -- "fetch or create store"
-        (logs, chan) <- maybe emptyStore return $ Map.lookup store state
-        -- "create broadcast chan"
-        bChan <- Chan.dupChan chan
-        return
-            ( Map.insert store (logs, chan) state
-            , (concat $ Map.elems logs, bChan)
-            )
-    -- TODO: filter from clientid
-    return
-        $ SourceT.source updates
-        <> SourceT.fromStepT (chanStepT chan)
-
--- | Emit elements from a channel to a stream. If the channel raises
--- 'Exc.BlockedIndefinitelyOnMVar' then the stream will stop.
---
--- XXX: Should that eror be emitted instead?
-chanStepT :: Chan.Chan a -> SourceT.StepT IO a
-chanStepT c = SourceT.Effect $ action `Exc.catch` handler
   where
-    action = do
-        v <- Chan.readChan c
-        return $ SourceT.Yield v (chanStepT c)
-    handler Exc.BlockedIndefinitelyOnMVar = return SourceT.Stop
+    broadcast storeVal
+        = Store.broadcast client update
+        . Store.log client update
+        $ storeVal

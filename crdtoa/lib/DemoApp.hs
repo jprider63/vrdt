@@ -20,6 +20,7 @@ main server requestStore = do
     App.withSer
         (App.Server server)
         (App.StoreId . fromString <$> requestStore)
+        Nothing
         (App.Recv $ either
             (\e -> putStrLn $ "Serialization error: " <> e)
             (\m -> putStrLn $ "[" <> handle m <> "]: " <> message m))

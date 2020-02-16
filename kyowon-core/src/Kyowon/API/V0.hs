@@ -1,17 +1,24 @@
+<<<<<<< HEAD:kyowon-core/src/Kyowon/API/V0.hs
 module Kyowon.API.V0 where
+=======
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeOperators #-}
+module Crdtoa.API
+( module Crdtoa.API
+, module Crdtoa.Types
+) where
+>>>>>>> da18ca4454fce5f25dcb862fd7964265cd95561f:crdtoa/lib/Crdtoa/API.hs
 
---import Web.HttpApiData (FromHttpApiData)
-import Data.ByteString.Lazy (ByteString)
-import Data.Map (Map)
-import Data.Text (Text)
-import GHC.Generics (Generic)
+import Crdtoa.Types -- XXX all names unqualified
 import Servant -- XXX all names unqualified
-import qualified Data.Aeson as Aeson
 
 import Kyowon.Types
 
 -- XXX for generating URIs elsewhere, might want to not distribute over the v0,v1 prefixes
 type API
+<<<<<<< HEAD:kyowon-core/src/Kyowon/API/V0.hs
     =    CreateV0 
     :<|> SendV0 
     :<|> ListenV0
@@ -70,3 +77,22 @@ data ServerMessage
     = OpaqueAppData AppData
     | RequestLogEntries [LogIndex]
 
+=======
+    =    "v0" :> (CreateV0 :<|> SendV0 :<|> ListenV0)
+
+type CreateV0 = "create"
+    :> Post '[JSON] StoreId
+
+type SendV0 = "send"
+    :> Capture "store-id" StoreId
+    :> ReqBody '[OctetStream] (ClientId, AppData)
+    :> Post '[JSON] NoContent
+-- TODO: instead of a tuple, define an Update type to match ServerMessage(Update)
+
+type ListenV0 = "listen"
+    :> Capture "store-id" StoreId
+    :> ReqBody '[OctetStream] ClientId
+    :> StreamPost NoFraming OctetStream ServerStream
+
+type ServerStream = SourceIO ServerMessage
+>>>>>>> da18ca4454fce5f25dcb862fd7964265cd95561f:crdtoa/lib/Crdtoa/API.hs
