@@ -8,6 +8,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64.URL as B64U
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock (UTCTime)
+import           GHC.Generics (Generic)
 
 
 {-@
@@ -18,7 +19,7 @@ data ClientId = ClientId {
 data ClientId = ClientId {
     rawClientId :: ByteString -- 128 bits
   }
-    deriving (Eq, Ord)
+    deriving (Show, Eq, Ord, Generic)
 
 instance FromJSON ClientId where
     parseJSON = Aeson.withText "ClientId" $ either fail (return . ClientId) . B64U.decode . Text.encodeUtf8 

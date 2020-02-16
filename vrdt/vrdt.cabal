@@ -54,6 +54,7 @@ library
   default-language: Haskell2010
   extensions: 
               BangPatterns
+              DeriveGeneric
               LambdaCase
               OverloadedStrings
               RecordWildCards
