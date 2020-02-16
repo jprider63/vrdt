@@ -12,7 +12,7 @@ import           Reflex hiding (apply, Event)
 import           Reflex.Vty hiding (apply, Event)
 
 import qualified Kyowon.Client as Client
-import qualified Kyowon.Reflex as Reflex
+import qualified Kyowon.Client.Reflex as Reflex
 import           VRDT.Class
 import           VRDT.Class.TH
 import           VRDT.LWW (LWWU, LWW(..))
@@ -111,7 +111,7 @@ app now = do
     toLWW e = return $ l0 <$> e
 
 
-    storeRef = Client.StoreRef (Client.Server "http://localhost:3000") (Client.StoreId "TODO")
+    storeRef = Reflex.StoreRef (Client.Server "http://localhost:3000") (Client.StoreId "TODO")
 
     e0 = Event (l0 "Alice's birthday") (l0 "Let's celebrate Alice's birthday") (l0 now) (l0 now) (l0 "Someplace secret")
 

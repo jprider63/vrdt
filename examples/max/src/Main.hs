@@ -37,7 +37,7 @@ import Reflex.Class.Switchable
 import Reflex.Vty
 import Text.Read (readMaybe)
 
-import Kyowon.Reflex (connectToStore)
+import Kyowon.Client.Reflex (connectToStore, StoreRef(..))
 import VRDT.Class (VRDT(..))
 import VRDT.Max
 
@@ -80,7 +80,7 @@ maxApp = do
     return ()
 
   where
-    storeRef = Client.StoreRef (Client.Server "http://localhost:3000") (Client.StoreId "TODO")
+    storeRef = StoreRef (Client.Server "http://localhost:3000") (Client.StoreId "TODO")
 
     v0 = Max (0 :: Integer)
 
