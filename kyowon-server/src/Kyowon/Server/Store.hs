@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Crdtoa.Server.Store where
+module Kyowon.Server.Store where
 
 import Control.Concurrent.STM (STM)
 import Servant.Types.SourceT (SourceT)
@@ -10,7 +10,9 @@ import qualified Servant
 import qualified Servant.Types.SourceT as SourceT hiding (SourceT)
 
 import Servant.Extras ()
-import qualified Crdtoa.API as API
+import qualified Kyowon.API as API
+import qualified Kyowon.API.V0 as API
+import qualified Kyowon.Types as API
 
 -- * Data model
 

@@ -28,6 +28,7 @@ source-repository head
 executable kyowon-server
   main-is: Kyowon/Server.hs
   other-modules:
+      Kyowon.Server.Store
       Paths_kyowon_server
   hs-source-dirs:
       src
@@ -39,6 +40,7 @@ executable kyowon-server
     , kyowon-core
     , servant
     , servant-server
+    , stm
     , wai-extra
     , warp
   default-language: Haskell2010

@@ -27,11 +27,9 @@ source-repository head
 
 library
   exposed-modules:
-      Control.Concurrent.STM.Extras
       Kyowon.Client
       Kyowon.Client.Log
       Kyowon.Reflex
-      Servant.Extras
   other-modules:
       Paths_kyowon_client
   hs-source-dirs:
