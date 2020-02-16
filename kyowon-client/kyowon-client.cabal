@@ -1,5 +1,8 @@
 name: kyowon-client
 version: 0
+author: PLR
+maintainer: code@curious.software
+copyright: 2019 PLR
 license: BSD3
 license-file: LICENSE
 build-type: Simple
