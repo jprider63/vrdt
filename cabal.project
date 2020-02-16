@@ -4,5 +4,5 @@ packages:
     kyowon-client
     kyowon-server
     kyowon-reflex
---  examples/event
---  examples/max
+    examples/event
+    examples/max
