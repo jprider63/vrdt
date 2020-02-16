@@ -1,6 +1,7 @@
 
 module VRDT.Types where
 
+import           Crypto.Random (createEntropyPool, cprgCreate, cprgGenerate, SystemRNG)
 import           Data.Aeson (FromJSON(..), ToJSON(..), (.=), (.:))
 import qualified Data.Aeson as Aeson
 import           Data.ByteString (ByteString)
@@ -28,8 +29,11 @@ instance ToJSON ClientId where
 
 
 -- | Randomly generate a `ClientId`.
-generateClientId :: m ClientId
-generateClientId = undefined -- TODO XXX
+generateClientId :: IO ClientId
+generateClientId = do
+    rng <- cprgCreate @SystemRNG <$> createEntropyPool -- TODO: grab from reader monad? Should we use cryptonite instead? We don't need the rest of the crypto functionality...
+    let (cId, _rng) = cprgGenerate 16 rng
+    return $ ClientId cId
 
 data UTCTimestamp = UTCTimestamp UTCTime ClientId
     deriving (Eq, Ord)

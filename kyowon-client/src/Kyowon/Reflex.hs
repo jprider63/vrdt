@@ -28,7 +28,7 @@ import           Reflex (
 import           Kyowon.Client (StoreRef(..))
 import qualified Kyowon.Client as Client
 import           VRDT.Class (VRDT(..))
-import           VRDT.Types (ClientId(..))
+import           VRDT.Types (ClientId(..), generateClientId)
 
 
 -- loadStore :: IO (StoreRef a, a)
@@ -49,19 +49,21 @@ connectToStore storeRef init opsE = do
     performEvent_ $ ffor opChanOpesE $ \(opChan, op) -> liftIO $ do
         writeChan opChan $ Left op
 
-    performEvent_ $ ffor opChanE $ \opChan -> liftIO $ void $ forkIO $ do
-      Client.withRaw
-        (storeRefServer storeRef)-- "http://127.0.0.1:3000") 
-        (Just $ storeRefStore storeRef) -- Client.StoreId "TODO") 
-        (ClientId "TODO") -- TODO: grab from a reader monad
-        (Client.Recv $ \(Client.AppData bs) -> do
-            case Aeson.decode bs of
-                Nothing -> 
-                    error "TODO"
-                Just op -> 
-                    writeChan opChan $ Right op
-          ) 
-        $ run init opChan cCallback
+    performEvent_ $ ffor opChanE $ \opChan -> liftIO $ do
+      clientId <- generateClientId -- TODO: grab from a reader monad
+      void $ forkIO $ do
+        Client.withRaw
+          (storeRefServer storeRef)-- "http://127.0.0.1:3000") 
+          (Just $ storeRefStore storeRef) -- Client.StoreId "TODO") 
+          clientId
+          (Client.Recv $ \(Client.AppData bs) -> do
+              case Aeson.decode bs of
+                  Nothing -> 
+                      error "TODO"
+                  Just op -> 
+                      writeChan opChan $ Right op
+            ) 
+          $ run init opChan cCallback
 
     holdDyn init cE
   

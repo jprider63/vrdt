@@ -47,6 +47,7 @@ library
     , base64-bytestring
     , bytestring
     , containers
+    , crypto-random
     -- , liquidhaskell
     , template-haskell
     , text
@@ -58,6 +59,7 @@ library
               LambdaCase
               OverloadedStrings
               RecordWildCards
+              TypeApplications
               TypeFamilies
               TypeFamilyDependencies
 
