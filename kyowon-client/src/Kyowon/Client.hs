@@ -1,53 +1,42 @@
-{-# LANGUAGE NamedFieldPuns #-}
-<<<<<<< HEAD:kyowon-client/src/Kyowon/Client.hs
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-module Kyowon.Client
-(
+
+module Kyowon.Client (
 -- * Application abstraction
-  module Kyowon.Client -- Application
-=======
-module Crdtoa.Application
-(
--- * Application abstraction
+--   module Kyowon.Client -- Application
   withSer
 , withRaw
 , runRaw
 , Server(..)
+, StoreRef(..)
 , Recv(..)
 , Client(store, send)
->>>>>>> da18ca4454fce5f25dcb862fd7964265cd95561f:crdtoa/lib/Crdtoa/Application.hs
 , API.StoreId(..)
 , API.AppData(..)
 , Ser.Serialize
 ) where
 
-import Servant (Proxy(..), (:<|>)(..), NoContent(..))
+import           Servant (Proxy(..), (:<|>)(..), NoContent(..))
 import qualified Control.Concurrent.Async as Async
 import qualified Control.Concurrent.STM as STM
+import qualified Control.Concurrent.STM.Extras as STME
 import qualified Control.Exception as Exc
 import qualified Data.Serialize as Ser
-import qualified Data.UUID.V4 as UUIDv4
+-- import qualified Data.UUID.V4 as UUIDv4
 import qualified Network.HTTP.Client as HTTP
 import qualified Network.HTTP.Client.TLS as TLS
 import qualified Servant.Client.Streaming as Client
 import qualified Servant.Types.SourceT as SourceT
 
-<<<<<<< HEAD:kyowon-client/src/Kyowon/Client.hs
 import           Kyowon.API (API)
 import qualified Kyowon.API.V0 as API -- JP: For now. Update this. XXX
+import qualified Kyowon.Types as API -- JP: For now. Update this. XXX
+import           Kyowon.Client.Log (slowLog, LogLevel(..), setupLogger)
 import           Kyowon.Types (ClientId)
+import           Servant.Extras ()
 
 data StoreRef a = StoreRef {
     storeRefServer :: Server
   , storeRefStore  :: API.StoreId
   }
-=======
-import Crdtoa.Log (slowLog, LogLevel(..), setupLogger)
-import Servant.Extras ()
-import qualified Control.Concurrent.STM.Extras as STME
-import qualified Crdtoa.API as API
->>>>>>> da18ca4454fce5f25dcb862fd7964265cd95561f:crdtoa/lib/Crdtoa/Application.hs
 
 maxBackoffSec :: Int
 maxBackoffSec = 600 -- five minutes
@@ -92,10 +81,10 @@ maxBackoffSec = 600 -- five minutes
 --      -> This test doesn't make sense. Since the server doesn't persist the
 --      data yet, it won't resend it to the client.
 
-<<<<<<< HEAD:kyowon-client/src/Kyowon/Client.hs
-_createV0 :: Client.ClientM API.StoreId
-sendV0 :: API.StoreId -> API.AppData -> Client.ClientM NoContent
-listenV0 :: API.StoreId -> Client.ClientM (SourceT.SourceT IO API.AppData)
+-- <<<<<<< HEAD:kyowon-client/src/Kyowon/Client.hs
+-- _createV0 :: Client.ClientM API.StoreId
+-- sendV0 :: API.StoreId -> API.AppData -> Client.ClientM NoContent
+-- listenV0 :: API.StoreId -> Client.ClientM (SourceT.SourceT IO API.AppData)
 -- <<<<<<< HEAD:kwik-client/src/Kwik/Client.hs
 -- createV0 :<|> sendV0 :<|> listenV0 = Client.client (Proxy :: Proxy API)
 -- 
@@ -129,9 +118,9 @@ listenV0 :: API.StoreId -> Client.ClientM (SourceT.SourceT IO API.AppData)
 -- -- that we're building to support explicitly.. needs to be handled
 -- -- properly
 -- =======
-streamV0 :: API.StoreId -> ClientId -> SourceT.SourceT IO API.AppData -> Client.ClientM (SourceT.SourceT IO API.AppData)
-_createV0 :<|> sendV0 :<|> listenV0 :<|> streamV0 = Client.client (Proxy :: Proxy API.API)
-=======
+-- streamV0 :: API.StoreId -> ClientId -> SourceT.SourceT IO API.AppData -> Client.ClientM (SourceT.SourceT IO API.AppData)
+-- _createV0 :<|> sendV0 :<|> listenV0 :<|> streamV0 = Client.client (Proxy :: Proxy API.API)
+-- =======
 -- TODO: make a pipes or conduit based interface? what about other
 -- serialization libraries?
 
@@ -139,7 +128,6 @@ createV0 :: Client.ClientM API.StoreId
 sendV0 :: API.StoreId -> (API.ClientId, API.AppData) -> Client.ClientM NoContent
 listenV0 :: API.StoreId -> API.ClientId -> Client.ClientM API.ServerStream
 createV0 :<|> sendV0 :<|> listenV0 = Client.client (Proxy :: Proxy API.API)
->>>>>>> da18ca4454fce5f25dcb862fd7964265cd95561f:crdtoa/lib/Crdtoa/Application.hs
 
 -- | The base URL of a server to connect with.
 newtype Server = Server String
@@ -165,16 +153,15 @@ data Client a = Client
 runRaw
     :: Server
     -> Maybe API.StoreId
-    -> Maybe API.ClientId
+    -> API.ClientId
     -> Recv API.AppData
     -> IO (Client API.AppData)
-runRaw (Server server) storeSpec clientSpec recv = do
+runRaw (Server server) storeSpec client recv = do
     () <- setupLogger
     env <- Client.mkClientEnv
         <$> HTTP.newManager TLS.tlsManagerSettings
         <*> Client.parseBaseUrl server
     store <- maybe (createStore env) return storeSpec
-    client <- maybe createClient return clientSpec
     outbox <- STM.newTQueueIO
     wakeup <- STME.newWakeupIO
     background <- Async.async $ manager env store client outbox recv wakeup
@@ -186,8 +173,8 @@ runRaw (Server server) storeSpec clientSpec recv = do
             STM.writeTQueue outbox a
         }
   where
-    createClient
-        = API.ClientId <$> UUIDv4.nextRandom
+    -- createClient
+    --     = API.ClientId <$> UUIDv4.nextRandom
     createStore env
         = Client.withClientM createV0 env
         $ either (error "createStore,either") return
@@ -309,7 +296,7 @@ exponentialBackoff wakeup demerits = do
 withRaw
     :: Server
     -> Maybe API.StoreId
-    -> Maybe API.ClientId
+    -> API.ClientId
     -> Recv API.AppData
     -> (Client API.AppData -> IO a)
     -> IO a
@@ -331,7 +318,7 @@ withSer
     :: Ser.Serialize u
     => Server
     -> Maybe API.StoreId
-    -> Maybe API.ClientId
+    -> API.ClientId
     -> Recv (Either String u)
     -- ^ Deserialization errors are exposed to the receive function so that the
     -- application can be made aware of error cases, eg. receiving data from an
@@ -344,8 +331,6 @@ withSer server store client (Recv recvSer) actionSer
     = withRaw server store client (Recv recvRaw) actionRaw
   where
     recvRaw = recvSer . Ser.decodeLazy . \(API.AppData bs) -> bs
-<<<<<<< HEAD:kyowon-client/src/Kyowon/Client.hs
-    actionRaw client@Client{send=sendRaw} = actionSer client{send=sendRaw . API.AppData . Ser.encodeLazy}
 
 -- TODO: make a pipes or conduit based interface? what about other
 -- serialization libraries?
@@ -372,9 +357,7 @@ withSer server store client (Recv recvSer) actionSer
 -- == Info: Connection #0 to host localhost left intact
 -- curl: (52) Empty reply from server
 -- ? 52
-=======
     actionRaw c@Client{send=sendRaw} = actionSer c{send=sendRaw . API.AppData . Ser.encodeLazy}
->>>>>>> da18ca4454fce5f25dcb862fd7964265cd95561f:crdtoa/lib/Crdtoa/Application.hs
 
 -- | @exponentialBackoffSec cap n@ computes the number of seconds, up to @cap@,
 -- to backoff after @n@ failures.

@@ -1,4 +1,4 @@
-module Crdtoa.Log where
+module Kyowon.Client.Log where
 
 import Data.Time (getCurrentTime)
 import Text.Printf (hPrintf)

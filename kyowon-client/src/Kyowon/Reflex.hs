@@ -28,6 +28,7 @@ import           Reflex (
 import           Kyowon.Client (StoreRef(..))
 import qualified Kyowon.Client as Client
 import           VRDT.Class (VRDT(..))
+import           VRDT.Types (ClientId(..))
 
 
 -- loadStore :: IO (StoreRef a, a)
@@ -52,6 +53,7 @@ connectToStore storeRef init opsE = do
       Client.withRaw
         (storeRefServer storeRef)-- "http://127.0.0.1:3000") 
         (Just $ storeRefStore storeRef) -- Client.StoreId "TODO") 
+        (ClientId "TODO") -- TODO: grab from a reader monad
         (Client.Recv $ \(Client.AppData bs) -> do
             case Aeson.decode bs of
                 Nothing -> 
