@@ -5,7 +5,8 @@
 * [ ] Merge in master and resolve the conflicts, merge back to master.
 * [ ] Build examples with reflex to demonstrate the thing
 * [ ] Implement and prove Sum type with Liquid Haskell
-* [ ] ICFP is Mar 3, 2020
+* [ ] ICFP paper submission deadline is Mar 3, 2020
+* [ ] OOPSLA paper submission deadline is Apr 15, 2020
 
 # Stateless behavior
 
