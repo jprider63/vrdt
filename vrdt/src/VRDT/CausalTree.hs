@@ -8,25 +8,26 @@ import           Data.Time.Clock (UTCTime)
 
 import           VRDT.Types
 
-data CausalTree a = CausalTree {
-    causalTreeWeave   :: CausalTreeWeave a
+-- Identifier for `CausalTree` is abstract, but you probably want to use `UTCTimestamp`.
+data CausalTree id a = CausalTree {
+    causalTreeWeave   :: CausalTreeWeave id a
   -- , CausalTreeList :: [a] -- JP: Should we add this field to cache the list representation?
-  , causalTreePending :: Map AtomId [CausalTreeAtom a]
+  , causalTreePending :: Map id [CausalTreeAtom id a]
   }
   deriving (Show)
 
-data CausalTreeOp a = CausalTreeOp {
-    causalTreeOpParent :: AtomId
-  , causalTreeOpAtom   :: CausalTreeAtom a    -- Invariant: Cannot be CausalTreeLetterRoot
+data CausalTreeOp id a = CausalTreeOp {
+    causalTreeOpParent :: id
+  , causalTreeOpAtom   :: CausalTreeAtom id a    -- Invariant: Cannot be CausalTreeLetterRoot
   }
   deriving (Show)
 
--- JP: Maybe we should leave this abstract.
-data AtomId = AtomId UTCTime ClientId
-  deriving (Show, Eq, Ord)
+-- -- JP: Maybe we should leave this abstract.
+-- data AtomId = AtomId UTCTime ClientId
+--   deriving (Show, Eq, Ord)
 
-data CausalTreeAtom a = CausalTreeAtom {
-    causalTreeAtomId     :: AtomId
+data CausalTreeAtom id a = CausalTreeAtom {
+    causalTreeAtomId     :: id
   , causalTreeAtomLetter :: CausalTreeLetter a
   }
   deriving (Show)
@@ -37,18 +38,18 @@ data CausalTreeLetter a =
   | CausalTreeLetterRoot -- | Root node. Should only be used as the initial node on creation.
   deriving (Show)
 
-data CausalTreeWeave a = CausalTreeWeave {
-    causalTreeWeaveAtom     :: CausalTreeAtom a
-  , causalTreeWeaveChildren :: [CausalTreeWeave a]
+data CausalTreeWeave id a = CausalTreeWeave {
+    causalTreeWeaveAtom     :: CausalTreeAtom id a
+  , causalTreeWeaveChildren :: [CausalTreeWeave id a]
   }
   deriving (Show)
 
-apply :: CausalTree a -> CausalTreeOp a -> CausalTree a
+apply :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTree id a
 apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
 
   where
 
-    applyAtom :: CausalTree a -> AtomId -> CausalTreeAtom a -> CausalTree a
+    -- applyAtom :: CausalTree a -> AtomId -> CausalTreeAtom a -> CausalTree a
     applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave parentId atom of
         Nothing -> 
             -- ParentId not seen yet, so mark as pending.
@@ -63,7 +64,7 @@ apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
             List.foldl' (\ct atom -> applyAtom ct opId atom) ct $ concat pendingAtomsM
 
 
-    insertInWeave :: CausalTreeWeave a -> AtomId -> CausalTreeAtom a -> Maybe (CausalTreeWeave a)
+    -- insertInWeave :: CausalTreeWeave a -> AtomId -> CausalTreeAtom a -> Maybe (CausalTreeWeave a)
     insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
         -- Is the current atom the target parent?
         | causalTreeAtomId currentAtom == parentId = 
@@ -74,7 +75,7 @@ apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
             CausalTreeWeave currentAtom <$> childrenM
 
 
-    insertInWeaveChildren :: [CausalTreeWeave a] -> AtomId -> CausalTreeAtom a -> Maybe [CausalTreeWeave a]
+    -- insertInWeaveChildren :: [CausalTreeWeave a] -> AtomId -> CausalTreeAtom a -> Maybe [CausalTreeWeave a]
     insertInWeaveChildren [] _ _ = Nothing
     insertInWeaveChildren (w:ws) parentId atom = case insertInWeave w parentId atom of
         Nothing ->
@@ -82,7 +83,7 @@ apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
         Just w' ->
             Just $ w':ws
 
-    insertAtom :: [CausalTreeWeave a] -> CausalTreeAtom a -> [CausalTreeWeave a]
+    -- insertAtom :: [CausalTreeWeave a] -> CausalTreeAtom a -> [CausalTreeWeave a]
     insertAtom [] atom = [CausalTreeWeave atom []]
     insertAtom l@(w:ws) atom 
       | atom `atomGreaterThan` causalTreeWeaveAtom w = CausalTreeWeave atom []:l
@@ -94,7 +95,7 @@ apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
 -- O(n)
 --
 -- JP: Can we efficiently return results in the correct order by doing a foldr?
-preorder :: CausalTree a -> [CausalTreeAtom a]
+preorder :: CausalTree id a -> [CausalTreeAtom id a]
 preorder = go [] . causalTreeWeave
  where
   go acc (CausalTreeWeave _atom ws) = 
@@ -121,7 +122,7 @@ preorder = go [] . causalTreeWeave
 
 
 -- Compare whether an atom is greater than another atom, prioritizing CausalTreeLetterDelete.
-atomGreaterThan :: CausalTreeAtom a -> CausalTreeAtom a -> Bool
+atomGreaterThan :: Ord id => CausalTreeAtom id a -> CausalTreeAtom id a -> Bool
 atomGreaterThan (CausalTreeAtom a1 CausalTreeLetterRoot) (CausalTreeAtom a2 CausalTreeLetterRoot)     = a1 > a2
 atomGreaterThan (CausalTreeAtom _ CausalTreeLetterRoot) (CausalTreeAtom _ _)                          = True
 atomGreaterThan (CausalTreeAtom a1 CausalTreeLetterDelete) (CausalTreeAtom a2 CausalTreeLetterDelete) = a1 > a2
