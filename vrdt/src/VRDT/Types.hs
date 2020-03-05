@@ -18,7 +18,7 @@ data ClientId = ClientId {
 data ClientId = ClientId {
     rawClientId :: ByteString -- 128 bits
   }
-    deriving (Eq, Ord)
+  deriving (Show, Eq, Ord)
 
 instance FromJSON ClientId where
     parseJSON = Aeson.withText "ClientId" $ either fail (return . ClientId) . B64U.decode . Text.encodeUtf8 
