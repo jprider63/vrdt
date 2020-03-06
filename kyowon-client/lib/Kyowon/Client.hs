@@ -19,7 +19,6 @@ import qualified Control.Concurrent.Async as Async
 import qualified Control.Concurrent.STM as STM
 import qualified Control.Exception as Exc
 import qualified Data.Serialize as Ser
-import qualified Data.UUID.V4 as UUIDv4
 import qualified Network.HTTP.Client as HTTP
 import qualified Network.HTTP.Client.TLS as TLS
 import qualified Servant.Client.Streaming as Client
@@ -91,6 +90,7 @@ newtype Recv a = Recv (a -> IO ())
 -- the name of the connected store.
 data Client a = Client
     { background :: Async.Async ()
+    , client :: API.ClientId
     , store :: API.StoreId
     , send :: a -> IO ()
     }
@@ -114,20 +114,19 @@ runRaw (Server server) storeSpec clientSpec recv = do
         <$> HTTP.newManager TLS.tlsManagerSettings
         <*> Client.parseBaseUrl server
     store <- maybe (createStore env) return storeSpec
-    client <- maybe createClient return clientSpec
+    client <- maybe API.createClient return clientSpec
     outbox <- STM.newTQueueIO
     wakeup <- STME.newWakeupIO
     background <- Async.async $ manager env store client outbox recv wakeup
     return Client
         { background = background
+        , client = client
         , store = store
         , send = \a -> STM.atomically $ do
             STME.wakeup wakeup
             STM.writeTQueue outbox a
         }
   where
-    createClient
-        = API.ClientId <$> UUIDv4.nextRandom
     createStore env
         = Client.withClientM createV0 env
         $ either (error "createStore,either") return
