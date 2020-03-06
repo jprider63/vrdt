@@ -47,6 +47,7 @@ library
     , base64-bytestring
     , bytestring
     , containers
+    , kyowon-core
     -- , liquidhaskell
     , template-haskell
     , text
