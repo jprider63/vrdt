@@ -1,65 +1,49 @@
-cabal-version: 1.12
+name: kyowon-client
+version: 0
+author: PLR
+maintainer: code@curious.software
+copyright: 2019 PLR
+license: BSD3
+license-file: LICENSE
+build-type: Simple
+cabal-version: >=1.10
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
---
--- see: https://github.com/sol/hpack
---
--- hash: 7e9fe051a74a03e09b58937fea821364da76e39ab775afe48a9e61bb3e42e1b7
-
-name:           kyowon-client
-version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/kyowon-client#readme>
-homepage:       https://github.com/githubuser/kyowon-client#readme
-bug-reports:    https://github.com/githubuser/kyowon-client/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2020 Author name here
-license:        BSD3
-license-file:   LICENSE
-build-type:     Simple
-extra-source-files:
-    README.md
-    ChangeLog.md
-
-source-repository head
-  type: git
-  location: https://github.com/githubuser/kyowon-client
+-- https://www.haskell.org/cabal/users-guide/developing-packages.html#pkg-field-data-files
+data-files:
 
 library
-  exposed-modules:
-      Kyowon.Client
-      Kyowon.Reflex
-  other-modules:
-      Paths_kyowon_client
-  hs-source-dirs:
-      src
-  build-depends:
-      async
-    , aeson
-    , base >=4.7 && <5
-    , cereal
-    , http-client
-    , http-client-tls
-    , kyowon-core
-    , reflex
-    , servant
-    , servant-client
-    , servant-server
-    , stm
-    , vrdt
-    , warp
-  extensions: FlexibleContexts
-  default-language: Haskell2010
+  build-depends:        base
+                      , async
+                      , cereal
+                      , http-client
+                      , http-client-tls
+                      , kyowon-core
+                      , servant
+                      , servant-client
+                      , stm
+                      , time
+                      , uuid
+  default-language:     Haskell2010
+  hs-source-dirs:       lib
 
-test-suite kyowon-client-test
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
+  exposed-modules:      Paths_kyowon_client
+                      , Kyowon.Client
+                      , Kyowon.Client.Log
   other-modules:
-      Paths_kyowon_client
-  hs-source-dirs:
-      test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-      base >=4.7 && <5
-    , kyowon-client
-  default-language: Haskell2010
+
+test-suite kyowon-client_test
+  type:                 exitcode-stdio-1.0
+  build-depends:        base, kyowon-client, doctest, QuickCheck
+  default-language:     Haskell2010
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N
+
+  hs-source-dirs:       .
+  main-is:              Doctest.hs
+
+executable kyowon-client_demo
+  build-depends:        base, kyowon-client
+  default-language:     Haskell2010
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N
+
+  hs-source-dirs:       .
+  main-is:              Main.hs

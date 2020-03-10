@@ -36,6 +36,7 @@ executable event
       aeson
     , base >=4.7 && <5
     , kyowon-client
+    , kyowon-reflex
     , reflex
     , reflex-vty
     , text

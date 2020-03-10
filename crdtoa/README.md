@@ -1,1 +1,0 @@
-# CRDT oriented architecture

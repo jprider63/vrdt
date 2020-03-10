@@ -1,63 +1,41 @@
-cabal-version: 1.12
+name: kyowon-core
+version: 0
+author: PLR
+maintainer: code@curious.software
+copyright: 2019 PLR
+license: BSD3
+license-file: LICENSE
+build-type: Simple
+cabal-version: >=1.10
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
---
--- see: https://github.com/sol/hpack
---
--- hash: 7fb290d5ba8226790722652e4935004f3bf8c7b331cbe65068700093de626ca4
-
-name:           kyowon-core
-version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/kyowon-core#readme>
-homepage:       https://github.com/githubuser/kyowon-core#readme
-bug-reports:    https://github.com/githubuser/kyowon-core/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2020 Author name here
-license:        BSD3
-license-file:   LICENSE
-build-type:     Simple
-extra-source-files:
-    README.md
-    ChangeLog.md
-
-source-repository head
-  type: git
-  location: https://github.com/githubuser/kyowon-core
+-- https://www.haskell.org/cabal/users-guide/developing-packages.html#pkg-field-data-files
+data-files:
 
 library
-  exposed-modules:
-      Kyowon.API
-    , Kyowon.API.V0
-    , Kyowon.Types
-  other-modules:
-      Paths_kyowon_core
-  hs-source-dirs:
-      src
-  build-depends:
-      aeson
-    , base >=4.7 && <5
-    , bytestring
-    , containers
-    , servant-server
-    , text
-  default-language: Haskell2010
-  extensions:
-    DataKinds
-    DeriveGeneric
-    MultiParamTypeClasses
-    TypeOperators
+  build-depends:        base
+                      , aeson
+                      , binary
+                      , bytestring
+                      , cereal
+                      , servant
+                      , stm
+                      , text
+                      , uuid-types
+  default-language:     Haskell2010
+  hs-source-dirs:       lib
 
-
-test-suite kyowon-core-test
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
+  exposed-modules:      Paths_kyowon_core
+                      , Control.Concurrent.STM.Extras
+                      , Kyowon.Core.API
+                      , Kyowon.Core.Types
+                      , Servant.Extras
   other-modules:
-      Paths_kyowon_core
-  hs-source-dirs:
-      test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-      base >=4.7 && <5
-    , kyowon-core
-  default-language: Haskell2010
+
+test-suite kyowon-core_test
+  type:                 exitcode-stdio-1.0
+  build-depends:        base, kyowon-core, doctest, QuickCheck
+  default-language:     Haskell2010
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N
+
+  hs-source-dirs:       .
+  main-is:              Doctest.hs
