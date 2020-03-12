@@ -20,7 +20,7 @@ data LWW t a = LWW {
   , lwwValue :: a
   }
 
-type LWWU a = LWW UTCTimestamp a
+-- type LWWU a = LWW UTCTimestamp a
 
 instance (FromJSON t, FromJSON a) => FromJSON (LWW t a) where
     parseJSON = Aeson.withObject "LWW" $ \o -> 

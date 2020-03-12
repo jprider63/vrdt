@@ -63,6 +63,19 @@ instance Serialize ClientId
 createClient :: IO ClientId
 createClient = ClientId <$> UUIDv4.nextRandom
 
+data UTCTimestamp = UTCTimestamp UTCTime ClientId
+    deriving (Eq, Ord)
+
+instance FromJSON UTCTimestamp where
+    parseJSON = Aeson.withObject "UTCTimestamp" $ \o -> 
+        UTCTimestamp <$> o .: "t" <*> o .: "c"
+
+instance ToJSON UTCTimestamp where
+    toJSON (UTCTimestamp t c) = Aeson.object [
+        "t" .= t
+      , "c" .= c
+      ]
+
 newtype StoreId
     = StoreId Text
     deriving
