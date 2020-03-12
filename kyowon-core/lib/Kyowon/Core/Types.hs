@@ -4,7 +4,12 @@
 {-# LANGUAGE FlexibleInstances #-} -- to define all Binary to be Serialize
 {-# LANGUAGE UndecidableInstances #-} -- to define all Serialize to be Mime(Un)Render OctetStream
 {-# OPTIONS_GHC -Wno-orphans #-} -- to define overlapping instances Binary->Serialize->Mime(Un)Render
-module Kyowon.Core.Types where
+module Kyowon.Core.Types
+( AppData(..)
+, ClientId, createClient
+, StoreId(..)
+, ServerMessage(..)
+) where
 
 import Data.Aeson (ToJSON, FromJSON)
 import Data.Binary (Binary)
@@ -16,6 +21,7 @@ import GHC.Generics (Generic)
 import qualified Data.Binary as Binary hiding (Binary)
 import qualified Data.Serialize as Serialize hiding (Serialize)
 import qualified Servant.API as Servant
+import qualified Data.UUID.V4 as UUIDv4
 
 -- TODO: extensions to reduce overcommunication:
 --
@@ -53,6 +59,9 @@ newtype ClientId
 instance ToJSON ClientId
 instance FromJSON ClientId
 instance Serialize ClientId
+
+createClient :: IO ClientId
+createClient = ClientId <$> UUIDv4.nextRandom
 
 newtype StoreId
     = StoreId Text

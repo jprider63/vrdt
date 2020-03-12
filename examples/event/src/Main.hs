@@ -78,17 +78,18 @@ instance Ord t => VRDT (LWW t a) where
 main :: IO ()
 main = do
   now <- getCurrentTime
+  clientId <- VRDT.createClient
   mainWidget $ do
     inp <- input
-    app now
+    app clientId now
     return $ fforMaybe inp $ \case
       V.EvKey (V.KChar 'c') [V.MCtrl] -> Just ()
       _ -> Nothing
 
 
 app :: (Reflex t, MonadHold t m, MonadFix m, Adjustable t m, NotReady t m, PostBuild t m, MonadNodeId m, TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), PostBuild t m)
-    => UTCTime -> VtyWidget t m ()
-app now = do
+    => VRDT.ClientId -> UTCTime -> VtyWidget t m ()
+app clientId now = do
   nav <- tabNavigation
   runLayout (pure Orientation_Column) 0 nav $ do
     rec 
@@ -116,5 +117,5 @@ app now = do
     e0 = Event (l0 "Alice's birthday") (l0 "Let's celebrate Alice's birthday") (l0 now) (l0 now) (l0 "Someplace secret")
 
     l0 :: a -> LWWU a
-    l0 = LWW (VRDT.UTCTimestamp now $ VRDT.ClientId "1")
+    l0 = LWW (VRDT.UTCTimestamp now clientId)
 
