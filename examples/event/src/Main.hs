@@ -13,11 +13,14 @@ import           Reflex.Vty hiding (apply, Event)
 
 import qualified Kyowon.Client as Client
 import qualified Kyowon.Client.Reflex as Reflex
+import           Kyowon.Core.Types (UTCTimestamp(..), ClientId, createClient)
 import           VRDT.Class
 import           VRDT.Class.TH
-import           VRDT.LWW (LWWU, LWW(..))
+import           VRDT.LWW (LWW(..))
 import qualified VRDT.LWW as LWW
 import qualified VRDT.Types as VRDT
+
+type LWWU a = LWW UTCTimestamp a
 
 data Event = Event {
     eventTitle :: LWWU Text
@@ -78,7 +81,7 @@ instance Ord t => VRDT (LWW t a) where
 main :: IO ()
 main = do
   now <- getCurrentTime
-  clientId <- VRDT.createClient
+  clientId <- createClient
   mainWidget $ do
     inp <- input
     app clientId now
@@ -88,7 +91,7 @@ main = do
 
 
 app :: (Reflex t, MonadHold t m, MonadFix m, Adjustable t m, NotReady t m, PostBuild t m, MonadNodeId m, TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), PostBuild t m)
-    => VRDT.ClientId -> UTCTime -> VtyWidget t m ()
+    => ClientId -> UTCTime -> VtyWidget t m ()
 app clientId now = do
   nav <- tabNavigation
   runLayout (pure Orientation_Column) 0 nav $ do
@@ -117,5 +120,5 @@ app clientId now = do
     e0 = Event (l0 "Alice's birthday") (l0 "Let's celebrate Alice's birthday") (l0 now) (l0 now) (l0 "Someplace secret")
 
     l0 :: a -> LWWU a
-    l0 = LWW (VRDT.UTCTimestamp now clientId)
+    l0 = LWW (UTCTimestamp now clientId)
 

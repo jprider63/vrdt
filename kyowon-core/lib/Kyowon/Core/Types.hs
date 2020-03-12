@@ -2,20 +2,24 @@
 {-# LANGUAGE DeriveGeneric #-} -- to leverage instances derivable from generics
 {-# LANGUAGE MultiParamTypeClasses #-} -- to define instances of Mime(Un)Render
 {-# LANGUAGE FlexibleInstances #-} -- to define all Binary to be Serialize
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE UndecidableInstances #-} -- to define all Serialize to be Mime(Un)Render OctetStream
 {-# OPTIONS_GHC -Wno-orphans #-} -- to define overlapping instances Binary->Serialize->Mime(Un)Render
 module Kyowon.Core.Types
 ( AppData(..)
 , ClientId, createClient
+, UTCTimestamp(..)
 , StoreId(..)
 , ServerMessage(..)
 ) where
 
-import Data.Aeson (ToJSON, FromJSON)
+import           Data.Aeson (FromJSON(..), ToJSON(..), (.=), (.:))
+import qualified Data.Aeson as Aeson
 import Data.Binary (Binary)
 import Data.ByteString.Lazy (ByteString)
 import Data.Serialize (Serialize)
 import Data.Text (Text)
+import           Data.Time.Clock (UTCTime)
 import Data.UUID.Types (UUID)
 import GHC.Generics (Generic)
 import qualified Data.Binary as Binary hiding (Binary)
