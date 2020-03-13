@@ -1,5 +1,5 @@
 {-@ LIQUID "--reflection" @-}
-{-@ LIQUID "--ple-local" @-}
+{-@ LIQUID "--ple" @-}
 
 module VRDT.LWW where
 
