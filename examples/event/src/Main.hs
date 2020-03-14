@@ -12,7 +12,7 @@ import           Reflex hiding (apply, Event)
 import           Reflex.Vty hiding (apply, Event)
 
 import qualified Kyowon.Client as Client
-import qualified Kyowon.Client.Reflex as Reflex
+import qualified Kyowon.Reflex.Client as Reflex
 import           Kyowon.Core.Types (UTCTimestamp(..), ClientId, createClient)
 import           VRDT.Class
 import           VRDT.Class.TH
