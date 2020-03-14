@@ -37,7 +37,7 @@ import Reflex.Class.Switchable
 import Reflex.Vty
 import Text.Read (readMaybe)
 
-import Kyowon.Client.Reflex (connectToStore, StoreRef(..))
+import Kyowon.Reflex.Client (connectToStore, StoreRef(..))
 import VRDT.Class (VRDT(..))
 import VRDT.Max
 
@@ -48,6 +48,7 @@ main = do
     
     -- Run FRP.
     runApp
+    -- exampleApp
 
 runApp = mainWidget $ do
   inp <- input

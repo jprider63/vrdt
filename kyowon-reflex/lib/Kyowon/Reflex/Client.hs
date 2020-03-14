@@ -1,7 +1,5 @@
-{-# LANGUAGE FlexibleContexts #-}
-module Kyowon.Client.Reflex where
+module Kyowon.Reflex.Client where
 
-import           Control.Applicative (liftA2)
 import           Control.Concurrent (Chan, readChan, writeChan, newChan, forkIO)
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO(..))
@@ -27,6 +25,8 @@ import           Reflex (
 
 import qualified Kyowon.Client as Client
 import           VRDT.Class (VRDT(..))
+
+import           Kyowon.Reflex.Common
 
 data StoreRef a = StoreRef
     { storeRefServer :: Client.Server
@@ -93,17 +93,4 @@ connectToStore storeRef init opsE = do
         -- Loop.
         run st' opChan cCallback client
 
-    zipEvents a b = do
-        dynA <- holdDyn Nothing (Just <$> a)
-        dynB <- holdDyn Nothing (Just <$> b)
-        pure $ fmapMaybe id $ updated $ (liftA2 . liftA2) (,) dynA dynB
-
-
-runOnLoad m = do
-    builtE <- getPostBuild
-    performEvent $ ffor builtE $ \() -> m
-
-runOnLoad_ m = do
-    builtE <- getPostBuild
-    performEvent_ $ ffor builtE $ \() -> m
 
