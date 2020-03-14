@@ -15,6 +15,7 @@ library
   build-depends:        base
                       , aeson
                       , kyowon-client
+                      , kyowon-core
                       , reflex
                       , time
                       , vrdt
@@ -25,6 +26,7 @@ library
   exposed-modules:      Paths_kyowon_reflex
                       , Kyowon.Reflex.Client
                       , Kyowon.Reflex.Common
+                      , Kyowon.Reflex.VRDT.LWW
                       , Kyowon.Reflex.Time
   other-modules:
 
