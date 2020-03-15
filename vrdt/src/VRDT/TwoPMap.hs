@@ -15,7 +15,7 @@ import           GHC.Generics
 import           VRDT.Class
 
 
--- Keys are (ClientId, NextId)?
+-- Keys are typically UniqueId (ClientId, NextId).
 
 -- Two phase map (inserted and deleted).
 data TwoPMap k v = TwoPMap {

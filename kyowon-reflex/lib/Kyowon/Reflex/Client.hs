@@ -45,6 +45,7 @@ import           Reflex (
 
 import qualified Kyowon.Client as Client
 import           Kyowon.Core.Types (ClientId)
+import           Kyowon.Core.Types.Internal (NextId(..), zeroNextId)
 import           VRDT.Class (VRDT(..))
 
 import           Kyowon.Reflex.Common
@@ -115,11 +116,6 @@ connectToStore storeRef init opsE = do
         run st' opChan cCallback client
 
 
-newtype NextId = NextId Integer
-
-zeroNextId :: NextId
-zeroNextId = NextId 0
-
 class KyowonMonad m where
     -- | Get (and increment) next unique id.
     getNextId :: m NextId
@@ -164,9 +160,9 @@ instance MonadIO m => MonadIO (KyowonT m) where
 instance MonadIO m => KyowonMonad (KyowonT m) where
     getNextId = do
         nextRef <- kyowonStateNextId <$> KyowonT ask
-        liftIO $ atomicModifyIORef nextRef $ \(NextId n) ->
+        liftIO $ atomicModifyIORef nextRef $ \n0@(NextId n) ->
             let n' = NextId $ n + 1 in
-            (n', n')
+            (n0, n')
 
     getClientId = kyowonStateClient <$> KyowonT ask
 
@@ -179,6 +175,10 @@ instance MonadIO m => KyowonMonad (KyowonT m) where
             -- Add a picosecond to the latest time if time went backwards.
             let res = if now > latest then now else addUTCTime 1e-12 latest in
             (res, res)
+
+-- getNextUTCTimestamp :: KyowonMonad m => m UTCTimestamp
+-- getNextUTCTimestamp =
+--     UTCTimestamp <$> getMonotonicTime <*> getClientId
 
 instance MonadRef m => MonadRef (KyowonT m) where
     type Ref (KyowonT m) = Ref m

@@ -30,6 +30,7 @@ library
                       , Control.Concurrent.STM.Extras
                       , Kyowon.Core.API
                       , Kyowon.Core.Types
+                      , Kyowon.Core.Types.Internal
                       , Servant.Extras
   other-modules:
 

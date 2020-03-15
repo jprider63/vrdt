@@ -9,6 +9,9 @@ module Kyowon.Core.Types
 ( AppData(..)
 , ClientId, createClient
 , UTCTimestamp(..)
+, NextId
+, zeroNextId
+, UniqueId(..)
 , StoreId(..)
 , ServerMessage(..)
 ) where
@@ -26,6 +29,8 @@ import qualified Data.Binary as Binary hiding (Binary)
 import qualified Data.Serialize as Serialize hiding (Serialize)
 import qualified Servant.API as Servant
 import qualified Data.UUID.V4 as UUIDv4
+
+import           Kyowon.Core.Types.Internal
 
 -- TODO: extensions to reduce overcommunication:
 --
@@ -78,6 +83,20 @@ instance ToJSON UTCTimestamp where
     toJSON (UTCTimestamp t c) = Aeson.object [
         "t" .= t
       , "c" .= c
+      ]
+
+-- | A tuple of client id and unique nextId.
+data UniqueId = UniqueId ClientId NextId
+    deriving (Eq, Ord)
+
+instance FromJSON UniqueId where
+    parseJSON = Aeson.withObject "UniqueId" $ \o -> 
+        UniqueId <$> o .: "c" <*> o .: "k"
+
+instance ToJSON UniqueId where
+    toJSON (UniqueId c k) = Aeson.object [
+        "c" .= c
+      , "k" .= k
       ]
 
 newtype StoreId
