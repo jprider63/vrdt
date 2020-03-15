@@ -15,12 +15,14 @@ import qualified Graphics.Vty as V
 import           Reflex hiding (apply, Event)
 import qualified Reflex
 import           Reflex.Network
-import           Reflex.Vty hiding (apply, Event)
+import           Reflex.Vty hiding (apply, Event, mainWidget)
 
 import qualified Kyowon.Client as Client
+import           Kyowon.Core.Types (UTCTimestamp(..), ClientId, createClient)
+import           Kyowon.Reflex.Client (KyowonT, runKyowonT, zeroNextId, KyowonMonad)
 import qualified Kyowon.Reflex.Client as Reflex
 import qualified Kyowon.Reflex.VRDT.LWW as Reflex
-import           Kyowon.Core.Types (UTCTimestamp(..), ClientId, createClient)
+import           Kyowon.Reflex.Vty.Widget
 import           VRDT.Class
 import           VRDT.Class.TH
 import           VRDT.LWW (LWW(..))
@@ -31,7 +33,7 @@ import qualified VRDT.TwoPMap
 import qualified VRDT.Types as VRDT
 
 type LWWU a = LWW UTCTimestamp a
-type Widget t m a = (Reflex t, MonadHold t m, MonadFix m, Adjustable t m, NotReady t m, PostBuild t m, MonadNodeId m, TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), PostBuild t m, MonadIO m) => VtyWidget t m a
+type Widget t m a = (Reflex t, MonadHold t m, MonadFix m, Adjustable t m, NotReady t m, PostBuild t m, MonadNodeId m, TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), PostBuild t m, MonadIO m, KyowonMonad m, KyowonMonad (Performable m)) => VtyWidget t m a
 
 
 -- State is TwoPMap of EventState
@@ -100,11 +102,12 @@ instance Ord t => VRDT (LWW t a) where
 
 main :: IO ()
 main = do
+  -- TODO: Load these from the file system.
   clientId <- createClient
-  mainWidget $ do
-    now <- liftIO getCurrentTime
+  let nextId = zeroNextId
+  mainWidget clientId nextId $ do
     inp <- input
-    app clientId now
+    app clientId
     return $ fforMaybe inp $ \case
       V.EvKey (V.KChar 'c') [V.MCtrl] -> Just ()
       _ -> Nothing
@@ -113,8 +116,8 @@ data View =
     ViewEvents
   | ViewCreateEvent
 
-app :: ClientId -> UTCTime -> Widget t m ()
-app clientId now = do
+app :: ClientId -> Widget t m ()
+app clientId = do
   -- nav <- tabNavigation
   -- runLayout (pure Orientation_Column) 0 nav $ do
   rec 
