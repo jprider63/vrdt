@@ -204,7 +204,7 @@ validateInput label validation e = do
     addErr _        = label <> ":"
 
 dateValidation :: Text -> Either Text UTCTime
-dateValidation = maybe (Left "Invalid date") Right . parseTimeM True defaultTimeLocale "%Y-%-m-%-d %H:%M%p" . Text.unpack
+dateValidation = maybe (Left "Invalid date") Right . parseTimeM True defaultTimeLocale "%Y-%-m-%-d %l:%M%p" . Text.unpack
     
 
 
