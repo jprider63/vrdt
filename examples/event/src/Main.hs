@@ -107,7 +107,7 @@ main = do
   let nextId = zeroNextId
   mainWidget clientId nextId $ do
     inp <- input
-    app clientId
+    app
     return $ fforMaybe inp $ \case
       V.EvKey (V.KChar 'c') [V.MCtrl] -> Just ()
       _ -> Nothing
@@ -116,10 +116,11 @@ data View =
     ViewEvents
   | ViewCreateEvent
 
-app :: ClientId -> Widget t m ()
-app clientId = do
+app :: Widget t m ()
+app = do
   -- nav <- tabNavigation
   -- runLayout (pure Orientation_Column) 0 nav $ do
+  clientId <- lift Reflex.getClientId
   rec 
       -- e <- lift $ Reflex.connectToStore storeRef initVRDT opsE
       -- let eB = current e
@@ -136,8 +137,8 @@ app clientId = do
   return ()
 
 
-  where
-    storeRef = Reflex.StoreRef (Client.Server "http://localhost:3000") (Client.StoreId "TODO")
+  -- where
+  --   storeRef = Reflex.StoreRef (Client.Server "http://localhost:3000") (Client.StoreId "TODO")
 
 events :: Widget t m (Reflex.Event t View)
 events = col $ do
