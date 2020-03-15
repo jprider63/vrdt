@@ -1,14 +1,18 @@
 {-@ LIQUID "--reflection" @-}
 
+{-# LANGUAGE UndecidableInstances #-}
+
 module VRDT.TwoPMap where
 
-import Data.Map (Map)
+import qualified Data.Aeson as Aeson
+import           Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe
-import Data.Set (Set)
+import           Data.Maybe
+import           Data.Set (Set)
 import qualified Data.Set as Set
+import           GHC.Generics
 
-import VRDT.Class
+import           VRDT.Class
 
 
 -- Keys are (ClientId, NextId)?
@@ -25,6 +29,7 @@ data TwoPMapOp k v =
     TwoPMapInsert k v
   | TwoPMapApply k (Operation v)
   | TwoPMapDelete k
+  deriving (Generic)
 
 instance (VRDT v, Ord k) => VRDT (TwoPMap k v) where
     type Operation (TwoPMap k v) = TwoPMapOp k v
@@ -77,5 +82,12 @@ instance (VRDT v, Ord k) => VRDT (TwoPMap k v) where
 
     lawCommutativity _ _ _ = ()
     
+
+instance (Ord k, VRDT v) => VRDTInitial (TwoPMap k v) where
+    initVRDT = TwoPMap mempty mempty mempty
     
+instance (Aeson.ToJSON k, Aeson.ToJSON v, Aeson.ToJSON (Operation v)) => Aeson.ToJSON (TwoPMapOp k v)
+instance (Aeson.FromJSON k, Aeson.FromJSON v, Aeson.FromJSON (Operation v)) => Aeson.FromJSON (TwoPMapOp k v)
+
+
 

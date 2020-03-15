@@ -26,3 +26,9 @@ module VRDT.Types where
 -- instance ToJSON ClientId where
 --     toJSON (ClientId c) = toJSON $ Text.decodeUtf8 $ B64U.encode c
 
+-- Unique identifier of a VRDT datatype.
+-- newtype VRDTId = VRDTId Text
+
+
+
+    

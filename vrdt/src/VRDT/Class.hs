@@ -53,3 +53,13 @@ class SVRDT t where
 -- JP: CRDT monad? 
 
 
+
+class VRDT a => VRDTInitial a where
+    initVRDT :: a
+
+-- class VRDT a => VRDTIdentifier a where
+--     vrdtIdentifier :: Proxy a -> VRDTId
+-- 
+-- class (VRDTInitial a, VRDTIdentifier a) => VRDTStore a
+
+
