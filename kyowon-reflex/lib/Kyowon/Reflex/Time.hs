@@ -30,7 +30,7 @@ zipSampleMonotonicTime tickD = do
 
 sampleMonotonicTimeWith :: (KyowonMonad m, KyowonMonad (Performable m), PostBuild t m, MonadHold t m, PerformEvent t m) 
                         => (a -> UTCTime -> b) -> Dynamic t a -> m (Dynamic t b)
-sampleMonotonicTimeWith f e = fmap (\(a, t) -> f a t) <$> zipSampleMonotonicTime e
+sampleMonotonicTimeWith f e = fmap (uncurry f) <$> zipSampleMonotonicTime e
 
     
 

@@ -1,6 +1,12 @@
-module Kyowon.Reflex.Common where
+module Kyowon.Reflex.Common (
+    zipEvents
+  , runOnLoad
+  , runOnLoad_
+  , catMaybes
+  ) where
 
 import           Control.Applicative (liftA2)
+import           Data.Witherable (catMaybes)
 import           Reflex
 
 zipEvents :: (Reflex t, MonadHold t m) => Event t a -> Event t b -> m (Event t (a, b))

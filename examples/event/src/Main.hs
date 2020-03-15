@@ -18,9 +18,11 @@ import           Reflex.Network
 import           Reflex.Vty hiding (apply, Event, mainWidget)
 
 import qualified Kyowon.Client as Client
-import           Kyowon.Core.Types (UTCTimestamp(..), ClientId, createClient)
+import           Kyowon.Core.Types (UTCTimestamp(..), ClientId, createClient, UniqueId(..))
 import           Kyowon.Reflex.Client (KyowonT, runKyowonT, zeroNextId, KyowonMonad)
 import qualified Kyowon.Reflex.Client as Reflex
+import           Kyowon.Reflex.Common (catMaybes)
+import           Kyowon.Reflex.Next (nextIdWith)
 import qualified Kyowon.Reflex.VRDT.LWW as Reflex
 import           Kyowon.Reflex.Vty.Widget
 import           VRDT.Class
@@ -148,7 +150,7 @@ events = col $ do
         ]
         
 
-createEvent :: forall t m . ClientId -> Widget t m (Reflex.Event t View, Reflex.Event t ())
+createEvent :: forall t m . ClientId -> Widget t m (Reflex.Event t View, Reflex.Event t (TwoPMapOp UniqueId Event))
 createEvent clientId = do
   escapedE <- escapePressed
   col $ do
@@ -162,21 +164,29 @@ createEvent clientId = do
         cancelE <- fixed 5 $ textButtonStatic def "Cancel"
         createE <- fixed 5 $ textButtonStatic def "Create event"
 
+    let eventMD = (liftM5 . liftM5) Event title description startDate endDate location
+    let insertEventE = catMaybes $ sampleOn createE eventMD
+    insertE <- lift $ to2PMapInsert clientId insertEventE
+
     let viewE = leftmost
           [ ViewEvents <$ cancelE
           , ViewEvents <$ escapedE
           -- TODO: send create event
+          , ViewEvents <$ insertE
           ]
 
-    let eventM = (liftM5 . liftM5) Event title description startDate endDate location
-    let insertE = () <$ createE
 
     return (viewE, insertE)
 
   where
     toLWW :: Dynamic t (Maybe a) -> Layout t m (Dynamic t (Maybe (LWW UTCTimestamp a)))
     toLWW = lift . Reflex.toLWW' clientId
-        
+
+    sampleOn event dyn = tag (current dyn) event
+
+    to2PMapInsert clientId = nextIdWith $ \e nextId -> 
+        let k = UniqueId clientId nextId in
+        TwoPMapInsert k e
 
 validateInput label validation e = do
     rec
