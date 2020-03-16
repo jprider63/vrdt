@@ -36,6 +36,8 @@ import qualified VRDT.Types as VRDT
 
 type LWWU a = LWW UTCTimestamp a
 type Widget t m a = (Reflex t, MonadHold t m, MonadFix m, Adjustable t m, NotReady t m, PostBuild t m, MonadNodeId m, TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), PostBuild t m, MonadIO m, KyowonMonad m, KyowonMonad (Performable m)) => VtyWidget t m a
+type State = TwoPMap UniqueId Event
+type StateOp = TwoPMapOp UniqueId Event
 
 
 -- State is TwoPMap of EventState
@@ -124,33 +126,35 @@ app = do
   -- runLayout (pure Orientation_Column) 0 nav $ do
   clientId <- lift Reflex.getClientId
   rec 
-      -- e <- lift $ Reflex.connectToStore storeRef initVRDT opsE
+      st <- lift $ Reflex.connectToStore storeRef initVRDT opsE
       -- let eB = current e
 
       -- let opsE = (undefined :: Reflex.Event (TwoPMapOp UTCTimestamp Event))
 
 
-      out <- networkHold events $ ffor (switch (current out)) $ \case
-          ViewCreateEvent -> do
-            (view, operation) <- createEvent clientId
-            return view
-          ViewEvents -> events
+      -- out :: Dynamic t (Reflex.Event t View, Reflex.Event t (TwoPMapOp UniqueId Event))
+      out <- networkHold (events st) $ ffor (switchDyn (fst <$> out)) $ \case
+          ViewCreateEvent -> createEvent clientId
+          ViewEvents -> events st
+      
+      let opsE = switchDyn (snd <$> out)
 
   return ()
 
+  where
+    storeRef = Reflex.StoreRef (Client.Server "http://localhost:3000") (Client.StoreId "TODO")
 
-  -- where
-  --   storeRef = Reflex.StoreRef (Client.Server "http://localhost:3000") (Client.StoreId "TODO")
 
-events :: Widget t m (Reflex.Event t View)
-events = col $ do
+events :: Dynamic t State -> Widget t m (Reflex.Event t View, Reflex.Event t StateOp)
+events st = col $ do
     createE <- fixed 5 $ textButtonStatic def "Create an event"
-    return $ leftmost
-        [ ViewCreateEvent <$ createE
-        ]
+    let view = leftmost
+          [ ViewCreateEvent <$ createE
+          ]
+    return (view, never)
         
 
-createEvent :: forall t m . ClientId -> Widget t m (Reflex.Event t View, Reflex.Event t (TwoPMapOp UniqueId Event))
+createEvent :: forall t m . ClientId -> Widget t m (Reflex.Event t View, Reflex.Event t StateOp)
 createEvent clientId = do
   escapedE <- escapePressed
   col $ do
