@@ -6,10 +6,11 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import qualified Data.Aeson as Aeson
 import           Data.Bifunctor
+import qualified Data.Map as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime, getCurrentTime)
-import           Data.Time.Format (parseTimeM, defaultTimeLocale)
+import           Data.Time.Format (parseTimeM, defaultTimeLocale, formatTime)
 import           GHC.Generics
 import qualified Graphics.Vty as V
 import           Reflex hiding (apply, Event)
@@ -98,6 +99,12 @@ instance Aeson.FromJSON Event
 --     lawNonCausal e (EventLocationOp op1) (EventLocationOp op2)           = lawNonCausal (eventLocation e) op1 op2
 --     lawNonCausal _ _ _                                               = ()
 
+-- TODO: 
+--  Make JSON instance. 
+--  Switch to EventId.
+-- newtype EventId = EventId { unEventId :: UniqueId }
+type EventId = UniqueId
+
 instance Ord t => VRDT (LWW t a) where
     type Operation (LWW t a) = LWW t a
     enabled = LWW.enabledLWW
@@ -119,6 +126,7 @@ main = do
 data View = 
     ViewEvents
   | ViewCreateEvent
+  | ViewEvent EventId
 
 app :: Widget t m ()
 app = do
@@ -136,6 +144,7 @@ app = do
       out <- networkHold (events st) $ ffor (switchDyn (fst <$> out)) $ \case
           ViewCreateEvent -> createEvent clientId
           ViewEvents -> events st
+          ViewEvent eId -> event eId $ (Map.lookup eId . twoPMap) <$> st
       
       let opsE = switchDyn (snd <$> out)
 
@@ -144,15 +153,87 @@ app = do
   where
     storeRef = Reflex.StoreRef (Client.Server "http://localhost:3000") (Client.StoreId "TODO")
 
+event :: EventId -> Dynamic t (Maybe Event) -> Widget t m (Reflex.Event t View, Reflex.Event t StateOp)
+event eId eventMD = do
+  nav <- tabNavigation
+  runLayout (pure Orientation_Column) 0 nav $ do
+    backE <- fixed 3 $ textButtonStatic def "Back"
+
+    editE <- networkView $ ffor eventMD $ \case
+        Nothing -> do
+            fixed 1 $ text "Event does not exist."
+
+            return never
+
+        Just e -> do
+            editE <- fixed 3 $ textButtonStatic def "Edit"
+
+            fixed 1 $ text "Title:"
+            fixed 1 $ text $ pure $ lwwValue $ eventTitle e
+            
+            fixed 1 $ text "Description:"
+            fixed 1 $ text $ pure $ lwwValue $ eventDescription e
+
+            fixed 1 $ text "Start time:"
+            fixed 1 $ text $ pure $ displayDate $ lwwValue $ eventStartTime e
+
+            fixed 1 $ text "End time:"
+            fixed 1 $ text $ pure $ displayDate $ lwwValue $ eventEndTime e
+
+            fixed 1 $ text "Location:"
+            fixed 1 $ text $ pure $ lwwValue $ eventLocation e
+
+            return editE
+
+
+    let viewE = leftmost [ ViewEvents <$ backE
+                         -- TODO: Trigger edit view.
+                         ]
+
+    return (viewE, never)
+    
 
 events :: Dynamic t State -> Widget t m (Reflex.Event t View, Reflex.Event t StateOp)
-events st = col $ do
-    createE <- fixed 5 $ textButtonStatic def "Create an event"
+events st = do
+  nav <- tabNavigation
+  runLayout (pure Orientation_Column) 0 nav $ do
+
+    -- Create event button.
+    createE <- fixed 3 $ textButtonStatic def "Create an event"
+    
+    -- Display events.
+    fixed 1 $ text $ pure "Events:"
+    selectEventE <- simpleList (Map.assocs . twoPMap <$> st) displayEvent
+
     let view = leftmost
           [ ViewCreateEvent <$ createE
+          , switchDyn (leftmost <$> selectEventE)
           ]
     return (view, never)
+
+  where
+
+    displayEvent eventD = do
+        let eventText (_, e) = lwwValue (eventTitle e) <> " - " <> "TODO"
+        clickedE <- fixed 1 $ link $ current $ eventText <$> eventD
+        -- tile tileCfg $ do
+        --     -- TODO: Can we set background color when focused?
+        --     
+        --     text $ current $ (lwwValue . eventTitle) <$> eventD
+        --     click <- void <$> mouseDown V.BLeft
+        --     let focusMe = leftmost [click] -- , sel, pb ]
+
+        --     return (focusMe, ())
+
+
+
+        -- Return selection event.
+        let viewEventE = ViewEvent . fst <$> tag (current eventD) clickedE
+        return viewEventE
         
+    -- tileCfg = TileConfig { _tileConfig_constraint = pure $ Constraint_Fixed 1
+    --                      , _tileConfig_focusable = pure $ True
+    --                      }
 
 createEvent :: forall t m . ClientId -> Widget t m (Reflex.Event t View, Reflex.Event t StateOp)
 createEvent clientId = do
@@ -165,8 +246,8 @@ createEvent clientId = do
         endDate <- validateInput "End Date" dateValidation createE >>= toLWW
         location <- validateInput "Location" Right createE >>= toLWW
 
-        cancelE <- fixed 5 $ textButtonStatic def "Cancel"
-        createE <- fixed 5 $ textButtonStatic def "Create event"
+        cancelE <- fixed 3 $ textButtonStatic def "Cancel"
+        createE <- fixed 3 $ textButtonStatic def "Create event"
 
     let eventMD = (liftM5 . liftM5) Event title description startDate endDate location
     let insertEventE = catMaybes $ sampleOn createE eventMD
@@ -210,6 +291,8 @@ validateInput label validation e = do
 dateValidation :: Text -> Either Text UTCTime
 dateValidation = maybe (Left "Invalid date") Right . parseTimeM True defaultTimeLocale "%Y-%-m-%-d %l:%M%p" . Text.unpack
     
+displayDate :: UTCTime -> Text
+displayDate = Text.pack . formatTime defaultTimeLocale "%Y-%-m-%-d %l:%M%p"
 
 
 

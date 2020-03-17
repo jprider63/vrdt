@@ -1,11 +1,13 @@
 module Kyowon.Reflex.Vty.Widget where
 
 import           Control.Monad.NodeId
+import           Control.Monad.Trans.Class
 import qualified Graphics.Vty as V
 import           Kyowon.Core.Types (ClientId)
 import           Reflex
 import           Reflex.Vty.Host
 import           Reflex.Vty.Widget (VtyWidgetCtx(..), VtyWidget(..), runVtyWidget, tellImages)
+import           Reflex.Vty.Widget.Layout (Layout)
 
 import           Kyowon.Reflex.Client (NextId, runKyowonT, KyowonMonad)
 
@@ -51,3 +53,5 @@ mainWidget clientId nextId child = do
   mainWidgetWithHandle vty clientId nextId child
 
 
+instance PostBuild t m => PostBuild t (Layout t m) where
+    getPostBuild = lift getPostBuild

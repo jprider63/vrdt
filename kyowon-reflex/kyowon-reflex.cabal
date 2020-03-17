@@ -43,7 +43,7 @@ library
                       , Kyowon.Reflex.VRDT.LWW
                       , Kyowon.Reflex.Vty.Widget
   other-modules:
-  ghc-options:        -Wall -Wno-name-shadowing -Werror
+  ghc-options:        -Wall -Wno-name-shadowing -Wno-orphans -Werror
 
 test-suite kyowon-reflex_test
   type:                 exitcode-stdio-1.0
