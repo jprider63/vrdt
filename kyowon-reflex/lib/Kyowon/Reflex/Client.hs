@@ -3,6 +3,7 @@
 module Kyowon.Reflex.Client (
     StoreRef(..)
   , connectToStore
+  , connectToStore'
   , runKyowonT
   , KyowonT
   , KyowonMonad(..)
@@ -61,7 +62,11 @@ data StoreRef a = StoreRef
 
 connectToStore :: (Aeson.FromJSON (Operation a), Aeson.ToJSON (Operation a), VRDT a, Reflex t, MonadHold t m, MonadIO (Performable m), PostBuild t m, TriggerEvent t m, PerformEvent t m)
                => StoreRef a -> a -> Event t (Operation a) -> m (Dynamic t a)
-connectToStore storeRef init opsE = do
+connectToStore storeRef init opsE = connectToStore' storeRef init $ fmap (:[]) opsE
+
+connectToStore' :: (Aeson.FromJSON (Operation a), Aeson.ToJSON (Operation a), VRDT a, Reflex t, MonadHold t m, MonadIO (Performable m), PostBuild t m, TriggerEvent t m, PerformEvent t m, Foldable l)
+               => StoreRef a -> a -> Event t (l (Operation a)) -> m (Dynamic t a)
+connectToStore' storeRef init opsE = do
     (cE, cCallback) <- newTriggerEvent
 
     -- performEvent_ $ ffor opsE $ \op -> liftIO $ 
@@ -70,8 +75,8 @@ connectToStore storeRef init opsE = do
     -- Create channel (once).
     opChanE <- runOnLoad $ liftIO newChan
     opChanOpesE <- zipEvents opChanE opsE
-    performEvent_ $ ffor opChanOpesE $ \(opChan, op) -> liftIO $ do
-        writeChan opChan $ Left op
+    performEvent_ $ ffor opChanOpesE $ \(opChan, ops) -> liftIO $ do
+        mapM_ (writeChan opChan . Left) ops
 
     performEvent_ $ ffor opChanE $ \opChan -> liftIO $ void $ forkIO $ do
       Client.withRaw
