@@ -7,6 +7,7 @@ import           Control.Monad.Trans.Class
 import qualified Data.Aeson as Aeson
 import           Data.Bifunctor
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Zipper as Zipper
@@ -25,6 +26,7 @@ import           Kyowon.Reflex.Client (KyowonT, runKyowonT, zeroNextId, KyowonMo
 import qualified Kyowon.Reflex.Client as Reflex
 import           Kyowon.Reflex.Common (catMaybes)
 import           Kyowon.Reflex.Next (nextIdWith)
+import           Kyowon.Reflex.Time (sampleMonotonicTimeWith)
 import qualified Kyowon.Reflex.VRDT.LWW as Reflex
 import           Kyowon.Reflex.Vty.Widget
 import           VRDT.Class
@@ -136,7 +138,7 @@ app = do
   -- runLayout (pure Orientation_Column) 0 nav $ do
   clientId <- lift Reflex.getClientId
   rec 
-      st <- lift $ Reflex.connectToStore storeRef initVRDT opsE
+      st <- lift $ Reflex.connectToStore' storeRef initVRDT opsE
       -- let eB = current e
 
       -- let opsE = (undefined :: Reflex.Event (TwoPMapOp UTCTimestamp Event))
@@ -156,28 +158,46 @@ app = do
   where
     storeRef = Reflex.StoreRef (Client.Server "http://localhost:3000") (Client.StoreId "TODO")
 
-editEvent :: EventId -> Event -> Widget t m (Reflex.Event t View, Reflex.Event t StateOp)
+editEvent :: forall t m . EventId -> Event -> Widget t m (Reflex.Event t View, Reflex.Event t [StateOp])
 editEvent eId event = do
   nav <- tabNavigation
   runLayout (pure Orientation_Column) 0 nav $ do
     backE <- fixed 3 $ textButtonStatic def "Back"
 
-    title <- validateInput "Title" Right (Just $ lwwValue $ eventTitle event) -- >>= toLWW
-    description <- validateInput "Description" Right (Just $ lwwValue $ eventDescription event) -- >>= toLWW
-    startDate <- validateInput "Start Date" dateValidation (Just $ displayDate $ lwwValue $ eventStartTime event) -- >>= toLWW
-    endDate <- validateInput "End Date" dateValidation (Just $ displayDate $ lwwValue $ eventEndTime event) -- >>= toLWW
-    location <- validateInput "Location" Right (Just $ lwwValue $ eventLocation event) -- >>= toLWW
+    title <- validateInput' "Title" Right id EventTitleOp (lwwValue $ eventTitle event)
+    description <- validateInput' "Description" Right id EventDescriptionOp (lwwValue $ eventDescription event)
+    startDate <- validateInput' "Start Date" dateValidation displayDate EventStartTimeOp (lwwValue $ eventStartTime event)
+    endDate <- validateInput' "End Date" dateValidation displayDate EventEndTimeOp (lwwValue $ eventEndTime event)
+    location <- validateInput' "Location" Right id EventLocationOp (lwwValue $ eventLocation event)
 
     updateE <- fixed 3 $ textButtonStatic def "Update"
 
-    -- TODO: propogate createE
+    -- If all fields are valid, propogate updates.
+    let opsMD = (liftM5 . liftM5) (\a b c d e -> [a,b,c,d,e]) title description startDate endDate location
+    let opsE = Maybe.catMaybes <$> (catMaybes $ sampleOn updateE opsMD)
+
 
     let viewE = leftmost [ ViewEvent eId <$ backE
+                         , ViewEvent eId <$ opsE
                          ]
 
-    return (viewE, never)
+    return (viewE, opsE)
 
-event :: EventId -> Dynamic t (Maybe Event) -> Widget t m (Reflex.Event t View, Reflex.Event t StateOp)
+  where
+    -- Validate input, check if the inputs changed, and create update operation.
+    validateInput' :: (Eq a) => Text -> (Text -> Either Text a) -> (a -> Text) -> (LWW UTCTimestamp a -> EventOp) -> a -> Layout t m (Dynamic t (Maybe (Maybe StateOp)))
+    validateInput' label validation render eventOp currentValue = do
+        t <- validateInput label validation $ Just $ render currentValue
+        clientId <- lift Reflex.getClientId
+        lift $ sampleMonotonicTimeWith (\a t -> (\v -> 
+            -- Don't update if the value hasn't changed.
+            if v == currentValue then
+                Nothing
+            else
+                Just $ TwoPMapApply eId $ eventOp $ LWW (UTCTimestamp t clientId) v
+          ) <$> a) t
+
+event :: EventId -> Dynamic t (Maybe Event) -> Widget t m (Reflex.Event t View, Reflex.Event t [StateOp])
 event eId eventMD = do
   nav <- tabNavigation
   runLayout (pure Orientation_Column) 0 nav $ do
@@ -218,7 +238,7 @@ event eId eventMD = do
     return (viewE, never)
     
 
-events :: Dynamic t State -> Widget t m (Reflex.Event t View, Reflex.Event t StateOp)
+events :: Dynamic t State -> Widget t m (Reflex.Event t View, Reflex.Event t [StateOp])
 events st = do
   nav <- tabNavigation
   runLayout (pure Orientation_Column) 0 nav $ do
@@ -260,7 +280,7 @@ events st = do
     --                      , _tileConfig_focusable = pure $ True
     --                      }
 
-createEvent :: forall t m . ClientId -> Widget t m (Reflex.Event t View, Reflex.Event t StateOp)
+createEvent :: forall t m . ClientId -> Widget t m (Reflex.Event t View, Reflex.Event t [StateOp])
 createEvent clientId = do
   escapedE <- escapePressed
   col $ do
@@ -286,13 +306,11 @@ createEvent clientId = do
           ]
 
 
-    return (viewE, insertE)
+    return (viewE, pure <$> insertE)
 
   where
     toLWW :: Dynamic t (Maybe a) -> Layout t m (Dynamic t (Maybe (LWW UTCTimestamp a)))
     toLWW = lift . Reflex.toLWW' clientId
-
-    sampleOn event dyn = tag (current dyn) event
 
     to2PMapInsert clientId = nextIdWith $ \e nextId -> 
         let k = UniqueId clientId nextId in
@@ -303,7 +321,7 @@ validateInput label validation initTextM = do
     rec
         let label' = addErr <$> current vE
         fixed 1 $ text label'
-        let setInit = maybe id (\t c -> c {_textInputConfig_initialValue = Zipper.fromText t}) initTextM
+        let setInit = maybe id (\v c -> c {_textInputConfig_initialValue = Zipper.fromText v}) initTextM
         t <- fixed 1 $ textInput $ setInit def
 
         -- TODO: holdDyn on e
@@ -322,6 +340,8 @@ displayDate :: UTCTime -> Text
 displayDate = Text.pack . formatTime defaultTimeLocale "%Y-%-m-%-d %l:%M%p"
 
 
+sampleOn :: Reflex t => Reflex.Event t a -> Dynamic t b -> Reflex.Event t b
+sampleOn event dyn = tag (current dyn) event
 
 escapePressed :: (Reflex t, Monad m, HasVtyInput t m) => m (Reflex.Event t ())
 escapePressed = do
@@ -329,7 +349,6 @@ escapePressed = do
   return $ fforMaybe i $ \case
     V.EvKey V.KEsc [] -> Just ()
     _ -> Nothing
-
 
 
 
