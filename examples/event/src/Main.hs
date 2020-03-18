@@ -259,7 +259,7 @@ events st = do
   where
 
     displayEvent eventD = do
-        let eventText (_, e) = lwwValue (eventTitle e) <> " - " <> "TODO"
+        let eventText (_, e) = lwwValue (eventTitle e) <> " (" <> displayDate (lwwValue (eventStartTime e)) <> ")"
         clickedE <- fixed 1 $ link $ current $ eventText <$> eventD
         -- tile tileCfg $ do
         --     -- TODO: Can we set background color when focused?
