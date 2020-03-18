@@ -9,6 +9,7 @@ import           Data.Bifunctor
 import qualified Data.Map as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text.Zipper as Zipper
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Time.Format (parseTimeM, defaultTimeLocale, formatTime)
 import           GHC.Generics
@@ -127,6 +128,7 @@ data View =
     ViewEvents
   | ViewCreateEvent
   | ViewEvent EventId
+  | ViewEditEvent EventId Event
 
 app :: Widget t m ()
 app = do
@@ -145,6 +147,7 @@ app = do
           ViewCreateEvent -> createEvent clientId
           ViewEvents -> events st
           ViewEvent eId -> event eId $ (Map.lookup eId . twoPMap) <$> st
+          ViewEditEvent eId e -> editEvent eId e
       
       let opsE = switchDyn (snd <$> out)
 
@@ -153,13 +156,34 @@ app = do
   where
     storeRef = Reflex.StoreRef (Client.Server "http://localhost:3000") (Client.StoreId "TODO")
 
+editEvent :: EventId -> Event -> Widget t m (Reflex.Event t View, Reflex.Event t StateOp)
+editEvent eId event = do
+  nav <- tabNavigation
+  runLayout (pure Orientation_Column) 0 nav $ do
+    backE <- fixed 3 $ textButtonStatic def "Back"
+
+    title <- validateInput "Title" Right (Just $ lwwValue $ eventTitle event) -- >>= toLWW
+    description <- validateInput "Description" Right (Just $ lwwValue $ eventDescription event) -- >>= toLWW
+    startDate <- validateInput "Start Date" dateValidation (Just $ displayDate $ lwwValue $ eventStartTime event) -- >>= toLWW
+    endDate <- validateInput "End Date" dateValidation (Just $ displayDate $ lwwValue $ eventEndTime event) -- >>= toLWW
+    location <- validateInput "Location" Right (Just $ lwwValue $ eventLocation event) -- >>= toLWW
+
+    updateE <- fixed 3 $ textButtonStatic def "Update"
+
+    -- TODO: propogate createE
+
+    let viewE = leftmost [ ViewEvent eId <$ backE
+                         ]
+
+    return (viewE, never)
+
 event :: EventId -> Dynamic t (Maybe Event) -> Widget t m (Reflex.Event t View, Reflex.Event t StateOp)
 event eId eventMD = do
   nav <- tabNavigation
   runLayout (pure Orientation_Column) 0 nav $ do
     backE <- fixed 3 $ textButtonStatic def "Back"
 
-    editE <- networkView $ ffor eventMD $ \case
+    editE' <- networkView $ ffor eventMD $ \case
         Nothing -> do
             fixed 1 $ text "Event does not exist."
 
@@ -183,11 +207,12 @@ event eId eventMD = do
             fixed 1 $ text "Location:"
             fixed 1 $ text $ pure $ lwwValue $ eventLocation e
 
-            return editE
+            return $ const e <$> editE
+    editE <- switchHold never editE'
 
 
     let viewE = leftmost [ ViewEvents <$ backE
-                         -- TODO: Trigger edit view.
+                         , ViewEditEvent eId <$> editE
                          ]
 
     return (viewE, never)
@@ -240,11 +265,11 @@ createEvent clientId = do
   escapedE <- escapePressed
   col $ do
     rec
-        title <- validateInput "Title" Right createE >>= toLWW
-        description <- validateInput "Description" Right createE >>= toLWW
-        startDate <- validateInput "Start Date" dateValidation createE >>= toLWW
-        endDate <- validateInput "End Date" dateValidation createE >>= toLWW
-        location <- validateInput "Location" Right createE >>= toLWW
+        title <- validateInput "Title" Right Nothing >>= toLWW
+        description <- validateInput "Description" Right Nothing >>= toLWW
+        startDate <- validateInput "Start Date" dateValidation Nothing >>= toLWW
+        endDate <- validateInput "End Date" dateValidation Nothing >>= toLWW
+        location <- validateInput "Location" Right Nothing >>= toLWW
 
         cancelE <- fixed 3 $ textButtonStatic def "Cancel"
         createE <- fixed 3 $ textButtonStatic def "Create event"
@@ -256,8 +281,8 @@ createEvent clientId = do
     let viewE = leftmost
           [ ViewEvents <$ cancelE
           , ViewEvents <$ escapedE
-          -- TODO: send create event
-          , ViewEvents <$ insertE
+          -- , ViewEvents <$ insertE
+          , (\(TwoPMapInsert k _) -> ViewEvent k) <$> insertE
           ]
 
 
@@ -273,11 +298,13 @@ createEvent clientId = do
         let k = UniqueId clientId nextId in
         TwoPMapInsert k e
 
-validateInput label validation e = do
+validateInput :: (Reflex t, MonadNodeId m, MonadHold t m, MonadFix m) => Text -> (Text -> Either Text a) -> Maybe Text -> Layout t m (Dynamic t (Maybe a))
+validateInput label validation initTextM = do
     rec
         let label' = addErr <$> current vE
         fixed 1 $ text label'
-        t <- fixed 1 $ textInput def
+        let setInit = maybe id (\t c -> c {_textInputConfig_initialValue = Zipper.fromText t}) initTextM
+        t <- fixed 1 $ textInput $ setInit def
 
         -- TODO: holdDyn on e
         let vE = validation <$> _textInput_value t
