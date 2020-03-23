@@ -45,8 +45,9 @@ instance Ord t => VRDT (LWW t a) where
       | t1 > t2   = l1
       | otherwise = l2
     
-    -- lawCommutativity x@(LWW t0 _) op1@(LWW t1 _) op2@(LWW t2 _) = ()
-    lawCommutativity x@(LWW t0 v0) op1@(LWW t1 v1) op2@(LWW t2 v2) = ()
+    -- lawCommutativity x op1 op2 = ()
+    -- lawCommutativity x@(LWW t0 v0) op1@(LWW t1 v1) op2@(LWW t2 v2) = ()
+    lawCommutativity (LWW t0 v0) (LWW t1 v1) (LWW t2 v2) = ()
 
     lawNonCausal x op1 op2 = ()
 
@@ -66,7 +67,7 @@ instance Ord t => VRDT (LWW t a) where
 -- enabled2LWW x op1 op2 = enabledLWW x op1 && enabledLWW x op2  && enabledLWW (applyLWW x op1) op2 && enabledLWW (applyLWW x op2) op1
 -- 
 -- {-@ ple lawCommutativityLWW @-}
--- {-@ lawCommutativityLWW :: x : LWW t a -> op1 : LWW t a -> op2 : LWW t a -> {enabled2LWW x op1 op2 => applyLWW op2 (applyLWW op1 x) == applyLWW op1 (applyLWW op2 x)} @-}
--- lawCommutativityLWW :: LWW t a -> LWW t a -> LWW t a -> ()
+-- {-@ lawCommutativityLWW :: Ord t => x : LWW t a -> op1 : LWW t a -> op2 : LWW t a -> {enabled2LWW x op1 op2 => applyLWW op2 (applyLWW op1 x) == applyLWW op1 (applyLWW op2 x)} @-}
+-- lawCommutativityLWW :: Ord t => LWW t a -> LWW t a -> LWW t a -> ()
 -- lawCommutativityLWW lww op1 op2 = ()
 
