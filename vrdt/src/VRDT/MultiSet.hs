@@ -24,8 +24,13 @@ module VRDT.MultiSet (
   , multiSetOpOrder
   ) where
 
-import Data.Map (Map)
+#ifdef NotLiquid
+import           Data.Map (Map)
 import qualified Data.Map as Map
+#else
+import           VRDT.Data.Map (Map)
+import qualified VRDT.Data.Map as Map
+#endif
 import Data.Maybe
 import Prelude hiding (null, Maybe(..))
 import qualified Data.Set as S
@@ -142,8 +147,9 @@ apply MultiSet{..} (MultiSetOpAdd e c)
 apply ms (MultiSetOpRemove e c) = apply ms (MultiSetOpAdd e (-c))
 
 {-@ ple lawCommutativity @-}
-{-@ lawCommutativity :: s : MultiSet a -> op1 : MultiSetOp a -> op2 : MultiSetOp a -> {apply op2 (apply op1 x) == apply op2 (apply op1 x)} @-}
-lawCommutativity :: MultiSet a -> MultiSetOp a -> MultiSetOp a -> ()
+{-@ lawCommutativity :: Ord a => x : MultiSet a -> op1 : MultiSetOp a -> op2 : MultiSetOp a -> {apply op2 (apply op1 x) == apply op1 (apply op2 x)} @-}
+-- {-@ lawCommutativity :: Ord a => x : MultiSet a -> op1 : MultiSetOp a -> op2 : MultiSetOp a -> {x = x} @-}
+lawCommutativity :: Ord a => MultiSet a -> MultiSetOp a -> MultiSetOp a -> ()
 lawCommutativity MultiSet{..} op1 op2 = ()
 
 

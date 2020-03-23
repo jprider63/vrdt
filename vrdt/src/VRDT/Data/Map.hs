@@ -1,6 +1,6 @@
 {-@ LIQUID "--reflection" @-}
 
-module Data.Map where 
+module VRDT.Data.Map where 
 
 import Prelude hiding (Maybe(..), lookup)
 import Data.Maybe 
