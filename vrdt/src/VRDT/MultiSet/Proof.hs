@@ -4,11 +4,11 @@
 
 module VRDT.MultiSet.Proof where
 
-import qualified Data.Map as Map
-import Data.Maybe
-import Props.Map 
-import Prelude hiding ((++), Maybe(..))
-import MultiSet (MultiSet(..), MultiSetOp(..), enabled, apply, multiSetOpOrder)
+import qualified Liquid.Data.Map as Map
+import           Liquid.Data.Maybe
+import           Liquid.Data.Map.Props
+import           Prelude hiding ((++), Maybe(..))
+import           VRDT.MultiSet (MultiSet(..), MultiSetOp(..), enabled, apply, multiSetOpOrder)
 -- import qualified VRDT.MultiSet as MS
 {-@ infix   ++ @-}
 

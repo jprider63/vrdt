@@ -1,6 +1,6 @@
 {-@ LIQUID "--reflection" @-}
 
-module VRDT.Data.Maybe where 
+module Liquid.Data.Maybe where 
 
 import Prelude hiding (Maybe(..))
 

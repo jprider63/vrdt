@@ -1,10 +1,10 @@
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple"        @-}
 
-module Props.Map where 
+module Liquid.Data.Map.Props where 
 
-import Data.Map 
-import Data.Maybe 
+import Liquid.Data.Map 
+import Liquid.Data.Maybe 
 import Language.Haskell.Liquid.ProofCombinators
 
 

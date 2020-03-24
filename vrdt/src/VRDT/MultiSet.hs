@@ -29,9 +29,9 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe
 #else
-import           VRDT.Data.Map (Map)
-import qualified VRDT.Data.Map as Map
-import           VRDT.Data.Maybe
+import           Liquid.Data.Map (Map)
+import qualified Liquid.Data.Map as Map
+import           Liquid.Data.Maybe
 #endif
 import           Prelude hiding (null, Maybe(..))
 import qualified Data.Set as S
