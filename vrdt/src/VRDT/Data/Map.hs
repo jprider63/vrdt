@@ -3,7 +3,7 @@
 module VRDT.Data.Map where 
 
 import Prelude hiding (Maybe(..), lookup)
-import Data.Maybe 
+import VRDT.Data.Maybe 
 import qualified Data.Set as S
 
 data Map k v = Tip | Map k v (Map k v)
