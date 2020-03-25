@@ -7,8 +7,8 @@ import VRDT.Class
 
 
 -- JP: This definition differs slightly from Shapiro's since order doesn't matter for us.
-{-@ strongEventualConsistency :: (Eq (Operation a), VRDT a) => s0 : a -> {ops1 : [Operation a] | allEnabled s0 ops1} -> {ops2 : [Operation a] | allEnabled s0 ops2} -> {isPermutation ops1 ops2 => applyAll s0 ops1 = applyAll s0 ops2} @-}
-strongEventualConsistency :: VRDT a => a -> [Operation a] -> [Operation a] -> ()
+{-@ strongEventualConsistency :: (VRDT a, Eq (Operation a)) => s0 : a -> {ops1 : [Operation a] | allEnabled s0 ops1} -> {ops2 : [Operation a] | allEnabled s0 ops2} -> {isPermutation ops1 ops2 => applyAll s0 ops1 = applyAll s0 ops2} @-}
+strongEventualConsistency :: (VRDT a, Eq (Operation a)) => a -> [Operation a] -> [Operation a] -> ()
 strongEventualConsistency _ _ _ = ()
 
 {-@ reflect allEnabled @-}
