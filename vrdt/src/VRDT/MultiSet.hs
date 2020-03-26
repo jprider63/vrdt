@@ -33,6 +33,7 @@ import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
 import           Liquid.Data.Maybe
 #endif
+import           Language.Haskell.Liquid.ProofCombinators
 import           Prelude hiding (null, Maybe(..))
 import qualified Data.Set as S
 
@@ -148,9 +149,55 @@ apply MultiSet{..} (MultiSetOpAdd e c)
 apply ms (MultiSetOpRemove e c) = apply ms (MultiSetOpAdd e (-c))
 
 {-@ ple lawCommutativity @-}
-{-@ lawCommutativity :: Ord a => x : MultiSet a -> op1 : MultiSetOp a -> op2 : MultiSetOp a -> {apply (apply x op1) op2 == apply (apply x op2) op1} @-}
+{-@ lawCommutativity :: Ord a => x : MultiSet a -> op1 : MultiSetOp a -> op2 : MultiSetOp a -> {apply (apply x op1) op2 == apply (apply x op2) op1} / [multiSetOpOrder op1 + multiSetOpOrder op2] @-}
 lawCommutativity :: Ord a => MultiSet a -> MultiSetOp a -> MultiSetOp a -> ()
-lawCommutativity MultiSet{..} op1 op2 = ()
+-- lawCommutativity MultiSet{..} op1 op2 = ()
+lawCommutativity x@MultiSet{..} op1@(MultiSetOpAdd v1 c1) op2@(MultiSetOpAdd v2 c2) 
+  | Just c1' <- Map.lookup v1 posMultiSet
+  , Just c2' <- Map.lookup v2 posMultiSet =
+    let c1'' = c1 + c1' in
+
+    if c1'' > 0 then
+        --     apply (apply x op1) op2
+        -- === apply (MultiSet (Map.insert e c'' posMultiSet) negMultiSet) op2
+        -- === apply (apply x op2) op1
+        -- *** QED
+        ()
+
+    else
+        ()
+
+  | otherwise = ()
+lawCommutativity x@MultiSet{..} op1@(MultiSetOpAdd v1 c1) op2@(MultiSetOpRemove v2 c2) = 
+    let op2' = MultiSetOpAdd v2 (-c2) in
+
+        apply (apply x op1) op2
+    === apply (apply x op1) op2' ? lawCommutativity x op1 op2'
+
+    === apply (apply x op2') op1
+    === apply (apply x op2) op1
+    *** QED
+lawCommutativity x@MultiSet{..} op1@(MultiSetOpRemove v1 c1) op2@(MultiSetOpAdd v2 c2) = 
+    let op1' = MultiSetOpAdd v1 (-c1) in
+
+        apply (apply x op1) op2
+    === apply (apply x op1') op2 ? lawCommutativity x op1' op2
+
+    === apply (apply x op2) op1'
+    === apply (apply x op2) op1
+    *** QED
+lawCommutativity x@MultiSet{..} op1@(MultiSetOpRemove v1 c1) op2@(MultiSetOpRemove v2 c2) = 
+    let op1' = MultiSetOpAdd v1 (-c1) in
+    let op2' = MultiSetOpAdd v2 (-c2) in
+
+        apply (apply x op1) op2
+    === apply (apply x op1) op2'
+    === apply (apply x op1') op2' ? lawCommutativity x op1' op2'
+
+    === apply (apply x op2') op1'
+    === apply (apply x op2') op1
+    === apply (apply x op2) op1
+    *** QED
 
 
 {-@ ple lawNonCausal @-}
