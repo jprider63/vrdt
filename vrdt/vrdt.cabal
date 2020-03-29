@@ -38,6 +38,7 @@ library
       VRDT.Types
       VRDT.TwoPMap
   other-modules:
+      Liquid.ProofCombinators
       Paths_vrdt
   hs-source-dirs:
       src

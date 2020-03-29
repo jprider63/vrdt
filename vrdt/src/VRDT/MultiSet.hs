@@ -33,7 +33,7 @@ import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
 import           Liquid.Data.Maybe
 #endif
-import           Language.Haskell.Liquid.ProofCombinators
+import           Liquid.ProofCombinators
 import           Prelude hiding (null, Maybe(..))
 import qualified Data.Set as S
 
