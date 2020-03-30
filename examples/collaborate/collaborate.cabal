@@ -1,0 +1,63 @@
+cabal-version: 1.12
+
+name:           collaborate
+version:        0.1.0.0
+-- description:    Please see the README on GitHub at <https://github.com/githubuser/collaborate#readme>
+-- homepage:       https://github.com/githubuser/collaborate#readme
+-- bug-reports:    https://github.com/githubuser/collaborate/issues
+-- author:         Author name here
+-- maintainer:     example@example.com
+-- copyright:      2020 Author name here
+-- license:        BSD3
+-- license-file:   LICENSE
+build-type:     Simple
+-- extra-source-files:
+--     README.md
+--     ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/collaborate
+
+executable collaborate
+  main-is: Main.hs
+  other-modules:
+      Paths_collaborate
+  hs-source-dirs:
+      src
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , kyowon-client
+    , kyowon-core
+    , kyowon-reflex
+    , reflex
+    , reflex-vty
+    , time
+    , transformers
+    , uuid
+    , vrdt
+    , vty
+  default-language: Haskell2010
+  extensions: 
+      FlexibleContexts
+      FlexibleInstances
+      LambdaCase
+      OverloadedStrings
+      RankNTypes
+      RecursiveDo
+      TypeFamilies
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+
+-- test-suite collaborate-test
+--   type: exitcode-stdio-1.0
+--   main-is: Spec.hs
+--   other-modules:
+--       Paths_collaborate
+--   hs-source-dirs:
+--       test
+--   ghc-options: -threaded -rtsopts -with-rtsopts=-N
+--   build-depends:
+--       base >=4.7 && <5
+--     , collaborate
+--   default-language: Haskell2010

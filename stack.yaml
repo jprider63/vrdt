@@ -34,6 +34,7 @@ packages:
 - kyowon-client
 - kyowon-server
 - kyowon-reflex
+- examples/collaborate
 - examples/event
 - examples/max
 

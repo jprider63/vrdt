@@ -40,6 +40,7 @@ library
                       , Kyowon.Reflex.Common
                       , Kyowon.Reflex.Next
                       , Kyowon.Reflex.Time
+                      , Kyowon.Reflex.VRDT.CausalTree
                       , Kyowon.Reflex.VRDT.LWW
                       , Kyowon.Reflex.Vty.Widget
   other-modules:

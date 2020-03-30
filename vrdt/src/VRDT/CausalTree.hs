@@ -1,6 +1,8 @@
 
 module VRDT.CausalTree where
 
+import           Data.Aeson (ToJSON(..), FromJSON(..), (.:), (.=))
+import qualified Data.Aeson as Aeson
 import qualified Data.List as List
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -131,3 +133,45 @@ atomGreaterThan (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2 (Cau
 atomGreaterThan (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2 _)                        = False
 
 
+#ifdef NotLiquid
+instance (FromJSON id, FromJSON a) => FromJSON (CausalTreeOp id a) where
+    parseJSON = Aeson.withObject "CausalTreeOp" $ \o -> 
+        CausalTreeOp <$> o .: "parent" <*> o .: "atom"
+
+instance (ToJSON id, ToJSON a) => ToJSON (CausalTreeOp id a) where
+    toJSON (CausalTreeOp id a) = Aeson.object [
+        "parent" .= id
+      , "atom" .= a
+      ]
+
+instance (FromJSON id, FromJSON a) => FromJSON (CausalTreeAtom id a) where
+    parseJSON = Aeson.withObject "CausalTreeAtom" $ \o ->
+        CausalTreeAtom <$> o .: "id" <*> o .: "letter"
+
+instance (ToJSON id, ToJSON a) => ToJSON (CausalTreeAtom id a) where
+    toJSON (CausalTreeAtom id letter) = Aeson.object [
+        "id" .= id
+      , "letter" .= letter
+      ]
+
+instance (FromJSON a) => FromJSON (CausalTreeLetter a) where
+    parseJSON = Aeson.withObject "CausalTreeLetter" $ \o -> do
+        c <- o .: "c"
+        case (c :: String) of
+            "letter" -> CausalTreeLetter <$> o .: "letter"
+            "delete" -> pure CausalTreeLetterDelete
+            "root" -> pure CausalTreeLetterRoot
+
+instance (ToJSON a) => ToJSON (CausalTreeLetter a) where
+    toJSON (CausalTreeLetter letter) = Aeson.object [
+        "c" .= ("letter" :: String)
+      , "letter" .= letter
+      ]
+    toJSON CausalTreeLetterDelete = Aeson.object [
+        "c" .= ("delete" :: String)
+      ]
+    toJSON CausalTreeLetterRoot = Aeson.object [
+        "c" .= ("root" :: String)
+      ]
+
+#endif
