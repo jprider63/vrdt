@@ -7,7 +7,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-} -- to define overlapping instances Binary->Serialize->Mime(Un)Render
 module Kyowon.Core.Types
 ( AppData(..)
-, ClientId, createClient
+, ClientId(..) -- TODO: Don't expose this.
+, createClient
 , UTCTimestamp(..)
 , NextId
 , zeroNextId

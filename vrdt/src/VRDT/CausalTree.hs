@@ -6,6 +6,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.List as List
 import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Maybe (mapMaybe)
 import           Data.Time.Clock (UTCTime)
 
 import           VRDT.Types
@@ -27,6 +28,7 @@ data CausalTreeOp id a = CausalTreeOp {
 -- -- JP: Maybe we should leave this abstract.
 -- data AtomId = AtomId UTCTime ClientId
 --   deriving (Show, Eq, Ord)
+-- JP: Don't really need id if CausalTreeLetterRoot or CausalTreeLetterDelete?
 
 data CausalTreeAtom id a = CausalTreeAtom {
     causalTreeAtomId     :: id
@@ -91,14 +93,23 @@ apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
       | atom `atomGreaterThan` causalTreeWeaveAtom w = CausalTreeWeave atom []:l
       | otherwise                                    = w:insertAtom ws atom
 
+-- extractLetter :: t (CausalTreeAtom id a) -> t a
+extractLetter :: [CausalTreeAtom id a] -> [a]
+extractLetter = mapMaybe $ \a -> case causalTreeAtomLetter a of
+    CausalTreeLetter a -> Just a
+    CausalTreeLetterDelete -> Nothing
+    CausalTreeLetterRoot -> Nothing
+
+preorder :: CausalTree id a -> [CausalTreeAtom id a]
+preorder = reverse . preorder'
 
 -- | Preorder traversal of a `CausalTree`. Returns atoms in reverse order.
 -- Invariant: `CausalTreeLetter` is the only constructor in the returned list.
 -- O(n)
 --
 -- JP: Can we efficiently return results in the correct order by doing a foldr?
-preorder :: CausalTree id a -> [CausalTreeAtom id a]
-preorder = go [] . causalTreeWeave
+preorder' :: CausalTree id a -> [CausalTreeAtom id a]
+preorder' = go [] . causalTreeWeave
  where
   go acc (CausalTreeWeave _atom ws) = 
     let (_, acc') = List.foldl' visitor (False, acc) ws in
