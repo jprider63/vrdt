@@ -1,7 +1,12 @@
 module Kyowon.Reflex.VRDT.CausalTree where
 
 import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Fix (MonadFix)
 -- import qualified Data.Text.Zipper as Z
+import           Data.Align (align)
+import qualified Data.List as List
+import qualified Data.Text.Zipper as Z
+import           Data.These (These(..))
 import           Data.Witherable (catMaybes)
 import qualified Graphics.Vty.Attributes as V
 import qualified Graphics.Vty.Image as V
@@ -10,11 +15,18 @@ import           Reflex (
                           Event
                         , Reflex
                         , Dynamic
+                        , MonadHold
+                        , MonadSample
                         , Performable
                         , PerformEvent
                         , attach
                         , current
                         -- , ffor
+                        , holdDyn
+                        -- , holdUniqDyn
+                        , sample
+                        -- , traceEvent
+                        , updated
                         )
 import           Reflex.Vty.Widget ( VtyWidget
                                    , ImageWriter(..))
@@ -41,26 +53,38 @@ foldDyn' :: (a -> a -> a) -> Dynamic t a -> (a -> b -> a) -> Event t b -> Dynami
 foldDyn' = undefined
 
 
+-- JP: I don't know if this works. Might need to use foldDyn of (,)
+-- prevDyn d = holdDyn Nothing (Just <$> updated d)
+
+-- eventToDynM d = holdDyn Nothing (Just <$> d)
 
 -- JP: Should this take a dynamic of CausalTree?
-causalTreeInput :: (KyowonMonad m, KyowonMonad (Performable m), Reflex t, PerformEvent t m)
+causalTreeInput :: (MonadHold t m, MonadFix m, KyowonMonad m, KyowonMonad (Performable m), Reflex t, PerformEvent t m)
     => Dynamic t (CausalTree UTCTimestamp Char) -> VtyWidget t m (CausalTreeInput t UTCTimestamp Char)
 causalTreeInput ct = do
     -- ct <- holdUniqDyn ct'
 
     i <- V.input
+    -- iM <- eventToDynM i
     -- f <- V.focus
     -- dh <- V.displayHeight
-    -- dw <- V.displayWidth
+    dw <- V.displayWidth
+
+    -- ctInputD <- alignDynE ct i
 
     clientId <- lift getClientId
 
-    -- let zipper = toZipper <$> ct <*> dh <*> dw
-    -- let cursorAtomId = zipperCursorIdentifier <$> zipper
-    let cursorAtomId = causalTreeAtomId . causalTreeWeaveAtom . causalTreeWeave <$> ct
+    -- rec
+    --     let zipperOpPair = updateZipper <$> prevZipper <*> ctInputD <*> dh <*> dw
+    --     let zipper = fst <$> zipperOpPair
+    --     let opsE = catMaybes $ updated (snd <$> zipperOpPair)
+    --     -- let cursorAtomId = zipperCursorIdentifier <$> zipper
+
+    --     prevZipper <- prevDyn zipper
 
     -- let cursorAttrs = ffor f $ \x -> if x then V.cursorAttributes else V.defAttr
 
+    let cursorAtomId = causalTreeAtomId . causalTreeWeaveAtom . causalTreeWeave <$> ct
     opsE <- lift $ do
         let pairE = attach (current cursorAtomId) i
         catMaybes <$> sampleMonotonicTimeWith' (\(parentId, i) t -> toOperation parentId t clientId i) pairE
@@ -68,15 +92,22 @@ causalTreeInput ct = do
 
 
     -- let rows = toSpan <$> ct
-    let img = ((:[]) . V.horizCat . fmap (V.char V.defAttr) . extractLetter . preorder) <$> ct
+    let img = (\ct w -> 
+            let t = extractLetter $ preorder ct in
+            let lines = splitAtWidth w t in
+            let img = V.vertCat $ fmap (V.horizCat . fmap (V.char V.defAttr)) lines in
+            [img]
+          ) <$> ct <*> dw
 
     -- tellImages $ pure $ map (V.char V.defAttr) "This is a causal tree input!!"
-    tellImages $ (:[]) . V.vertCat <$> current img
+    tellImages $ current img
 
     -- return $ CausalTreeInput never -- TODO: Implement this XXX
-    return $ CausalTreeInput opsE
+    return $ CausalTreeInput opsE -- $ traceEvent "Operations" opsE
 
   where
+
+
     -- toSpan ct = ct
 
     -- JP: Do we need a zipper of the causal tree? So that we can delete backwards, etc?
@@ -89,6 +120,39 @@ causalTreeInput ct = do
     actionToLetter (V.EvKey (V.KChar c) []) = Just $ CausalTreeLetter c
     actionToLetter (V.EvKey V.KBS [])       = Just CausalTreeLetterDelete
     actionToLetter _                        = Nothing
+
+    updateZipper Nothing ct h w = undefined
+        -- JP: How do we tell if the ct updated here?
+    updateZipper (Just prevZipper) ct h w = undefined
+
+-- TODO: Improve this.
+splitAtWidth :: Int -> [Char] -> [[Char]]
+splitAtWidth n s = go [] s
+  where
+    go acc [] = List.reverse acc
+    go acc s  = 
+      let (line, s') = splitN 0 [] s in
+      go (line:acc) s'
+
+    -- splitN 0 [] = error "unreachable"
+    splitN :: Int -> [Char] -> [Char] -> ([Char], [Char])
+    splitN m acc []         = (List.reverse acc, [])
+    splitN m acc s | m >= n = (List.reverse acc, s)
+    splitN m acc (c:s)      = splitN (m + Z.charWidth c) (c:acc) s
+
+      
+    
+    
+    
+
+
+-- TODO: Move to Reflex?
+alignDynE :: (Reflex t, MonadSample t m, MonadHold t m) => Dynamic t a -> Event t b -> m (Dynamic t (These a b))
+alignDynE d e = do
+    d0 <- sample (current d)
+    let theseE = align (updated d) e
+
+    holdDyn (This d0) theseE
 
 
         

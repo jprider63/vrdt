@@ -19,7 +19,9 @@ library
                       , ref-tf
                       , reflex
                       , reflex-vty
+                      , semialign
                       , time
+                      , these
                       , transformers
                       , vrdt
                       , vty
@@ -32,6 +34,7 @@ library
                         LambdaCase
                         MultiParamTypeClasses
                         RankNTypes
+                        RecursiveDo
                         ScopedTypeVariables
                         TypeFamilies
 
@@ -44,7 +47,7 @@ library
                       , Kyowon.Reflex.VRDT.LWW
                       , Kyowon.Reflex.Vty.Widget
   other-modules:
-  ghc-options:        -Wall -Wno-name-shadowing -Wno-orphans -Werror
+  ghc-options:        -Wall -Wno-name-shadowing -Wno-orphans
 
 test-suite kyowon-reflex_test
   type:                 exitcode-stdio-1.0
