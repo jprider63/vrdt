@@ -58,7 +58,7 @@ runApp = mainWidget $ do
     _ -> Nothing
 
 
-maxApp :: (Reflex t, MonadHold t m, MonadFix m, Adjustable t m, NotReady t m, PostBuild t m, MonadNodeId m, TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), PostBuild t m)
+maxApp :: (Reflex t, MonadHold t m, MonadFix m, Adjustable t m, NotReady t m, PostBuild t m, MonadNodeId m, TriggerEvent t m, PerformEvent t m, MonadIO m, MonadIO (Performable m), PostBuild t m)
        => VtyWidget t m ()
 maxApp = do
   nav <- tabNavigation
