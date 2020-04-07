@@ -67,7 +67,7 @@ causalTreeInput ct = do
     i <- V.input
     -- iM <- eventToDynM i
     -- f <- V.focus
-    -- dh <- V.displayHeight
+    dh <- V.displayHeight
     dw <- V.displayWidth
 
     -- ctInputD <- alignDynE ct i
@@ -84,6 +84,7 @@ causalTreeInput ct = do
 
     -- let cursorAttrs = ffor f $ \x -> if x then V.cursorAttributes else V.defAttr
 
+    let scrollTop = pure 0
     -- let cursorAtomId = causalTreeAtomId . causalTreeWeaveAtom . causalTreeWeave <$> ct
     rec
       cursorAtomId <- (\a -> toAtomId <$> a <*> ct) <$> holdDyn Nothing (Just <$> opsE)
@@ -97,7 +98,10 @@ causalTreeInput ct = do
             let t = preorder ct in
             splitAtWidth w t
           ) <$> ct <*> dw
-    let img = (pure . V.vertCat . fmap (V.horizCat . fmap (V.char V.defAttr . extractLetterUnsafe))) <$> rows
+    let img = (\rows dh scrollTop -> 
+            let rows' = take dh $ drop scrollTop rows in
+            pure $ V.vertCat $ fmap (V.horizCat . fmap (V.char V.defAttr . extractLetterUnsafe)) rows'
+          ) <$> rows <*> dh <*> scrollTop
 
     -- tellImages $ pure $ map (V.char V.defAttr) "This is a causal tree input!!"
     tellImages $ current img
@@ -108,8 +112,8 @@ causalTreeInput ct = do
   where
     extractLetterUnsafe = maybe (error "extractLetterUnsafe: unreachable") id . extractLetter
 
-    toAtomId Nothing ct = causalTreeAtomId $ causalTreeWeaveAtom $ causalTreeWeave ct -- Pull out the root id. Better way to do this?
     toAtomId (Just (CausalTreeOp _ (CausalTreeAtom atomId (CausalTreeLetter _)))) _ = atomId
+    toAtomId _ ct = causalTreeAtomId $ causalTreeWeaveAtom $ causalTreeWeave ct -- Pull out the root id. Better way to do this?
 
 
     -- toSpan ct = ct
