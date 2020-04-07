@@ -91,13 +91,11 @@ causalTreeInput ct = do
 
 
 
-    -- let rows = toSpan <$> ct
-    let img = (\ct w -> 
-            let t = extractLetter $ preorder ct in
-            let lines = splitAtWidth w t in
-            let img = V.vertCat $ fmap (V.horizCat . fmap (V.char V.defAttr)) lines in
-            [img]
+    let rows = (\ct w -> 
+            let t = preorder ct in
+            splitAtWidth w t
           ) <$> ct <*> dw
+    let img = (pure . V.vertCat . fmap (V.horizCat . fmap (V.char V.defAttr . extractLetterUnsafe))) <$> rows
 
     -- tellImages $ pure $ map (V.char V.defAttr) "This is a causal tree input!!"
     tellImages $ current img
@@ -106,6 +104,7 @@ causalTreeInput ct = do
     return $ CausalTreeInput opsE -- $ traceEvent "Operations" opsE
 
   where
+    extractLetterUnsafe = maybe (error "extractLetterUnsafe: unreachable") id . extractLetter
 
 
     -- toSpan ct = ct
@@ -118,6 +117,7 @@ causalTreeInput ct = do
         CausalTreeOp parentId <$> atomM
 
     actionToLetter (V.EvKey (V.KChar c) []) = Just $ CausalTreeLetter c
+    actionToLetter (V.EvKey V.KEnter [])    = Just $ CausalTreeLetter '\n'
     actionToLetter (V.EvKey V.KBS [])       = Just CausalTreeLetterDelete
     actionToLetter _                        = Nothing
 
@@ -126,7 +126,7 @@ causalTreeInput ct = do
     updateZipper (Just prevZipper) ct h w = undefined
 
 -- TODO: Improve this.
-splitAtWidth :: Int -> [Char] -> [[Char]]
+splitAtWidth :: Int -> [CausalTreeAtom t Char] -> [[CausalTreeAtom t Char]]
 splitAtWidth n s = go [] s
   where
     go acc [] = List.reverse acc
@@ -135,10 +135,13 @@ splitAtWidth n s = go [] s
       go (line:acc) s'
 
     -- splitN 0 [] = error "unreachable"
-    splitN :: Int -> [Char] -> [Char] -> ([Char], [Char])
+    splitN :: Int -> [CausalTreeAtom t Char] -> [CausalTreeAtom t Char] -> ([CausalTreeAtom t Char], [CausalTreeAtom t Char])
     splitN m acc []         = (List.reverse acc, [])
     splitN m acc s | m >= n = (List.reverse acc, s)
-    splitN m acc (c:s)      = splitN (m + Z.charWidth c) (c:acc) s
+    splitN m acc (a:s)      = case extractLetter a of
+      Nothing   -> splitN m acc s
+      Just '\n' -> (List.reverse acc, s)
+      Just c    -> splitN (m + Z.charWidth c) (a:acc) s
 
       
     

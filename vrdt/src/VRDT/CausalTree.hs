@@ -94,8 +94,10 @@ apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
       | otherwise                                    = w:insertAtom ws atom
 
 -- extractLetter :: t (CausalTreeAtom id a) -> t a
-extractLetter :: [CausalTreeAtom id a] -> [a]
-extractLetter = mapMaybe $ \a -> case causalTreeAtomLetter a of
+-- extractLetter :: [CausalTreeAtom id a] -> [a]
+-- extractLetter = mapMaybe $ \a -> case causalTreeAtomLetter a of
+extractLetter :: CausalTreeAtom id a -> Maybe a
+extractLetter a = case causalTreeAtomLetter a of
     CausalTreeLetter a -> Just a
     CausalTreeLetterDelete -> Nothing
     CausalTreeLetterRoot -> Nothing
