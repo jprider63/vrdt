@@ -84,8 +84,10 @@ causalTreeInput ct = do
 
     -- let cursorAttrs = ffor f $ \x -> if x then V.cursorAttributes else V.defAttr
 
-    let cursorAtomId = causalTreeAtomId . causalTreeWeaveAtom . causalTreeWeave <$> ct
-    opsE <- lift $ do
+    -- let cursorAtomId = causalTreeAtomId . causalTreeWeaveAtom . causalTreeWeave <$> ct
+    rec
+      cursorAtomId <- (\a -> toAtomId <$> a <*> ct) <$> holdDyn Nothing (Just <$> opsE)
+      opsE <- lift $ do
         let pairE = attach (current cursorAtomId) i
         catMaybes <$> sampleMonotonicTimeWith' (\(parentId, i) t -> toOperation parentId t clientId i) pairE
 
@@ -105,6 +107,9 @@ causalTreeInput ct = do
 
   where
     extractLetterUnsafe = maybe (error "extractLetterUnsafe: unreachable") id . extractLetter
+
+    toAtomId Nothing ct = causalTreeAtomId $ causalTreeWeaveAtom $ causalTreeWeave ct -- Pull out the root id. Better way to do this?
+    toAtomId (Just (CausalTreeOp _ (CausalTreeAtom atomId (CausalTreeLetter _)))) _ = atomId
 
 
     -- toSpan ct = ct
