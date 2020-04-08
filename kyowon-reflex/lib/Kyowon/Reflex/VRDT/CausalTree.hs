@@ -149,7 +149,7 @@ splitAtWidth n s = go [] s
     splitN m acc s | m >= n = (List.reverse acc, s)
     splitN m acc (a:s)      = case extractLetter a of
       Nothing   -> splitN m acc s
-      Just '\n' -> (List.reverse acc, s)
+      Just '\n' -> (List.reverse ((t, ' '):acc), s) -- JP: How should we handle newlines?
       Just c    -> splitN (m + Z.charWidth c) ((t, c):acc) s
 
       where
