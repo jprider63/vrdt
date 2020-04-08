@@ -39,6 +39,8 @@ import           Kyowon.Core.Types (UTCTimestamp(..))
 import           Kyowon.Reflex.Client (KyowonMonad(..))
 import           Kyowon.Reflex.Time (sampleMonotonicTimeWith')
 
+
+
 data CausalTreeInput t id a = CausalTreeInput {
     causalTreeInputOperations :: Event t (CausalTreeOp id a)
     -- causalTreeInputOperations :: Event t (Operation (CausalTree id a))
@@ -100,7 +102,7 @@ causalTreeInput ct = do
           ) <$> ct <*> dw
     let img = (\rows dh scrollTop -> 
             let rows' = take dh $ drop scrollTop rows in
-            pure $ V.vertCat $ fmap (V.horizCat . fmap (V.char V.defAttr . extractLetterUnsafe)) rows'
+            pure $ V.vertCat $ fmap (V.horizCat . fmap (V.char V.defAttr . snd)) rows'
           ) <$> rows <*> dh <*> scrollTop
 
     -- tellImages $ pure $ map (V.char V.defAttr) "This is a causal tree input!!"
@@ -110,8 +112,6 @@ causalTreeInput ct = do
     return $ CausalTreeInput opsE -- $ traceEvent "Operations" opsE
 
   where
-    extractLetterUnsafe = maybe (error "extractLetterUnsafe: unreachable") id . extractLetter
-
     toAtomId (Just (CausalTreeOp _ (CausalTreeAtom atomId (CausalTreeLetter _)))) _ = atomId
     toAtomId _ ct = causalTreeAtomId $ causalTreeWeaveAtom $ causalTreeWeave ct -- Pull out the root id. Better way to do this?
 
@@ -135,7 +135,7 @@ causalTreeInput ct = do
     updateZipper (Just prevZipper) ct h w = undefined
 
 -- TODO: Improve this.
-splitAtWidth :: Int -> [CausalTreeAtom t Char] -> [[CausalTreeAtom t Char]]
+splitAtWidth :: Int -> [CausalTreeAtom t Char] -> [[(t, Char)]]
 splitAtWidth n s = go [] s
   where
     go acc [] = List.reverse acc
@@ -144,13 +144,16 @@ splitAtWidth n s = go [] s
       go (line:acc) s'
 
     -- splitN 0 [] = error "unreachable"
-    splitN :: Int -> [CausalTreeAtom t Char] -> [CausalTreeAtom t Char] -> ([CausalTreeAtom t Char], [CausalTreeAtom t Char])
+    splitN :: Int -> [(t, Char)] -> [CausalTreeAtom t Char] -> ([(t, Char)], [CausalTreeAtom t Char])
     splitN m acc []         = (List.reverse acc, [])
     splitN m acc s | m >= n = (List.reverse acc, s)
     splitN m acc (a:s)      = case extractLetter a of
       Nothing   -> splitN m acc s
       Just '\n' -> (List.reverse acc, s)
-      Just c    -> splitN (m + Z.charWidth c) (a:acc) s
+      Just c    -> splitN (m + Z.charWidth c) ((t, c):acc) s
+
+      where
+        t = causalTreeAtomId a
 
       
     
