@@ -51,6 +51,14 @@ import           VRDT.Class (VRDT(..))
 
 import           Kyowon.Reflex.Common
 
+
+
+
+import qualified Data.HashSet as HashSet -- TODO: Delete me XXX
+import           System.IO
+
+
+
 data StoreRef a = StoreRef
     { storeRefServer :: Client.Server
     , storeRefStore  :: Client.StoreId
@@ -77,12 +85,26 @@ connectToStore' storeRef init opsE = do
     performEvent_ $ ffor opsE $ \ops -> liftIO $ do
         mapM_ (writeChan opChan . Left) ops
 
+    -- TODO: Get rid of this. XXX
+    seenRef <- liftIO $ newIORef mempty
+
     liftIO $ void $ forkIO $ do
       Client.withRaw
         (storeRefServer storeRef)-- "http://127.0.0.1:3000") 
         (Just $ storeRefStore storeRef) -- Client.StoreId "TODO") 
         Nothing
         (Client.Recv $ \(Client.AppData bs) -> do
+            seen <- atomicModifyIORef seenRef $ \seen -> 
+                let r = HashSet.member bs seen in
+                (HashSet.insert bs seen, r)
+
+            if seen then 
+                hPrint stderr "duplicate op"
+            else
+                do
+                hPrint stderr "not dup"
+                return ()
+
             case Aeson.decode bs of
                 Nothing -> 
                     error "TODO"

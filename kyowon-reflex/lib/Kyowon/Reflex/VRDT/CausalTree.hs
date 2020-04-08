@@ -41,6 +41,11 @@ import           Kyowon.Reflex.Time (sampleMonotonicTimeWith')
 
 
 
+
+import Debug.Trace -- TODO: Delete me
+
+
+
 data CausalTreeInput t id a = CausalTreeInput {
     causalTreeInputOperations :: Event t (CausalTreeOp id a)
     -- causalTreeInputOperations :: Event t (Operation (CausalTree id a))
@@ -97,7 +102,7 @@ causalTreeInput ct = do
 
 
     let rows = (\ct w -> 
-            let t = preorder ct in
+            let t = traceShowId $ preorder ct in
             splitAtWidth w t
           ) <$> ct <*> dw
     let img = (\rows dh scrollTop -> 

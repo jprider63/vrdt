@@ -74,7 +74,7 @@ createClient :: IO ClientId
 createClient = ClientId <$> UUIDv4.nextRandom
 
 data UTCTimestamp = UTCTimestamp UTCTime ClientId
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 
 instance FromJSON UTCTimestamp where
     parseJSON = Aeson.withObject "UTCTimestamp" $ \o -> 

@@ -23,6 +23,7 @@ library
                       , time
                       , these
                       , transformers
+                      , unordered-containers
                       , vrdt
                       , vty
                       , witherable
