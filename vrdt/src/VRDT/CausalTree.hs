@@ -111,28 +111,50 @@ preorder = reverse . preorder'
 --
 -- JP: Can we efficiently return results in the correct order by doing a foldr?
 preorder' :: CausalTree id a -> [CausalTreeAtom id a]
-preorder' = go [] . causalTreeWeave
- where
-  go acc (CausalTreeWeave _atom ws) = 
-    let (_, acc') = List.foldl' visitor (False, acc) ws in
-    List.foldl' go acc' ws 
+preorder' = snd . go False [] . causalTreeWeave
+  where
+    go deleted acc (CausalTreeWeave atom ws) = 
+      let (deleted', acc') = case causalTreeAtomLetter atom of
+            CausalTreeLetterDelete ->
+              if deleted then
+                (deleted, acc)
+              else
+                (True, pop acc)
+            CausalTreeLetterRoot ->
+              (deleted, acc)
+            CausalTreeLetter _ ->
+              (deleted, atom:acc)
+      in
+      let acc'' = snd $ List.foldl' (uncurry go) (False, acc') ws in
+      (deleted', acc'')
 
-  visitor (deleted, acc) (CausalTreeWeave atom _ws) = case causalTreeAtomLetter atom of
-    CausalTreeLetterDelete ->
-      -- Skip if already deleted.
-      if deleted then
-        (deleted, acc)
-      else
-        (True, pop acc)
-    
-    CausalTreeLetterRoot ->
-      -- Should be unreachable.
-      (deleted, acc)
+    pop = List.drop 1
 
-    CausalTreeLetter _ ->
-      (deleted, atom:acc)
-  
-  pop = List.drop 1
+-- JP: This does a version does a BFS.
+-- preorder' :: CausalTree id a -> [CausalTreeAtom id a]
+-- preorder' = go [] . causalTreeWeave
+--  where
+--   -- go deleted acc (CausalTreeWeave _atom ws) = 
+--   go acc (CausalTreeWeave _atom ws) = 
+--     let (_, acc') = List.foldl' visitor (False, acc) ws in
+--     List.foldl' go acc' ws 
+-- 
+--   visitor (deleted, acc) (CausalTreeWeave atom _ws) = case causalTreeAtomLetter atom of
+--     CausalTreeLetterDelete ->
+--       -- Skip if already deleted.
+--       if deleted then
+--         (deleted, acc)
+--       else
+--         (True, pop acc)
+--     
+--     CausalTreeLetterRoot ->
+--       -- Should be unreachable.
+--       (deleted, acc)
+-- 
+--     CausalTreeLetter _ ->
+--       (deleted, atom:acc)
+--   
+--   pop = List.drop 1
       
 
 
