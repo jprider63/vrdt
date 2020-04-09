@@ -26,6 +26,6 @@ type SendV0 = "send"
 type ListenV0 = "listen"
     :> Capture "store-id" StoreId
     :> ReqBody '[OctetStream] ClientId
-    :> StreamPost NoFraming OctetStream ServerStream
+    :> StreamPost NetstringFraming OctetStream ServerStream
 
 type ServerStream = SourceIO ServerMessage
