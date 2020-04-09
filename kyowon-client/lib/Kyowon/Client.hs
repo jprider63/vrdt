@@ -215,26 +215,17 @@ connectListen env store client sink = action `Exc.catches` handlers
 --
 -- TODO: inline this after clients start handling RequestResendUpdates
 receiveTo :: Recv API.AppData -> API.ServerStream -> IO ()
-receiveTo (Recv recv) stream
-    = consume stream
+receiveTo (Recv recv)
+    = SourceT.foreach complainMidstream recv
+    . SourceT.mapMaybe justUpdates
   where
-  -- We currently only handle updates, not other message types.
     justUpdates item = case item of
         API.Update _ update -> Just update
         API.RequestResendUpdates -> Nothing
     -- This handles an error sent intentionally by the stream producer. Since
     -- we don't expect any errors from the stream producer currently, we just
     -- report it.
-    complainMidstream err = do
-        slowLog WARNING $ "Received from stream: " <> show err
-        -- XXX: After reporting an error, start consuming the stream again.
-        -- This is a temporary workaround for the disconnects observed in the
-        -- collaborate example.
-        consume stream
-    -- The whole pipeline consumes just updates and complains midstream.
-    consume
-        = SourceT.foreach complainMidstream recv
-        . SourceT.mapMaybe justUpdates
+    complainMidstream err = slowLog WARNING $ "Received from stream: " <> err
 
 -- | Sleep exponentially according to the number of demerits.
 --
