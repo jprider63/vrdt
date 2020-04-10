@@ -102,6 +102,9 @@ extractLetter a = case causalTreeAtomLetter a of
     CausalTreeLetterDelete -> Nothing
     CausalTreeLetterRoot -> Nothing
 
+rootAtomId :: CausalTree id a -> id
+rootAtomId = causalTreeAtomId . causalTreeWeaveAtom . causalTreeWeave
+
 preorder :: CausalTree id a -> [CausalTreeAtom id a]
 preorder = reverse . preorder'
 

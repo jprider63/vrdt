@@ -20,6 +20,7 @@ import           Reflex (
                         , Performable
                         , PerformEvent
                         , attach
+                        , attachWith
                         , current
                         -- , ffor
                         , holdDyn
@@ -28,11 +29,12 @@ import           Reflex (
                         -- , traceEvent
                         , updated
                         )
+import qualified Reflex.Vty.Host as V
 import           Reflex.Vty.Widget ( VtyWidget
                                    , ImageWriter(..))
 import qualified Reflex.Vty.Widget as V
 -- import qualified Reflex.Vty.Widget.Input.Text as V
-import           VRDT.CausalTree (CausalTree(..), preorder, extractLetter, CausalTreeAtom(..), CausalTreeWeave(..), CausalTreeLetter(..), CausalTreeOp(..))
+import           VRDT.CausalTree (CausalTree(..), preorder, extractLetter, CausalTreeAtom(..), CausalTreeWeave(..), CausalTreeLetter(..), CausalTreeOp(..), rootAtomId)
 -- import           VRDT.Class (VRDT(..))
 
 import           Kyowon.Core.Types (UTCTimestamp(..))
@@ -60,7 +62,6 @@ foldDyn' = undefined
 
 -- eventToDynM d = holdDyn Nothing (Just <$> d)
 
--- JP: Should this take a dynamic of CausalTree?
 causalTreeInput :: (MonadHold t m, MonadFix m, KyowonMonad m, KyowonMonad (Performable m), Reflex t, PerformEvent t m)
     => Dynamic t (CausalTree UTCTimestamp Char) -> VtyWidget t m (CausalTreeInput t UTCTimestamp Char)
 causalTreeInput ct = do
@@ -72,9 +73,12 @@ causalTreeInput ct = do
     dh <- V.displayHeight
     dw <- V.displayWidth
 
-    -- ctInputD <- alignDynE ct i
-
     clientId <- lift getClientId
+
+    let rows = (\ct w -> 
+            let t = preorder ct in
+            splitAtWidth w t
+          ) <$> ct <*> dw
 
     -- rec
     --     let zipperOpPair = updateZipper <$> prevZipper <*> ctInputD <*> dh <*> dw
@@ -87,33 +91,59 @@ causalTreeInput ct = do
     -- let cursorAttrs = ffor f $ \x -> if x then V.cursorAttributes else V.defAttr
 
     let scrollTop = pure 0
-    -- let cursorAtomId = causalTreeAtomId . causalTreeWeaveAtom . causalTreeWeave <$> ct
     rec
-      cursorAtomId <- (\a -> toAtomId <$> a <*> ct) <$> holdDyn Nothing (Just <$> opsE)
+      
+      cursorAtomIdMD <- eventToDynM cursorAtomIdE
+      let cursorAtomId = toAtomId <$> cursorAtomIdMD <*> ct
+
       opsE <- lift $ do
         let pairE = attach (current cursorAtomId) i
         catMaybes <$> sampleMonotonicTimeWith' (\(parentId, i) t -> toOperation parentId t clientId i) pairE
 
+      let cursorAndRowsAndCt = (,,) <$> cursorAtomId <*> rows <*> ct
+      let opsAndInputE = align opsE i
+      let cursorAtomIdE = attachWith toCursorId (current cursorAndRowsAndCt) opsAndInputE
 
 
-    let rows = (\ct w -> 
-            let t = preorder ct in
-            splitAtWidth w t
-          ) <$> ct <*> dw
-    let img = (\rows dh scrollTop -> 
+    let img = (\rows dh cursorAtomId scrollTop ct -> 
             let rows' = take dh $ drop scrollTop rows in
-            pure $ V.vertCat $ fmap (V.horizCat . fmap (V.char V.defAttr . snd)) rows'
-          ) <$> rows <*> dh <*> scrollTop
+            let rootId = rootAtomId ct in
+            displayRows cursorAtomId rootId rows
+          ) <$> rows <*> dh <*> cursorAtomId <*> scrollTop <*> ct
 
-    -- tellImages $ pure $ map (V.char V.defAttr) "This is a causal tree input!!"
     tellImages $ current img
 
-    -- return $ CausalTreeInput never -- TODO: Implement this XXX
     return $ CausalTreeInput opsE -- $ traceEvent "Operations" opsE
 
   where
-    toAtomId (Just (CausalTreeOp _ (CausalTreeAtom atomId (CausalTreeLetter _)))) _ = atomId
-    toAtomId _ ct = causalTreeAtomId $ causalTreeWeaveAtom $ causalTreeWeave ct -- Pull out the root id. Better way to do this?
+    toAtomId (Just cursorId) _ = cursorId
+    toAtomId _ ct              = rootAtomId ct
+
+    toCursorId :: (UTCTimestamp, [[(UTCTimestamp, Char)]], CausalTree UTCTimestamp Char) -> These (CausalTreeOp UTCTimestamp Char) V.VtyEvent -> UTCTimestamp
+    toCursorId (currentCursorId, rows, ct) op = toCursorId' op currentCursorId rows ct
+
+    toCursorId' :: These (CausalTreeOp UTCTimestamp Char) V.VtyEvent -> UTCTimestamp -> [[(UTCTimestamp,Char)]] -> CausalTree UTCTimestamp Char -> UTCTimestamp
+    toCursorId' (This op) _ rows ct = opToCursorId op rows ct
+    toCursorId' (These op _) _ rows ct = opToCursorId op rows ct
+    toCursorId' (That i) currentCursorId rows ct = inputToCursorId i currentCursorId rows ct
+
+    opToCursorId (CausalTreeOp parentId atom) rows ct = case causalTreeAtomLetter atom of
+      CausalTreeLetter _ -> causalTreeAtomId atom
+      CausalTreeLetterRoot -> rootAtomId ct
+      CausalTreeLetterDelete -> leftOf parentId rows ct
+
+    inputToCursorId (V.EvKey V.KLeft []) currentCursorId rows ct = leftOf currentCursorId rows ct
+    inputToCursorId (V.EvKey V.KRight []) currentCursorId rows ct = rightOf currentCursorId rows ct
+    inputToCursorId (V.EvKey V.KUp []) currentCursorId rows ct = upOf currentCursorId rows ct
+    inputToCursorId (V.EvKey V.KDown []) currentCursorId rows ct = downOf currentCursorId rows ct
+    inputToCursorId _ currentCursorId rows ct = currentCursorId
+
+    leftOf _ _ ct = rootAtomId ct -- TODO
+    rightOf _ _ ct = rootAtomId ct -- TODO
+    upOf _ _ ct = rootAtomId ct -- TODO
+    downOf _ _ ct = rootAtomId ct -- TODO
+      
+
 
 
     -- toSpan ct = ct
@@ -155,6 +185,9 @@ splitAtWidth n s = go [] s
       where
         t = causalTreeAtomId a
 
+
+eventToDynM :: (Reflex t, MonadHold t m) => Event t a -> m (Dynamic t (Maybe a))
+eventToDynM e = holdDyn Nothing (Just <$> e)
       
     
     
@@ -171,4 +204,31 @@ alignDynE d e = do
 
 
         
+-- displayRows :: 
+displayRows cursorAtomId lastId rows = 
+  pure $ V.vertCat $ fmap (V.horizCat . fmap displayChar) rows
+
+-- displayRows cursorAtomId lastId rows = 
+--   List.foldl' displayRows' (lastId, [])
+-- 
+-- 
+-- 
+  where
+    displayChar (atomId, c) = 
+      let attr = if atomId == cursorAtomId then 
+              V.withStyle V.defAttr V.reverseVideo 
+            else 
+              V.defAttr 
+      in
+      V.char attr c
+--     displayRows' cursorAtomId lastId rows = 
+-- 
+
+      -- let attr = V.defAttr in
+      -- let i = V.char attr c in
+      -- if atomId == cursorAtomId then
+      --     V.char attr c `V.horizJoin` V.char attr '|'
+      --   else
+      --     i
+
 
