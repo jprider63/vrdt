@@ -116,7 +116,7 @@ preorder = reverse . preorder'
 preorder' :: CausalTree id a -> [CausalTreeAtom id a]
 preorder' = snd . go False [] . causalTreeWeave
   where
-    go deleted acc (CausalTreeWeave atom ws) = 
+    go !deleted !acc (CausalTreeWeave atom ws) = 
       let (deleted', acc') = case causalTreeAtomLetter atom of
             CausalTreeLetterDelete ->
               if deleted then

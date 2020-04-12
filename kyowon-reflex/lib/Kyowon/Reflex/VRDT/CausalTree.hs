@@ -137,12 +137,11 @@ causalTreeInput ct = do
     inputToCursorId (V.EvKey V.KUp []) currentCursorId rows ct = upOf currentCursorId rows ct
     inputToCursorId (V.EvKey V.KDown []) currentCursorId rows ct = downOf currentCursorId rows ct
     inputToCursorId _ currentCursorId rows ct = currentCursorId
-
-    leftOf _ _ ct = rootAtomId ct -- TODO
+    
     rightOf _ _ ct = rootAtomId ct -- TODO
     upOf _ _ ct = rootAtomId ct -- TODO
     downOf _ _ ct = rootAtomId ct -- TODO
-      
+
 
 
 
@@ -163,6 +162,28 @@ causalTreeInput ct = do
     updateZipper Nothing ct h w = undefined
         -- JP: How do we tell if the ct updated here?
     updateZipper (Just prevZipper) ct h w = undefined
+
+
+leftOf :: UTCTimestamp -> [[(UTCTimestamp, a)]] -> CausalTree UTCTimestamp a -> UTCTimestamp
+leftOf atomId rows ct = leftOfRows rootId rows
+  where
+    rootId = rootAtomId ct
+
+    leftOfRows _last [] = rootAtomId ct
+    leftOfRows last (row:rows) = case leftOfRow last row of
+      Left last' -> leftOfRows last' rows
+      Right left -> left
+    
+    leftOfRow last []    = Left last
+    leftOfRow last (h:t) = 
+      let hId = fst h in
+      if hId == atomId then 
+        Right last 
+      else 
+        leftOfRow hId t
+
+
+
 
 -- TODO: Improve this.
 splitAtWidth :: Int -> [CausalTreeAtom t Char] -> [[(t, Char)]]
