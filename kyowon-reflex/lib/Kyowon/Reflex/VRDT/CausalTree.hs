@@ -1,4 +1,7 @@
-module Kyowon.Reflex.VRDT.CausalTree where
+module Kyowon.Reflex.VRDT.CausalTree (
+    CausalTreeInput(..)
+  , causalTreeInput
+  ) where
 
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Fix (MonadFix)
@@ -79,6 +82,7 @@ causalTreeInput ct = do
             let t = preorder ct in
             splitAtWidth w t
           ) <$> ct <*> dw
+    let ctRootId = rootAtomId <$> ct
 
     -- rec
     --     let zipperOpPair = updateZipper <$> prevZipper <*> ctInputD <*> dh <*> dw
@@ -94,22 +98,23 @@ causalTreeInput ct = do
     rec
       
       cursorAtomIdMD <- eventToDynM cursorAtomIdE
-      let cursorAtomId = toAtomId <$> cursorAtomIdMD <*> ct
+      let cursorAtomId = toAtomId <$> cursorAtomIdMD <*> ctRootId
+      let rightOfId = rightOf <$> cursorAtomId <*> ctRootId <*> rows
 
       opsE <- lift $ do
         let pairE = attach (current cursorAtomId) i
         catMaybes <$> sampleMonotonicTimeWith' (\(parentId, i) t -> toOperation parentId t clientId i) pairE
 
-      let cursorAndRowsAndCt = (,,) <$> cursorAtomId <*> rows <*> ct
+      let cursorAndRowsAndCt = (,,,) <$> cursorAtomId <*> rows <*> ctRootId <*> rightOfId
       let opsAndInputE = align opsE i
       let cursorAtomIdE = attachWith toCursorId (current cursorAndRowsAndCt) opsAndInputE
 
 
-    let img = (\rows dh cursorAtomId scrollTop ct -> 
+    let img = (\rows dh rightOfId scrollTop -> 
             let rows' = take dh $ drop scrollTop rows in
-            let rootId = rootAtomId ct in
-            displayRows cursorAtomId rootId rows
-          ) <$> rows <*> dh <*> cursorAtomId <*> scrollTop <*> ct
+            -- let rootId = rootAtomId ct in
+            displayRows rightOfId rows
+          ) <$> rows <*> dh <*> rightOfId <*> scrollTop
 
     tellImages $ current img
 
@@ -117,30 +122,30 @@ causalTreeInput ct = do
 
   where
     toAtomId (Just cursorId) _ = cursorId
-    toAtomId _ ct              = rootAtomId ct
+    toAtomId _ rootId          = rootId
 
-    toCursorId :: (UTCTimestamp, [[(UTCTimestamp, Char)]], CausalTree UTCTimestamp Char) -> These (CausalTreeOp UTCTimestamp Char) V.VtyEvent -> UTCTimestamp
-    toCursorId (currentCursorId, rows, ct) op = toCursorId' op currentCursorId rows ct
+    toCursorId :: (UTCTimestamp, [[(UTCTimestamp, Char)]], UTCTimestamp, Maybe UTCTimestamp) -> These (CausalTreeOp UTCTimestamp Char) V.VtyEvent -> UTCTimestamp
+    toCursorId (currentCursorId, rows, rootId, rightOf) op = toCursorId' op currentCursorId rows rootId rightOf
 
-    toCursorId' :: These (CausalTreeOp UTCTimestamp Char) V.VtyEvent -> UTCTimestamp -> [[(UTCTimestamp,Char)]] -> CausalTree UTCTimestamp Char -> UTCTimestamp
-    toCursorId' (This op) _ rows ct = opToCursorId op rows ct
-    toCursorId' (These op _) _ rows ct = opToCursorId op rows ct
-    toCursorId' (That i) currentCursorId rows ct = inputToCursorId i currentCursorId rows ct
+    toCursorId' :: These (CausalTreeOp UTCTimestamp Char) V.VtyEvent -> UTCTimestamp -> [[(UTCTimestamp,Char)]] -> UTCTimestamp -> Maybe UTCTimestamp -> UTCTimestamp
+    toCursorId' (This op) _ rows rootId _ = opToCursorId op rows rootId
+    toCursorId' (These op _) _ rows rootId _ = opToCursorId op rows rootId
+    toCursorId' (That i) currentCursorId rows rootId rightOf = inputToCursorId i currentCursorId rows rootId rightOf
 
-    opToCursorId (CausalTreeOp parentId atom) rows ct = case causalTreeAtomLetter atom of
+    opToCursorId (CausalTreeOp parentId atom) rows rootId = case causalTreeAtomLetter atom of
       CausalTreeLetter _ -> causalTreeAtomId atom
-      CausalTreeLetterRoot -> rootAtomId ct
-      CausalTreeLetterDelete -> leftOf parentId rows ct
+      CausalTreeLetterRoot -> rootId
+      CausalTreeLetterDelete -> leftOf parentId rows rootId
 
-    inputToCursorId (V.EvKey V.KLeft []) currentCursorId rows ct = leftOf currentCursorId rows ct
-    inputToCursorId (V.EvKey V.KRight []) currentCursorId rows ct = rightOf currentCursorId rows ct
-    inputToCursorId (V.EvKey V.KUp []) currentCursorId rows ct = upOf currentCursorId rows ct
-    inputToCursorId (V.EvKey V.KDown []) currentCursorId rows ct = downOf currentCursorId rows ct
-    inputToCursorId _ currentCursorId rows ct = currentCursorId
+    inputToCursorId (V.EvKey V.KLeft []) currentCursorId rows rootId _ = leftOf currentCursorId rows rootId
+    inputToCursorId (V.EvKey V.KRight []) currentCursorId rows rootId (Just rightId) = rightId
+    inputToCursorId (V.EvKey V.KRight []) currentCursorId rows rootId Nothing = currentCursorId
+    inputToCursorId (V.EvKey V.KUp []) currentCursorId rows rootId _ = upOf currentCursorId rows rootId
+    inputToCursorId (V.EvKey V.KDown []) currentCursorId rows rootId _ = downOf currentCursorId rows rootId
+    inputToCursorId _ currentCursorId rows rootId _ = currentCursorId
     
-    rightOf _ _ ct = rootAtomId ct -- TODO
-    upOf _ _ ct = rootAtomId ct -- TODO
-    downOf _ _ ct = rootAtomId ct -- TODO
+    upOf _ _ rootId = rootId -- TODO
+    downOf _ _ rootId = rootId -- TODO
 
 
 
@@ -164,12 +169,10 @@ causalTreeInput ct = do
     updateZipper (Just prevZipper) ct h w = undefined
 
 
-leftOf :: UTCTimestamp -> [[(UTCTimestamp, a)]] -> CausalTree UTCTimestamp a -> UTCTimestamp
-leftOf atomId rows ct = leftOfRows rootId rows
+leftOf :: UTCTimestamp -> [[(UTCTimestamp, a)]] -> UTCTimestamp -> UTCTimestamp
+leftOf atomId rows rootId = leftOfRows rootId rows
   where
-    rootId = rootAtomId ct
-
-    leftOfRows _last [] = rootAtomId ct
+    leftOfRows _last [] = rootId
     leftOfRows last (row:rows) = case leftOfRow last row of
       Left last' -> leftOfRows last' rows
       Right left -> left
@@ -182,6 +185,23 @@ leftOf atomId rows ct = leftOfRows rootId rows
       else 
         leftOfRow hId t
 
+rightOf :: UTCTimestamp -> UTCTimestamp -> [[(UTCTimestamp, a)]] -> Maybe UTCTimestamp
+rightOf targetId rootId rows | targetId == rootId = nextOfRows rows
+rightOf _ _ []                                    = Nothing
+rightOf targetId rootId (row:rows)                = case rightOfRow row of
+  Just remaining ->
+    nextOfRows (remaining:rows)
+  Nothing ->
+    rightOf targetId rootId rows
+
+  where
+    rightOfRow []    = Nothing
+    rightOfRow (h:t) = if fst h == targetId then Just t else rightOfRow t
+
+nextOfRows []          = Nothing
+nextOfRows ([]:t)      = nextOfRows t
+nextOfRows ((h:_):_)   = Just $ fst h
+  
 
 
 
@@ -226,7 +246,7 @@ alignDynE d e = do
 
         
 -- displayRows :: 
-displayRows cursorAtomId lastId rows = 
+displayRows hoverIdM rows = 
   pure $ V.vertCat $ fmap (V.horizCat . fmap displayChar) rows
 
 -- displayRows cursorAtomId lastId rows = 
@@ -236,7 +256,7 @@ displayRows cursorAtomId lastId rows =
 -- 
   where
     displayChar (atomId, c) = 
-      let attr = if atomId == cursorAtomId then 
+      let attr = if Just atomId == hoverIdM then 
               V.withStyle V.defAttr V.reverseVideo 
             else 
               V.defAttr 
