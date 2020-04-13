@@ -8,6 +8,7 @@ import           Control.Monad.Fix (MonadFix)
 -- import qualified Data.Text.Zipper as Z
 import           Data.Align (align)
 import qualified Data.List as List
+import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.Text.Zipper as Z
 import           Data.These (These(..))
 import           Data.Witherable (catMaybes)
@@ -144,7 +145,6 @@ causalTreeInput ct = do
     inputToCursorId (V.EvKey V.KDown []) currentCursorId rows rootId _ = downOf currentCursorId rows rootId
     inputToCursorId _ currentCursorId rows rootId _ = currentCursorId
     
-    upOf _ _ rootId = rootId -- TODO
     downOf _ _ rootId = rootId -- TODO
 
 
@@ -202,6 +202,33 @@ nextOfRows []          = Nothing
 nextOfRows ([]:t)      = nextOfRows t
 nextOfRows ((h:_):_)   = Just $ fst h
   
+-- upOf :: UTCTimestamp -> 
+upOf targetId rows rootId = upOfRows rootId (targetId:|[]) rows
+  where
+    upOfRows _ _ [] = rootId -- targetId
+    upOfRows lastId prevRow (row:rows) = 
+      let row' = lastId:|(map fst row) in
+      case findIndexOrLast (\c -> c == targetId) row' of
+        Left tail ->
+          upOfRows tail row' rows
+        Right i ->
+          takeAtOrSecondToLast i prevRow
+          
+          
+takeAtOrSecondToLast i (x:|xs) = go i x xs
+  where
+    go c prev []     = prev
+    go 0 prev [x]    = x
+    go c prev [_]    = prev
+    go 0 prev (x:_)  = x
+    go c prev (x:xs) = go (c-1) x xs
+
+findIndexOrLast f (x:|xs) = go 0 x xs
+  where
+    go c prev [] = Left prev
+    go c prev (x:xs) = if f x then Right c else go (c+1) x xs
+        
+
 
 
 
@@ -235,13 +262,13 @@ eventToDynM e = holdDyn Nothing (Just <$> e)
     
 
 
--- TODO: Move to Reflex?
-alignDynE :: (Reflex t, MonadSample t m, MonadHold t m) => Dynamic t a -> Event t b -> m (Dynamic t (These a b))
-alignDynE d e = do
-    d0 <- sample (current d)
-    let theseE = align (updated d) e
-
-    holdDyn (This d0) theseE
+-- -- TODO: Move to Reflex?
+-- alignDynE :: (Reflex t, MonadSample t m, MonadHold t m) => Dynamic t a -> Event t b -> m (Dynamic t (These a b))
+-- alignDynE d e = do
+--     d0 <- sample (current d)
+--     let theseE = align (updated d) e
+-- 
+--     holdDyn (This d0) theseE
 
 
         
