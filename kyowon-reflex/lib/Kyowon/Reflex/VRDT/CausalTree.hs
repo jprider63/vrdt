@@ -145,8 +145,6 @@ causalTreeInput ct = do
     inputToCursorId (V.EvKey V.KDown []) currentCursorId rows rootId _ = downOf currentCursorId rows rootId
     inputToCursorId _ currentCursorId rows rootId _ = currentCursorId
     
-    downOf _ _ rootId = rootId -- TODO
-
 
 
 
@@ -202,31 +200,74 @@ nextOfRows []          = Nothing
 nextOfRows ([]:t)      = nextOfRows t
 nextOfRows ((h:_):_)   = Just $ fst h
   
--- upOf :: UTCTimestamp -> 
-upOf targetId rows rootId = upOfRows rootId (targetId:|[]) rows
+downOf :: UTCTimestamp -> [[(UTCTimestamp, Char)]] -> UTCTimestamp -> UTCTimestamp
+downOf targetId rows rootId = 
+  if targetId == rootId then
+    nextLastOfRows rows
+  else
+    downOfRows rows
   where
-    upOfRows _ _ [] = rootId -- targetId
-    upOfRows lastId prevRow (row:rows) = 
-      let row' = lastId:|(map fst row) in
-      case findIndexOrLast (\c -> c == targetId) row' of
-        Left tail ->
-          upOfRows tail row' rows
-        Right i ->
-          takeAtOrSecondToLast i prevRow
-          
-          
-takeAtOrSecondToLast i (x:|xs) = go i x xs
-  where
-    go c prev []     = prev
-    go 0 prev [x]    = x
-    go c prev [_]    = prev
-    go 0 prev (x:_)  = x
-    go c prev (x:xs) = go (c-1) x xs
+    downOfRows [] = targetId
+    downOfRows (row:rows) = case findIndexAndLast (\c -> fst c == targetId) targetId row of
+      Nothing ->
+        downOfRows rows
+        
+      Just (i, tail) ->
+        -- Check if last.
+        if null tail then
+          nextLastOfRows rows
+        else
+          case rows of 
+            []          -> targetId
+            (nextRow:_) -> takeAtOrSecondToLast i (lastOfRow targetId tail) nextRow
 
-findIndexOrLast f (x:|xs) = go 0 x xs
+    lastOfRow defId [] = defId
+    lastOfRow _ [(lastId, _)] = lastId
+    lastOfRow defId (_:t) = lastOfRow defId t
+
+    nextLastOfRows [] = targetId
+    nextLastOfRows (row:_) = lastOfRow targetId row
+
+    findIndexAndLast :: ((UTCTimestamp, Char) -> Bool) -> UTCTimestamp -> [(UTCTimestamp, Char)] -> Maybe (Int, [(UTCTimestamp, Char)])
+    findIndexAndLast f x xs = go 0 x xs
+      where
+        go c prev [] = Nothing
+        go c prev (x:xs) = if f x then Just (c, xs) else go (c+1) (fst x) xs
+        
+
+
+
+upOf :: UTCTimestamp -> [[(UTCTimestamp, Char)]] -> UTCTimestamp -> UTCTimestamp
+upOf targetId rows rootId = targetId
+-- upOf targetId rows rootId = upOfRows rootId targetId [] rows
+--   where
+--     upOfRows _ _ _ [] = rootId
+--     upOfRows lastId prevHeadId prevRow (row:rows) = 
+--       -- let row' = lastId:|row in
+--       case findIndexOrLast (\c -> fst c == targetId) lastId row of
+--         Left tail ->
+--           upOfRows tail lastId row rows
+--         Right i ->
+--           takeAtOrLast i prevHeadId prevRow
+--           
+--           
+takeAtOrSecondToLast :: Int -> UTCTimestamp -> [(UTCTimestamp, Char)] -> UTCTimestamp
+takeAtOrSecondToLast i x xs = go i x xs
+  where
+    go c prev []                        = prev
+    -- go 0 prev [x]    = x
+    go c prev [_]                       = prev
+    -- go c prev (p:_) | isNewline p        = prev
+    go 0 prev ((x, _):_)                = x
+    go c prev ((x, _):xs)               = go (c-1) x xs
+--     
+-- isNewline (_, ch) = (ch == '\n')
+-- 
+findIndexOrLast :: ((UTCTimestamp, Char) -> Bool) -> UTCTimestamp -> [(UTCTimestamp, Char)] -> Either UTCTimestamp (Int, Bool)
+findIndexOrLast f x xs = go 0 x xs
   where
     go c prev [] = Left prev
-    go c prev (x:xs) = if f x then Right c else go (c+1) x xs
+    go c prev (x:xs) = if f x then Right (c, null xs) else go (c+1) (fst x) xs
         
 
 
