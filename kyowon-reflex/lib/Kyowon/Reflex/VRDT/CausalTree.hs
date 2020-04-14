@@ -132,6 +132,7 @@ causalTreeInput ct = do
     toCursorId' (This op) _ rows rootId _ = opToCursorId op rows rootId
     toCursorId' (These op _) _ rows rootId _ = opToCursorId op rows rootId
     toCursorId' (That i) currentCursorId rows rootId rightOf = inputToCursorId i currentCursorId rows rootId rightOf
+    -- JP: Could `drop (scrollTop - 1) rows` as an optimization.
 
     opToCursorId (CausalTreeOp parentId atom) rows rootId = case causalTreeAtomLetter atom of
       CausalTreeLetter _ -> causalTreeAtomId atom
@@ -208,7 +209,7 @@ downOf targetId rows rootId =
     downOfRows rows
   where
     downOfRows [] = targetId
-    downOfRows (row:rows) = case findIndexAndLast (\c -> fst c == targetId) targetId row of
+    downOfRows (row:rows) = case findIndexAndRest (\c -> fst c == targetId) row of
       Nothing ->
         downOfRows rows
         
@@ -229,28 +230,40 @@ downOf targetId rows rootId =
     nextLastOfRows [_] = targetId
     nextLastOfRows (row:_) = lastOfRow targetId row
 
-    findIndexAndLast :: ((UTCTimestamp, Char) -> Bool) -> UTCTimestamp -> [(UTCTimestamp, Char)] -> Maybe (Int, [(UTCTimestamp, Char)])
-    findIndexAndLast f x xs = go 0 x xs
+    findIndexAndRest :: ((UTCTimestamp, Char) -> Bool) -> [(UTCTimestamp, Char)] -> Maybe (Int, [(UTCTimestamp, Char)])
+    findIndexAndRest f xs = go 0 xs
       where
-        go c prev [] = Nothing
-        go c prev (x:xs) = if f x then Just (c, xs) else go (c+1) (fst x) xs
+        go c [] = Nothing
+        go c (x:xs) = if f x then Just (c, xs) else go (c+1) xs
         
 
 
 
 upOf :: UTCTimestamp -> [[(UTCTimestamp, Char)]] -> UTCTimestamp -> UTCTimestamp
-upOf targetId rows rootId = targetId
--- upOf targetId rows rootId = upOfRows rootId targetId [] rows
---   where
---     upOfRows _ _ _ [] = rootId
---     upOfRows lastId prevHeadId prevRow (row:rows) = 
---       -- let row' = lastId:|row in
---       case findIndexOrLast (\c -> fst c == targetId) lastId row of
---         Left tail ->
---           upOfRows tail lastId row rows
---         Right i ->
---           takeAtOrLast i prevHeadId prevRow
---           
+upOf targetId rows rootId = upOfRows rootId targetId [] rows
+  where
+    upOfRows _ _ _ [] = rootId
+    upOfRows lastId prevHeadId prevRow (row:rows) = 
+      -- let row' = lastId:|row in
+      case findIndexOrLast (\c -> fst c == targetId) lastId row of
+        Left tail ->
+          upOfRows tail lastId row rows
+        Right (i, isLast) ->
+          -- Check if last character of row.
+          if isLast then
+            -- TODO: Check if last row and not wrapped.
+            lastId
+          else
+            takeAtOrSecondToLast i prevHeadId prevRow
+          
+    findIndexOrLast :: ((UTCTimestamp, Char) -> Bool) -> UTCTimestamp -> [(UTCTimestamp, Char)] -> Either UTCTimestamp (Int, Bool)
+    findIndexOrLast f x xs = go 0 x xs
+      where
+        go c prev [] = Left prev
+        go c prev (x:xs) = if f x then Right (c, null xs) else go (c+1) (fst x) xs
+        
+
+
 --           
 takeAtOrSecondToLast :: Int -> UTCTimestamp -> [(UTCTimestamp, Char)] -> UTCTimestamp
 takeAtOrSecondToLast i x xs = go i x xs
@@ -261,16 +274,6 @@ takeAtOrSecondToLast i x xs = go i x xs
     -- go c prev (p:_) | isNewline p        = prev
     go 0 prev ((x, _):_)                = x
     go c prev ((x, _):xs)               = go (c-1) x xs
---     
--- isNewline (_, ch) = (ch == '\n')
--- 
-findIndexOrLast :: ((UTCTimestamp, Char) -> Bool) -> UTCTimestamp -> [(UTCTimestamp, Char)] -> Either UTCTimestamp (Int, Bool)
-findIndexOrLast f x xs = go 0 x xs
-  where
-    go c prev [] = Left prev
-    go c prev (x:xs) = if f x then Right (c, null xs) else go (c+1) (fst x) xs
-        
-
 
 
 
