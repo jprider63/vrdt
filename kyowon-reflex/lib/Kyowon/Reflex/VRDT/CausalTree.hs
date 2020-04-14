@@ -32,6 +32,7 @@ import           Reflex (
                         , sample
                         -- , traceEvent
                         , updated
+                        , zipDyn
                         )
 import qualified Reflex.Vty.Host as V
 import           Reflex.Vty.Widget ( VtyWidget
@@ -95,12 +96,15 @@ causalTreeInput ct = do
 
     -- let cursorAttrs = ffor f $ \x -> if x then V.cursorAttributes else V.defAttr
 
-    let scrollTop = pure 0
     rec
       
       cursorAtomIdMD <- eventToDynM cursorAtomIdE
       let cursorAtomId = toAtomId <$> cursorAtomIdMD <*> ctRootId
-      let rightOfId = rightOf <$> cursorAtomId <*> ctRootId <*> rows
+      let rightOfAndY = rightOfAndRow <$> cursorAtomId <*> ctRootId <*> rows
+      let rightOfId = fst <$> rightOfAndY
+      let y = snd <$> rightOfAndY
+
+      scrollTop <- holdDyn 0 $ attachWith newScrollTop (current scrollTop) $ updated $ zipDyn dh y
 
       opsE <- lift $ do
         let pairE = attach (current cursorAtomId) i
@@ -114,7 +118,7 @@ causalTreeInput ct = do
     let img = (\rows dh rightOfId scrollTop -> 
             let rows' = take dh $ drop scrollTop rows in
             -- let rootId = rootAtomId ct in
-            displayRows rightOfId rows
+            displayRows rightOfId rows'
           ) <$> rows <*> dh <*> rightOfId <*> scrollTop
 
     tellImages $ current img
@@ -163,9 +167,15 @@ causalTreeInput ct = do
     actionToLetter (V.EvKey V.KBS [])       = Just CausalTreeLetterDelete
     actionToLetter _                        = Nothing
 
-    updateZipper Nothing ct h w = undefined
-        -- JP: How do we tell if the ct updated here?
-    updateZipper (Just prevZipper) ct h w = undefined
+    -- http://hackage.haskell.org/package/reflex-vty-0.1.2.0/docs/src/Reflex.Vty.Widget.Input.Text.html
+    newScrollTop st (h, cursorY)
+      | cursorY < st = cursorY
+      | cursorY >= st + h = cursorY - h + 1
+      | otherwise = st
+
+    -- updateZipper Nothing ct h w = undefined
+    --     -- JP: How do we tell if the ct updated here?
+    -- updateZipper (Just prevZipper) ct h w = undefined
 
 
 leftOf :: UTCTimestamp -> [[(UTCTimestamp, a)]] -> UTCTimestamp -> UTCTimestamp
@@ -184,22 +194,23 @@ leftOf atomId rows rootId = leftOfRows rootId rows
       else 
         leftOfRow hId t
 
-rightOf :: UTCTimestamp -> UTCTimestamp -> [[(UTCTimestamp, a)]] -> Maybe UTCTimestamp
-rightOf targetId rootId rows | targetId == rootId = nextOfRows rows
-rightOf _ _ []                                    = Nothing
-rightOf targetId rootId (row:rows)                = case rightOfRow row of
-  Just remaining ->
-    nextOfRows (remaining:rows)
-  Nothing ->
-    rightOf targetId rootId rows
-
+rightOfAndRow :: UTCTimestamp -> UTCTimestamp -> [[(UTCTimestamp, a)]] -> (Maybe UTCTimestamp, Int)
+rightOfAndRow targetId rootId rows = rightOfAndRow' 0 targetId rootId rows
   where
+    rightOfAndRow' c targetId rootId rows | targetId == rootId = nextOfRows c rows
+    rightOfAndRow' c _ _ []                                    = (Nothing, c)
+    rightOfAndRow' c targetId rootId (row:rows)                = case rightOfRow row of
+      Just remaining ->
+        nextOfRows c (remaining:rows)
+      Nothing ->
+        rightOfAndRow' (c+1) targetId rootId rows
+
     rightOfRow []    = Nothing
     rightOfRow (h:t) = if fst h == targetId then Just t else rightOfRow t
 
-nextOfRows []          = Nothing
-nextOfRows ([]:t)      = nextOfRows t
-nextOfRows ((h:_):_)   = Just $ fst h
+    nextOfRows c []          = (Nothing, c)
+    nextOfRows c ([]:t)      = nextOfRows (c+1) t
+    nextOfRows c ((h:_):_)   = (Just $ fst h, c)
   
 downOf :: UTCTimestamp -> [[(UTCTimestamp, Char)]] -> UTCTimestamp -> UTCTimestamp
 downOf targetId rows rootId = 
