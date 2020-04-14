@@ -213,7 +213,7 @@ downOf targetId rows rootId =
         downOfRows rows
         
       Just (i, tail) ->
-        -- Check if last.
+        -- Check if last character in column.
         if null tail then
           nextLastOfRows rows
         else
@@ -226,6 +226,7 @@ downOf targetId rows rootId =
     lastOfRow defId (_:t) = lastOfRow defId t
 
     nextLastOfRows [] = targetId
+    nextLastOfRows [_] = targetId
     nextLastOfRows (row:_) = lastOfRow targetId row
 
     findIndexAndLast :: ((UTCTimestamp, Char) -> Bool) -> UTCTimestamp -> [(UTCTimestamp, Char)] -> Maybe (Int, [(UTCTimestamp, Char)])
