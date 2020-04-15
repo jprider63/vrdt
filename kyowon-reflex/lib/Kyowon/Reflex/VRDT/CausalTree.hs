@@ -168,7 +168,8 @@ causalTreeInput ct = do
     actionToLetter _                        = Nothing
 
     -- http://hackage.haskell.org/package/reflex-vty-0.1.2.0/docs/src/Reflex.Vty.Widget.Input.Text.html
-    newScrollTop st (h, cursorY)
+    newScrollTop st (h, Nothing) = st
+    newScrollTop st (h, Just cursorY)
       | cursorY < st = cursorY
       | cursorY >= st + h = cursorY - h + 1
       | otherwise = st
@@ -194,11 +195,11 @@ leftOf atomId rows rootId = leftOfRows rootId rows
       else 
         leftOfRow hId t
 
-rightOfAndRow :: UTCTimestamp -> UTCTimestamp -> [[(UTCTimestamp, a)]] -> (Maybe UTCTimestamp, Int)
+rightOfAndRow :: UTCTimestamp -> UTCTimestamp -> [[(UTCTimestamp, a)]] -> (Maybe UTCTimestamp, Maybe Int)
 rightOfAndRow targetId rootId rows = rightOfAndRow' 0 targetId rootId rows
   where
     rightOfAndRow' c targetId rootId rows | targetId == rootId = nextOfRows c rows
-    rightOfAndRow' c _ _ []                                    = (Nothing, c)
+    rightOfAndRow' _ _ _ []                                    = (Nothing, Nothing)
     rightOfAndRow' c targetId rootId (row:rows)                = case rightOfRow row of
       Just remaining ->
         nextOfRows c (remaining:rows)
@@ -208,9 +209,9 @@ rightOfAndRow targetId rootId rows = rightOfAndRow' 0 targetId rootId rows
     rightOfRow []    = Nothing
     rightOfRow (h:t) = if fst h == targetId then Just t else rightOfRow t
 
-    nextOfRows c []          = (Nothing, c)
+    nextOfRows c []          = (Nothing, Just c)
     nextOfRows c ([]:t)      = nextOfRows (c+1) t
-    nextOfRows c ((h:_):_)   = (Just $ fst h, c)
+    nextOfRows c ((h:_):_)   = (Just $ fst h, Just c)
   
 downOf :: UTCTimestamp -> [[(UTCTimestamp, Char)]] -> UTCTimestamp -> UTCTimestamp
 downOf targetId rows rootId = 
