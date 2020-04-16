@@ -201,8 +201,8 @@ lawCommutativity x@MultiSet{..} op1@(MultiSetOpRemove v1 c1) op2@(MultiSetOpRemo
 
 
 {-@ ple lawNonCausal @-}
-{-@ lawNonCausal :: x : MultiSet t -> {op1 : MultiSetOp t | enabled x op1} -> {op2 : MultiSetOp t | enabled x op2} -> {enabled (apply x op1) op2 <=> enabled (apply x op2) op1} @-}
-lawNonCausal :: MultiSet t -> MultiSetOp t -> MultiSetOp t -> ()
+{-@ lawNonCausal :: Ord t => x : MultiSet t -> {op1 : MultiSetOp t | enabled x op1} -> {op2 : MultiSetOp t | enabled x op2} -> {enabled (apply x op1) op2 <=> enabled (apply x op2) op1} @-}
+lawNonCausal :: Ord t => MultiSet t -> MultiSetOp t -> MultiSetOp t -> ()
 lawNonCausal _ _ _ = () 
 
 null :: MultiSet a -> Bool

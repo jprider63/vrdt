@@ -24,7 +24,7 @@ class VRDT t where
     lawNonCausal :: t -> Operation t -> Operation t -> ()
 
 
--- {-@ reflect enabled2 @-}
+-- {-@ inline enabled2 @-}
 -- enabled2 :: VRDT t => t -> Operation t -> Operation t -> Bool
 -- enabled2 x op1 op2 = enabled x op1 && enabled x op2  && enabled (apply x op1) op2 && enabled (apply x op2) op1
 

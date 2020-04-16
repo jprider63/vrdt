@@ -73,8 +73,10 @@ _ *** _ = ()
 
 data QED = Admit | QED
 
-{-@ measure isAdmit :: QED -> Bool @-}
-{-@ Admit :: {v:QED | isAdmit v } @-}
+{-@ reflect isAdmit @-}
+isAdmit :: QED -> Bool
+isAdmit Admit = True
+isAdmit _ = False
 
 
 -------------------------------------------------------------------------------
@@ -101,13 +103,13 @@ infixl 3 ===
 _ === y  = y
 
 infixl 3 =<=
-{-@ (=<=) :: x:a -> y:{a | x <= y} -> {v:a | v == y} @-}
-(=<=) :: a -> a -> a
+{-@ (=<=) :: Ord a => x:a -> y:{a | x <= y} -> {v:a | v == y} @-}
+(=<=) :: Ord a => a -> a -> a
 _ =<= y  = y
 
 infixl 3 =>=
-{-@ (=>=) :: x:a -> y:{a | x >= y}  -> {v:a | v == y} @-}
-(=>=) :: a -> a -> a
+{-@ (=>=) :: Ord a => x:a -> y:{a | x >= y}  -> {v:a | v == y} @-}
+(=>=) :: Ord a => a -> a -> a
 _ =>= y  = y
 
 -------------------------------------------------------------------------------
@@ -169,7 +171,7 @@ x &&& _ = x
 withProof :: a -> b -> a
 withProof x _ = x
 
-{-@ impossible :: {v:a | false} -> b @-}
+{-@ impossible :: {v:a | False} -> b @-}
 impossible :: a -> b
 impossible _ = undefined
 
