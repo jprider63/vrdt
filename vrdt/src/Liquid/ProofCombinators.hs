@@ -3,6 +3,8 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE IncoherentInstances   #-}
 
+{-@ LIQUID "--reflection" @-}
+
 -- https://raw.githubusercontent.com/ucsd-progsys/liquidhaskell/develop/include/Language/Haskell/Liquid/ProofCombinators.hs
 module Liquid.ProofCombinators (
 
@@ -73,11 +75,13 @@ _ *** _ = ()
 
 data QED = Admit | QED
 
-{-@ reflect isAdmit @-}
-isAdmit :: QED -> Bool
-isAdmit Admit = True
-isAdmit _ = False
+-- {-@ reflect isAdmit @-}
+-- isAdmit :: QED -> Bool
+-- isAdmit Admit = True
+-- isAdmit _ = False
 
+{-@ measure isAdmit :: QED -> Bool @-}
+{-@ Admit :: {v:QED | isAdmit v } @-}
 
 -------------------------------------------------------------------------------
 -- | * Checked Proof Certificates ---------------------------------------------
