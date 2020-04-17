@@ -50,5 +50,5 @@ lawCommutativityMin x@(Min x') op1@(Min op1') op2@(Min op2') = ()
 {-@ ple lawNonCausal @-}
 {-@ lawNonCausal :: x : Min a -> {op1 : Min a | enabledMin x op1} -> {op2 : Min a | enabledMin x op2} -> {enabledMin (applyMin x op1) op2 <=> enabledMin (applyMin x op2) op1} @-}
 lawNonCausal :: Min a -> Min a -> Min a -> ()
-lawNonCausal lww op1 op2 = ()
+lawNonCausal min op1 op2 = ()
 
