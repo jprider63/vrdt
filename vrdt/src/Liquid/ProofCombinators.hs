@@ -36,6 +36,8 @@ module Liquid.ProofCombinators (
   , withProof 
   , impossible 
 
+  , assert
+  , assume
 
 ) where
 
@@ -185,6 +187,15 @@ impossible _ = undefined
 
 {-@ measure prop :: a -> b           @-}
 {-@ type Prop E = {v:_ | prop v = E} @-}
+
+
+assert :: Bool -> Proof
+{-@ assert :: b:{Bool | b} -> {v:Proof | b} @-}
+assert _ = ()
+
+assume :: Bool -> Proof
+{-@ assume assume :: b:Bool -> {v:Proof | b} @-}
+assume _ = ()
 
 
 
