@@ -70,14 +70,13 @@ insert k' v' (Map k v m)
   | k' < k    = Map k' v' (Map k v m) -- ? assume ()
   | otherwise = Map k v (insert k' v' m)
 
--- {-@ ple keyLeqLemma @-}
 {-@ 
 keyLeqLemma 
   :: Ord k 
   => kd:k 
   -> {k:k | kd <= k}
   -> v:v 
-  -> {t:Map k v | k == mapKey (Map k v t) && v == mapValue (Map k v t) && t == mapTail (Map k v t)}
+  -> {t:Map {k':k|k < k'} v | k == mapKey (Map k v t) && v == mapValue (Map k v t) && t == mapTail (Map k v t)}
   -> {not (S.member kd (keys t))}
 @-}
 keyLeqLemma 
@@ -88,49 +87,8 @@ keyLeqLemma
   -> Map k v
   -> ()
 keyLeqLemma kd k v Tip = ()
-keyLeqLemma kd k v t@(Map k' v' t') | k >= k' = assert (k < k') -- JP: This is unreachable. Why can't LH prove this?
--- keyLeqLemma kd k v t@(Map k' v' t') | kd == k = assert (k < k' && kd <= k && kd < k')
-keyLeqLemma kd k v t@(Map k' v' t') = 
-    case t' of 
-      Tip -> 
-        if kd < k' then
-              not (S.member kd (keys t)) -- ? assert (k < k' && kd <= k && kd < k')
-          ==. not (S.member kd (S.fromList [k']))
-          ==. True
-          *** QED
-        else
-            -- assert (k < k' && kd <= k && kd < k')
-            assert (kd < k')
-            -- error "unreachable"
-      Map _ _ _ -> 
-        undefined
-        -- if k' <= kd then 
-        --   keyLeqLemma kd k' v' t' 
-        -- else
-        --   ()
+keyLeqLemma kd k v t@(Map k' v' t') = keyLeqLemma kd k' v' t'
 
-  -- where
-  --   m = Map k v t
-
-
-  -- if kd == k then
-  --   ()
-  -- else if kd < k then
-  --   -- let m = Map k v t in 
-  --   -- keyLeqLemma kd k' v' t'
-  --   case t' of 
-  --     Tip -> ()
-  --     Map _ _ t'' -> keyLeqLemma kd k' v' t'
-  -- else case t' of
-  --   Tip -> ()
-  --   Map k'' v'' t'' -> keyLeqLemma kd k'' v'' t''
-
--- keyLeqLemma kd k v Tip = () -- undefined -- TODO
--- keyLeqLemma kd _ _ (Map k v t) = case t of
---   Tip -> ()
---   Map k2 v2 t2 -> keyLeqLemma kd k2 v2 t2
-
--- {-@ ple delete @-}
 {-@ reflect delete @-}
 {-@ delete :: Ord k => k:k -> m:Map k v -> {v:Map k v | if (S.member k (keys m)) then (keys v == S.difference (keys m) (S.singleton k)) else (keys m == keys v) } @-}
 delete :: Ord k => k -> Map k v -> Map k v 
