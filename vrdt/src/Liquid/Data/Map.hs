@@ -74,6 +74,7 @@ insert k' v' (Map k v m)
   | k' < k    = Map k' v' (Map k v m) -- ? assume ()
   | otherwise = Map k v (insert k' v' m)
 
+-- {-@ reflect keyLeqLema @-}
 {-@ 
 keyLeqLemma 
   :: Ord k 
@@ -94,9 +95,10 @@ keyLeqLemma kd k v Tip = ()
 keyLeqLemma kd k v t@(Map k' v' t') = keyLeqLemma kd k' v' t'
 
 
+{-@ inline helper @-}
 helper :: a -> b -> a 
 helper x _ = x 
-{-# INLINE (?)   #-} 
+{-# INLINE helper   #-} 
 
 {-@ reflect delete @-}
 {-@ delete :: Ord k => kd:k -> m:Map k v -> {v:Map k v | if (S.member kd (keys m)) then (keys v == S.difference (keys m) (S.singleton kd)) else (keys m == keys v) } @-}

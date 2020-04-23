@@ -39,6 +39,8 @@ library
       VRDT.TwoPMap
   other-modules:
       Liquid.ProofCombinators
+      Liquid.Data.Maybe
+      Liquid.Data.Map
       Paths_vrdt
   hs-source-dirs:
       src

@@ -28,7 +28,7 @@ module VRDT.MultiSet (
 -- import           Data.Map (Map)
 -- import qualified Data.Map as Map
 -- import           Data.Maybe
--- -- import           Liquid.ProofCombinators
+import           Liquid.ProofCombinators
 -- #else
 import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
