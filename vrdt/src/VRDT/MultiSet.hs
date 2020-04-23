@@ -24,18 +24,16 @@ module VRDT.MultiSet (
   , multiSetOpOrder
   ) where
 
--- #ifdef NotLiquid
--- import           Data.Map (Map)
--- import qualified Data.Map as Map
--- import           Data.Maybe
-import           Liquid.ProofCombinators
--- #else
+#ifdef NotLiquid
+import           Data.Map (Map)
+import qualified Data.Map as Map
+import           Data.Maybe
+#else
 import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
 import           Liquid.Data.Maybe
--- import           Language.Haskell.Liquid.ProofCombinators
--- #endif
--- import           Liquid.ProofCombinators
+#endif
+import           Liquid.ProofCombinators
 import           Prelude hiding (null, Maybe(..))
 import qualified Data.Set as S
 

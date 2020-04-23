@@ -39,8 +39,17 @@ module Liquid.ProofCombinators (
   , assert
   , assume
 
+  , by
+
 ) where
 
+#ifndef NotLiquid
+import           Language.Haskell.Liquid.ProofCombinators
+#endif
+
+
+
+#ifdef NotLiquid
 -------------------------------------------------------------------------------
 -- | Proof is just a () alias -------------------------------------------------
 -------------------------------------------------------------------------------
@@ -188,6 +197,8 @@ impossible _ = undefined
 {-@ measure prop :: a -> b           @-}
 {-@ type Prop E = {v:_ | prop v = E} @-}
 
+#endif
+
 
 assert :: Bool -> Proof
 {-@ assert :: b:{Bool | b} -> {v:Proof | b} @-}
@@ -197,5 +208,9 @@ assume :: Bool -> Proof
 {-@ assume assume :: b:Bool -> {v:Proof | b} @-}
 assume _ = ()
 
+{-@ inline by @-}
+by :: a -> b -> a 
+by x _ = x 
+{-# INLINE by   #-} 
 
 
