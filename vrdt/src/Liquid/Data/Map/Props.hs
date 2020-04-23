@@ -5,7 +5,7 @@ module Liquid.Data.Map.Props where
 
 import Liquid.Data.Map 
 import Liquid.Data.Maybe 
-import Language.Haskell.Liquid.ProofCombinators
+import Liquid.ProofCombinators
 
 
 lemmaLookupInsert2 :: Ord k => Map k v -> k -> k -> v -> () 

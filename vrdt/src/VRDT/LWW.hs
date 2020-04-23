@@ -8,7 +8,7 @@ import           Data.Aeson (FromJSON(..), ToJSON(..), (.=), (.:))
 import qualified Data.Aeson as Aeson
 #endif
 
-import VRDT.Class
+-- import VRDT.Class
 import           VRDT.Types
 
 {-@

@@ -5,7 +5,11 @@ module Liquid.Data.Map where
 
 import Prelude hiding (Maybe(..), lookup)
 import Liquid.Data.Maybe 
-import Liquid.ProofCombinators
+-- #ifdef NotLiquid
+-- import Liquid.ProofCombinators
+-- #else
+-- import Language.Haskell.Liquid.ProofCombinators
+-- #endif
 import qualified Data.Set as S
 
 data Map k v = 
@@ -89,18 +93,23 @@ keyLeqLemma
 keyLeqLemma kd k v Tip = ()
 keyLeqLemma kd k v t@(Map k' v' t') = keyLeqLemma kd k' v' t'
 
+
+helper :: a -> b -> a 
+helper x _ = x 
+{-# INLINE (?)   #-} 
+
 {-@ reflect delete @-}
-{-@ delete :: Ord k => k:k -> m:Map k v -> {v:Map k v | if (S.member k (keys m)) then (keys v == S.difference (keys m) (S.singleton k)) else (keys m == keys v) } @-}
+{-@ delete :: Ord k => kd:k -> m:Map k v -> {v:Map k v | if (S.member kd (keys m)) then (keys v == S.difference (keys m) (S.singleton kd)) else (keys m == keys v) } @-}
 delete :: Ord k => k -> Map k v -> Map k v 
 delete _ Tip  = Tip 
 delete kd (Map k v m)
   -- | kd == k   = delete kd m
-  | kd == k   = m ? keyLeqLemma kd k v m
+  | kd == k   = m `helper` keyLeqLemma kd k v m
 
   | kd > k    = Map k v (delete kd m)
 
   -- kd < k
-  | otherwise = Map k v m ? keyLeqLemma kd k v m
+  | otherwise = Map k v m `helper` keyLeqLemma kd k v m
   
 
 
