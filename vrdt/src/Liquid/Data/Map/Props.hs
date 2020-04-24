@@ -9,8 +9,23 @@ import Liquid.ProofCombinators
 import Prelude hiding (Maybe(..), lookup)
 
 
+-- {-@ ple lemmaDisjoint @-}
+{-@ lemmaDisjoint :: k:k -> m1:Map k v -> {m2:Map k v | disjoint m1 m2} -> {member k m1 => not (member k m2)} @-}
+lemmaDisjoint :: k -> Map k v -> Map k v -> ()
+lemmaDisjoint k m1 m2 = undefined -- () TODO XXX
+
+{-@ lemmaDisjoint' :: k:k -> v:v -> m1:Map k v -> {m2:Map k v | disjoint m1 m2 && not (member k m2)} -> {disjoint (insert k v m1) m2} @-}
+lemmaDisjoint' :: k -> v -> Map k v -> Map k v -> ()
+lemmaDisjoint' k v m1 m2 = undefined -- () TODO XXX
+
+
+{-@ lemmaInsert :: Ord k => k1:k -> v1:v -> k2:k -> v2:v -> m:Map k v
+                -> { (k1 /= k2) => (insert k1 v1 (insert k2 v2 m) == insert k2 v2 (insert k1 v1 m)) } @-}
+lemmaInsert :: Ord k => k -> v -> k -> v -> Map k v -> ()
+lemmaInsert k1 v1 k2 v2 = undefined -- TODO XXX
+
 lemmaLookupInsert2 :: Ord k => Map k v -> k -> k -> v -> () 
-{-@ lemmaLookupInsert2 :: m:Map k v -> x:k -> k:k -> v:v 
+{-@ lemmaLookupInsert2 :: Ord k => m:Map k v -> x:k -> k:k -> v:v 
                        -> { (k /= x) => (lookup x (insert k v m) == lookup x m) } @-}
 lemmaLookupInsert2  Tip _ _ _ = () 
 lemmaLookupInsert2 (Map k _ m)   x k' v
@@ -20,7 +35,7 @@ lemmaLookupInsert2 (Map k _ m)   x k' v
 
 
 lemmaLookupInsert :: Ord k => Map k v -> k -> v -> () 
-{-@ lemmaLookupInsert :: m:Map k v -> k:k -> v:v
+{-@ lemmaLookupInsert :: Ord k => m:Map k v -> k:k -> v:v
   -> {lookup k (insert k v m) == Just v } @-}
 lemmaLookupInsert  Tip _ _ = () 
 lemmaLookupInsert (Map k _ m)   k' x
@@ -29,7 +44,7 @@ lemmaLookupInsert (Map k _ m)   k' x
 
 
 lemmaLookupDelete2 :: Ord k => Map k v -> k ->  k -> () 
-{-@ lemmaLookupDelete2 :: m:Map k v -> x:k -> kd:k
+{-@ lemmaLookupDelete2 :: Ord k => m:Map k v -> x:k -> kd:k
    -> { (kd /= x => lookup x (delete kd m) == lookup x m) } @-}
 lemmaLookupDelete2 Tip _ _        = ()
 lemmaLookupDelete2 (Map k v m) x kd
@@ -46,7 +61,7 @@ lemmaLookupDelete2 (Map k v m) x kd
 
 
 lemmaLookupDelete :: Ord k => Map k v -> k -> () 
-{-@ lemmaLookupDelete :: m:Map k v -> kd:k -> {lookup kd (delete kd m) == Nothing } @-}
+{-@ lemmaLookupDelete :: Ord k => m:Map k v -> kd:k -> {lookup kd (delete kd m) == Nothing } @-}
 lemmaLookupDelete Tip _         = ()
 lemmaLookupDelete (Map k v m) kd 
   | k < kd    = lemmaLookupDelete m kd 

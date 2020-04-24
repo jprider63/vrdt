@@ -31,6 +31,7 @@ import           Data.Maybe
 #else
 import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
+import qualified Liquid.Data.Map.Props as Map
 import           Liquid.Data.Maybe
 #endif
 import           Liquid.ProofCombinators
@@ -118,6 +119,7 @@ multiSetOpOrder (MultiSetOpRemove _ _) = 1
 enabled :: MultiSet k -> MultiSetOp k -> Bool 
 enabled _ _ = True 
 
+{-@ ple apply @-}
 {-@ reflect apply @-}
 {-@ apply :: Ord a => MultiSet a -> op : MultiSetOp a -> MultiSet a / [multiSetOpOrder op] @-}
 apply :: Ord a => MultiSet a -> MultiSetOp a -> MultiSet a
@@ -155,28 +157,38 @@ lawCommutativity :: Ord a => MultiSet a -> MultiSetOp a -> MultiSetOp a -> ()
 lawCommutativity x@MultiSet{..} op1@(MultiSetOpAdd v1 c1) op2@(MultiSetOpAdd v2 c2) 
   | Just c1' <- Map.lookup v1 posMultiSet
   , Just c2' <- Map.lookup v2 posMultiSet
-  , v1 /= v2 =
+  , v1 /= v2 = 
     let c1'' = c1 + c1' in
     let c2'' = c2 + c2' in
 
     if c1'' > 0 then
       if c2'' > 0 then
-            apply (apply x op1) op2
-        === apply (MultiSet (Map.insert v1 c1'' posMultiSet) negMultiSet) op2
-        === MultiSet (Map.insert v2 c2'' (Map.insert v1 c1'' posMultiSet)) negMultiSet
-        === MultiSet (Map.insert v1 c1'' (Map.insert v2 c2'' posMultiSet)) negMultiSet
+            apply (apply x op1) op2 ? 
+                    assert (Map.disjoint posMultiSet negMultiSet) 
+                &&& assert (not (Map.member v1 negMultiSet)) 
+                &&& Map.lemmaDisjoint' v1 c1'' posMultiSet negMultiSet 
+        === apply (MultiSet (Map.insert v1 c1'' posMultiSet) negMultiSet) op2 ? 
+                    assert (Map.disjoint (Map.insert v1 c1'' posMultiSet) negMultiSet)
+                &&& assert (not (Map.member v2 negMultiSet)) 
+                &&& Map.lemmaDisjoint' v2 c2'' (Map.insert v1 c1'' posMultiSet) negMultiSet 
+                &&& Map.lemmaLookupInsert2 posMultiSet v2 v1 c1''
+        === MultiSet (Map.insert v2 c2'' (Map.insert v1 c1'' posMultiSet)) negMultiSet ?
+                    Map.lemmaInsert v2 c2'' v1 c1'' posMultiSet
+        === MultiSet (Map.insert v1 c1'' (Map.insert v2 c2'' posMultiSet)) negMultiSet -- ?
+                    -- Map.lemmaInsert v1 c1'' v2 c2'' posMultiSet
         === apply (MultiSet (Map.insert v2 c2'' posMultiSet) negMultiSet) op2
         === apply (apply x op2) op1
         *** QED
+        -- TODO XXX
       else
-        undefined
+        undefined -- TODO XXX
         -- ()
 
     else
-        undefined
+        undefined -- TODO XXX
         -- ()
 
-  | otherwise = undefined -- ()
+  | otherwise = undefined -- () -- TODO XXX
 lawCommutativity x@MultiSet{..} op1@(MultiSetOpAdd v1 c1) op2@(MultiSetOpRemove v2 c2) = 
     let op2' = MultiSetOpAdd v2 (-c2) in
 
@@ -236,6 +248,7 @@ notMember e = not . member e
 occur :: Ord a => a -> MultiSet a -> Integer
 occur e = Map.findWithDefault 0 e . posMultiSet
 
+{-@ ple empty @-}
 empty :: Ord a => MultiSet a
 empty = MultiSet Map.empty Map.empty
 
@@ -253,5 +266,7 @@ deleteMany e c _ = MultiSetOpRemove e c
 
 deleteAll :: Ord a => a -> MultiSet a -> MultiSetOp a
 deleteAll e ms = deleteMany e (occur e ms) ms
+
+
 
 
