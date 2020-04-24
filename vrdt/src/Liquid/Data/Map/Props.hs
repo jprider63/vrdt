@@ -3,26 +3,35 @@
 
 module Liquid.Data.Map.Props where 
 
+import qualified Data.Set as S
 import Liquid.Data.Map 
 import Liquid.Data.Maybe 
 import Liquid.ProofCombinators
 import Prelude hiding (Maybe(..), lookup)
 
 
--- {-@ ple lemmaDisjoint @-}
-{-@ lemmaDisjoint :: k:k -> m1:Map k v -> {m2:Map k v | disjoint m1 m2} -> {member k m1 => not (member k m2)} @-}
-lemmaDisjoint :: k -> Map k v -> Map k v -> ()
-lemmaDisjoint k m1 m2 = undefined -- () TODO XXX
+{-@ lemmaDisjoint :: Ord k => k:k -> m1:Map k v -> {m2:Map k v | disjoint m1 m2} -> {member k m1 => not (member k m2)} @-}
+lemmaDisjoint :: Ord k => k -> Map k v -> Map k v -> ()
+lemmaDisjoint _ _ Tip                                 = ()
+lemmaDisjoint k m1 (Map k2 v2 m2) | not (member k m1) = ()
+lemmaDisjoint k m1 (Map k2 v2 m2) | otherwise         = lemmaDisjoint k m1 m2
 
-{-@ lemmaDisjoint' :: k:k -> v:v -> m1:Map k v -> {m2:Map k v | disjoint m1 m2 && not (member k m2)} -> {disjoint (insert k v m1) m2} @-}
-lemmaDisjoint' :: k -> v -> Map k v -> Map k v -> ()
-lemmaDisjoint' k v m1 m2 = undefined -- () TODO XXX
+
+{-@ lemmaDisjoint' :: Ord k => k:k -> v:v -> m1:Map k v -> {m2:Map k v | disjoint m1 m2 && not (member k m2)} -> {disjoint (insert k v m1) m2} @-}
+lemmaDisjoint' :: Ord k => k -> v -> Map k v -> Map k v -> ()
+lemmaDisjoint' k v m1 m2 | S.member k (keys m2) = assert (not (member k m2)) -- unreachable
+lemmaDisjoint' k v m1 m2 = 
+        disjoint (insert k v m1) m2
+    ==. S.null (S.intersection (keys (insert k v m1)) (keys m2))
+    ==. S.null (S.intersection (S.insert k (keys m1)) (keys m2))
+    *** QED
 
 
 {-@ lemmaInsert :: Ord k => k1:k -> v1:v -> k2:k -> v2:v -> m:Map k v
                 -> { (k1 /= k2) => (insert k1 v1 (insert k2 v2 m) == insert k2 v2 (insert k1 v1 m)) } @-}
 lemmaInsert :: Ord k => k -> v -> k -> v -> Map k v -> ()
-lemmaInsert k1 v1 k2 v2 = undefined -- TODO XXX
+lemmaInsert k1 v1 k2 v2 Tip = ()
+lemmaInsert k1 v1 k2 v2 (Map k v m) = lemmaInsert k1 v1 k2 v2 m
 
 lemmaLookupInsert2 :: Ord k => Map k v -> k -> k -> v -> () 
 {-@ lemmaLookupInsert2 :: Ord k => m:Map k v -> x:k -> k:k -> v:v 
@@ -51,12 +60,12 @@ lemmaLookupDelete2 (Map k v m) x kd
   | k < kd    = lemmaLookupDelete2 m x kd 
   | k == kd   = 
         lookup x (delete kd (Map k v m))
-    === lookup x m -- JP: Why can't PLE solve this?
+    ==. lookup x m -- JP: Why can't PLE solve this?
     *** QED
         
   | otherwise =
         lookup x (delete kd (Map k v m))
-    === lookup x (Map k v m) -- JP: Why can't PLE solve this?
+    ==. lookup x (Map k v m) -- JP: Why can't PLE solve this?
     *** QED
 
 
@@ -67,16 +76,16 @@ lemmaLookupDelete (Map k v m) kd
   | k < kd    = lemmaLookupDelete m kd 
   | k == kd   =
         lookup kd (delete kd (Map k v m))
-    === lookup kd m ?    assert (not (member kd m)) 
+    ==. lookup kd m ?    assert (not (member kd m)) 
                     &&& lemmaNotMemberLookupNothing kd m
-    === Nothing
+    ==. Nothing
     *** QED
 
   | otherwise =
         lookup kd (delete kd (Map k v m))
-    === lookup kd (Map k v m) ?   lemmaLessNotMember kd (Map k v m) 
+    ==. lookup kd (Map k v m) ?   lemmaLessNotMember kd (Map k v m) 
                               &&& lemmaNotMemberLookupNothing kd (Map k v m)
-    === Nothing
+    ==. Nothing
     *** QED
 
 {-@ lemmaLessNotMember :: kd:k -> m:Map {k:k | kd < k} v -> {not (member kd m)} @-}
