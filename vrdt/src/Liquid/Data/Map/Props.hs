@@ -28,7 +28,6 @@ lemmaLookupInsert (Map k _ m)   k' x
   | otherwise = lemmaLookupInsert m k' x
 
 
--- {-@ ple lemmaLookupDelete2 @-}
 lemmaLookupDelete2 :: Ord k => Map k v -> k ->  k -> () 
 {-@ lemmaLookupDelete2 :: m:Map k v -> x:k -> kd:k
    -> { (kd /= x => lookup x (delete kd m) == lookup x m) } @-}
@@ -46,7 +45,6 @@ lemmaLookupDelete2 (Map k v m) x kd
     *** QED
 
 
--- {-@ ple lemmaLookupDelete @-}
 lemmaLookupDelete :: Ord k => Map k v -> k -> () 
 {-@ lemmaLookupDelete :: m:Map k v -> kd:k -> {lookup kd (delete kd m) == Nothing } @-}
 lemmaLookupDelete Tip _         = ()
