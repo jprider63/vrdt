@@ -40,6 +40,7 @@ empty = Tip
 
 
 {-@ reflect member @-}
+{-@ member :: Eq k => k:k -> m:Map k v -> {vv:Bool | vv = S.member k (keys m)} @-}
 member :: Eq k => k -> Map k v -> Bool 
 member _ Tip = False 
 member x (Map k _ m) = x == k || member x m 
