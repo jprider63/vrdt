@@ -107,6 +107,7 @@ deriveVRDT n = reify n >>= \case
 
         -- Assign `Operation` type family.
         let operationD = TySynInstD ''Operation $ TySynEqn [ty] (ConT opName)
+        -- let operationD = TySynInstD ''Operation $ TySynEqn [ty] (ConT opName)
 
         applyD <- mkApply varMap
         enabledD <- mkEnabled varMap
