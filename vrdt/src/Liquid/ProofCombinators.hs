@@ -168,7 +168,7 @@ infixl 3 ==!
 
 infixl 3 ==.
 
-{-# DEPRECATED (==.) "Use (===) instead" #-}
+-- {-# DEPRECATED (==.) "Use (===) instead" #-}
 
 {-# INLINE (==.) #-} 
 (==.) :: a -> a -> a 

@@ -4,11 +4,29 @@
 module Liquid.Data.Map.Props where 
 
 import qualified Data.Set as S
+#ifdef NotLiquid
+import Liquid.Data.Map hiding (disjoint)
+#else
 import Liquid.Data.Map 
+#endif NotLiquid
 import Liquid.Data.Maybe 
 import Liquid.ProofCombinators
 import Prelude hiding (Maybe(..), lookup)
 
+-- CPP hacks since `disjoint` doesn't exist in Data.Map for this version and lemmas don't exist for Data.Map.
+#ifdef NotLiquid
+disjoint :: a -> a -> Bool
+disjoint m1 m2 = error "unused"
+
+lemmaDisjoint' :: k -> v -> m k v -> m k v -> ()
+lemmaDisjoint' k v m1 m2 = error "unused"
+
+lemmaLookupInsert2 :: m k v -> k -> k -> v -> () 
+lemmaLookupInsert2 k v m1 m2 = error "unused"
+
+lemmaInsert :: k -> v -> k -> v -> m k v -> ()
+lemmaInsert _ _ _ _ _ = error "unused"
+#else
 
 {-@ lemmaDisjoint :: Ord k => k:k -> m1:Map k v -> {m2:Map k v | disjoint m1 m2} -> {member k m1 => not (member k m2)} @-}
 lemmaDisjoint :: Ord k => k -> Map k v -> Map k v -> ()
@@ -97,3 +115,5 @@ lemmaLessNotMember k (Map _ _ m) = lemmaLessNotMember k m
 lemmaNotMemberLookupNothing :: k -> Map k v -> ()
 lemmaNotMemberLookupNothing _ Tip = ()
 lemmaNotMemberLookupNothing k (Map _ _ m) = lemmaNotMemberLookupNothing k m
+
+#endif
