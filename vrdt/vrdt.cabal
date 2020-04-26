@@ -41,6 +41,7 @@ library
       Liquid.ProofCombinators
       Liquid.Data.Maybe
       Liquid.Data.Map
+      Liquid.Data.Map.Props
       Paths_vrdt
   hs-source-dirs:
       src

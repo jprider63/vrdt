@@ -8,7 +8,7 @@ import qualified Data.Set as S
 import Liquid.Data.Map hiding (disjoint)
 #else
 import Liquid.Data.Map 
-#endif NotLiquid
+#endif
 import Liquid.Data.Maybe 
 import Liquid.ProofCombinators
 import Prelude hiding (Maybe(..), lookup)
@@ -26,7 +26,24 @@ lemmaLookupInsert2 k v m1 m2 = error "unused"
 
 lemmaInsert :: k -> v -> k -> v -> m k v -> ()
 lemmaInsert _ _ _ _ _ = error "unused"
+
+lemmaNotMemberLookupNothing :: k -> m k v -> ()
+lemmaNotMemberLookupNothing _ _ = error "unused"
+
+lemmaLookupDelete2 :: Ord k => m k v -> k ->  k -> () 
+lemmaLookupDelete2 _ _ _        = error "unused"
+
+lemmaDisjoint'' :: Ord k => k -> v -> m k v -> m k v -> ()
+lemmaDisjoint'' k v m1 m2 = error "unused"
+
+lemmaInsertDelete :: Ord k => k -> v -> k -> m k v -> ()
+lemmaInsertDelete k1 v1 k2 m = error "unused"
+
+lemmaLessInsert :: k -> v -> m k v -> ()
+lemmaLessInsert _ _ _ = error "unused"
 #else
+
+
 
 {-@ lemmaDisjoint :: Ord k => k:k -> m1:Map k v -> {m2:Map k v | disjoint m1 m2} -> {member k m1 => not (member k m2)} @-}
 lemmaDisjoint :: Ord k => k -> Map k v -> Map k v -> ()
@@ -46,11 +63,63 @@ lemmaDisjoint' k v m1 m2 =
 
 {-@ lemmaDisjoint'' :: Ord k => k:k -> v:v -> m1:Map k v -> {m2:Map k v | disjoint m1 m2} -> {disjoint (delete k m1) (insert k v m2)} @-}
 lemmaDisjoint'' :: Ord k => k -> v -> Map k v -> Map k v -> ()
-lemmaDisjoint'' k v m1 m2 = undefined -- TODO XXX
+lemmaDisjoint'' k v m1 m2 = assert (not (member k (delete k m1))) &&& lemmaDisjoint' k v m2 (delete k m1)
 
 {-@ lemmaInsertDelete :: Ord k => k1:k -> v1:v -> {k2:k| k1 /= k2} -> m:Map k v -> {insert k1 v1 (delete k2 m) = delete k2 (insert k1 v1 m)} @-}
 lemmaInsertDelete :: Ord k => k -> v -> k -> Map k v -> ()
-lemmaInsertDelete k1 v1 k2 m = undefined -- TODO XXX
+lemmaInsertDelete k1 v1 k2 Tip 
+  | k1 < k2 = ()
+  | k1 > k2 = 
+        insert k1 v1 (delete k2 Tip)
+    ==. delete k2 (insert k1 v1 Tip)
+    *** QED
+  | otherwise = ()
+  
+lemmaInsertDelete k1 v1 k2 (Map k v m)
+  | k1 < k && k2 < k = 
+        insert k1 v1 (delete k2 (Map k v m))
+    ==. delete k2 (insert k1 v1 (Map k v m))
+    *** QED
+  | k1 == k && k2 < k = 
+        insert k1 v1 (delete k2 (Map k v m))
+    ==. delete k2 (insert k1 v1 (Map k v m))
+    *** QED
+  | k1 > k && k2 < k = 
+        insert k1 v1 (delete k2 (Map k v m)) ? lemmaInsertDelete k1 v1 k2 m
+    ==. delete k2 (insert k1 v1 (Map k v m))
+    *** QED
+  | k1 < k && k2 == k = 
+        insert k1 v1 (delete k2 (Map k v m))
+    ==. insert k1 v1 m ? 
+          lemmaLessNotMember k1 m
+      &&& lemmaLessInsert k1 v1 m
+    ==. Map k1 v1 m
+    ==. Map k1 v1 (delete k2 (Map k v m))
+    ==. delete k2 (Map k1 v1 (Map k v m))
+    ==. delete k2 (insert k1 v1 (Map k v m))
+    *** QED
+  | k1 > k && k2 == k = 
+        insert k1 v1 (delete k2 (Map k v m))
+    ==. delete k2 (insert k1 v1 (Map k v m))
+    *** QED
+  | k1 < k && k2 > k = 
+        insert k1 v1 (delete k2 (Map k v m))
+    ==. delete k2 (insert k1 v1 (Map k v m))
+    *** QED
+  | k1 == k && k2 > k = 
+        insert k1 v1 (delete k2 (Map k v m))
+    ==. delete k2 (insert k1 v1 (Map k v m))
+    *** QED
+  | k1 > k && k2 > k = 
+        insert k1 v1 (delete k2 (Map k v m)) ? lemmaInsertDelete k1 v1 k2 m
+    ==. delete k2 (insert k1 v1 (Map k v m))
+    *** QED
+  | otherwise = ()
+
+{-@ lemmaLessInsert :: k:k -> v:v -> m:Map {k':k | k < k'} v -> {insert k v m == Map k v m} @-}
+lemmaLessInsert :: k -> v -> Map k v -> ()
+lemmaLessInsert _ _ Tip = ()
+lemmaLessInsert k v m@(Map k' _ m') = lemmaLessInsert k v m'
 
 
 {-@ lemmaInsert :: Ord k => k1:k -> v1:v -> k2:k -> v2:v -> m:Map k v
