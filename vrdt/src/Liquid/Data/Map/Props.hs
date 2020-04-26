@@ -41,6 +41,9 @@ lemmaInsertDelete k1 v1 k2 m = error "unused"
 
 lemmaLessInsert :: k -> v -> m k v -> ()
 lemmaLessInsert _ _ _ = error "unused"
+
+lemmaDelete :: Ord k => k -> k -> m k v -> ()
+lemmaDelete k1 k2 _ = ()
 #else
 
 
@@ -182,6 +185,12 @@ lemmaLookupDelete (Map k v m) kd
                               &&& lemmaNotMemberLookupNothing kd (Map k v m)
     ==. Nothing
     *** QED
+
+{-@ lemmaDelete :: Ord k => k1:k -> k2:k -> m:Map k v
+                -> { (k1 /= k2) => (delete k1 (delete k2 m) == delete k2 (delete k1 m)) } @-}
+lemmaDelete :: Ord k => k -> k -> Map k v -> ()
+lemmaDelete k1 k2 Tip = ()
+lemmaDelete k1 k2 (Map k v m) = undefined -- TODO XXX -- lemmaDelete k1 k2 m
 
 {-@ lemmaLessNotMember :: kd:k -> m:Map {k:k | kd < k} v -> {not (member kd m)} @-}
 lemmaLessNotMember :: k -> Map k v -> ()
