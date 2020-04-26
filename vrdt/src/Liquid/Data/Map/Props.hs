@@ -190,7 +190,40 @@ lemmaLookupDelete (Map k v m) kd
                 -> { (k1 /= k2) => (delete k1 (delete k2 m) == delete k2 (delete k1 m)) } @-}
 lemmaDelete :: Ord k => k -> k -> Map k v -> ()
 lemmaDelete k1 k2 Tip = ()
-lemmaDelete k1 k2 (Map k v m) = undefined -- TODO XXX -- lemmaDelete k1 k2 m
+lemmaDelete k1 k2 (Map k v m) 
+  | k1 < k && k2 < k  = 
+        delete k1 (delete k2 (Map k v m))
+    ==. delete k2 (delete k1 (Map k v m))
+    *** QED
+  | k1 == k && k2 < k =
+        delete k1 (delete k2 (Map k v m))
+    ==. delete k2 (delete k1 (Map k v m))
+    *** QED
+  | k1 > k && k2 < k  =
+        delete k1 (delete k2 (Map k v m))
+    ==. delete k2 (delete k1 (Map k v m))
+    *** QED
+  | k1 < k && k2 == k =
+        delete k1 (delete k2 (Map k v m))
+    ==. delete k2 (delete k1 (Map k v m))
+    *** QED
+  | k1 > k && k2 == k =
+        delete k1 (delete k2 (Map k v m))
+    ==. delete k2 (delete k1 (Map k v m))
+    *** QED
+  | k1 < k && k2 > k  =
+        delete k1 (delete k2 (Map k v m))
+    ==. delete k2 (delete k1 (Map k v m))
+    *** QED
+  | k1 == k && k2 > k =
+        delete k1 (delete k2 (Map k v m))
+    ==. delete k2 (delete k1 (Map k v m))
+    *** QED
+  | k1 > k && k2 > k  =
+        delete k1 (delete k2 (Map k v m)) ? lemmaDelete k1 k2 m
+    ==. delete k2 (delete k1 (Map k v m))
+    *** QED
+  | otherwise         = ()
 
 {-@ lemmaLessNotMember :: kd:k -> m:Map {k:k | kd < k} v -> {not (member kd m)} @-}
 lemmaLessNotMember :: k -> Map k v -> ()
