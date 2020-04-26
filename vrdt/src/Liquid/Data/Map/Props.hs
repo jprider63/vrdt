@@ -56,7 +56,9 @@ lemmaDisjoint k m1 (Map k2 v2 m2) | otherwise         = lemmaDisjoint k m1 m2
 
 
 {-@ lemmaDisjoint' :: Ord k => k:k -> v:v -> m1:Map k v -> {m2:Map k v | disjoint m1 m2 && not (member k m2)} -> {disjoint (insert k v m1) m2} @-}
+-- {-@ lemmaDisjoint' :: Ord k => k:k -> v:v -> m1:Map k v -> {m2:Map k v | disjoint m1 m2} -> {not (member k m2) => disjoint (insert k v m1) m2} @-}
 lemmaDisjoint' :: Ord k => k -> v -> Map k v -> Map k v -> ()
+lemmaDisjoint' k v m1 m2 | member k m2 = ()
 lemmaDisjoint' k v m1 m2 | S.member k (keys m2) = assert (not (member k m2)) -- unreachable
 lemmaDisjoint' k v m1 m2 = 
         disjoint (insert k v m1) m2
