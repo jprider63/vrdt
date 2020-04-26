@@ -93,7 +93,7 @@ keyLeqLemma kd k v t@(Map k' v' t') = keyLeqLemma kd k' v' t'
 
 
 {-@ reflect delete @-}
-{-@ delete :: Ord k => kd:k -> m:Map k v -> {v:Map k v | if (S.member kd (keys m)) then (keys v == S.difference (keys m) (S.singleton kd)) else (keys m == keys v) } @-}
+{-@ delete :: Ord k => kd:k -> m:Map k v -> {v:Map k v | if (S.member kd (keys m)) then (keys v == S.difference (keys m) (S.singleton kd)) else m == v } @-} -- (keys m == keys v) } @-}
 delete :: Ord k => k -> Map k v -> Map k v 
 delete _ Tip  = Tip 
 delete kd (Map k v m)

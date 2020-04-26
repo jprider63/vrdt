@@ -44,6 +44,14 @@ lemmaDisjoint' k v m1 m2 =
     ==. S.null (S.intersection (S.insert k (keys m1)) (keys m2))
     *** QED
 
+{-@ lemmaDisjoint'' :: Ord k => k:k -> v:v -> m1:Map k v -> {m2:Map k v | disjoint m1 m2} -> {disjoint (delete k m1) (insert k v m2)} @-}
+lemmaDisjoint'' :: Ord k => k -> v -> Map k v -> Map k v -> ()
+lemmaDisjoint'' k v m1 m2 = undefined -- TODO XXX
+
+{-@ lemmaInsertDelete :: Ord k => k1:k -> v1:v -> {k2:k| k1 /= k2} -> m:Map k v -> {insert k1 v1 (delete k2 m) = delete k2 (insert k1 v1 m)} @-}
+lemmaInsertDelete :: Ord k => k -> v -> k -> Map k v -> ()
+lemmaInsertDelete k1 v1 k2 m = undefined -- TODO XXX
+
 
 {-@ lemmaInsert :: Ord k => k1:k -> v1:v -> k2:k -> v2:v -> m:Map k v
                 -> { (k1 /= k2) => (insert k1 v1 (insert k2 v2 m) == insert k2 v2 (insert k1 v1 m)) } @-}
