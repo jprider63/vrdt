@@ -171,52 +171,53 @@ lawCommutativityNEq x@MultiSet{..} v1 c1 v2 c2
 
     if c1'' > 0 then
       if c2'' > 0 then
+        --     apply (apply x op1) op2 ? 
+        --             assert (Map.disjoint posMultiSet negMultiSet) 
+        --         &&& assert (not (Map.member v1 (Map.delete v1 negMultiSet))) 
+        --         &&& assert (Map.disjoint posMultiSet (Map.delete v1 negMultiSet))
+        --         &&& Map.lemmaDisjoint' v1 c1'' posMultiSet (Map.delete v1 negMultiSet)
+        -- ==. apply (MultiSet (Map.insert v1 c1'' posMultiSet) (Map.delete v1 negMultiSet)) op2 ? 
+        --             assert (Map.disjoint (Map.delete v1 negMultiSet) (Map.insert v1 c1'' posMultiSet))
+        --         &&& Map.lemmaDisjoint'' v2 c2'' (Map.delete v1 negMultiSet) (Map.insert v1 c1'' posMultiSet)
+        --         &&& assert (Map.disjoint (Map.insert v2 c2'' (Map.insert v1 c1'' posMultiSet)) (Map.delete v2 (Map.delete v1 negMultiSet)))
+        --         &&& Map.lemmaLookupDelete2 negMultiSet v2 v1
+        --         &&& Map.lemmaLookupInsert2 posMultiSet v2 v1 c1''
+        -- ==. MultiSet (Map.insert v2 c2'' (Map.insert v1 c1'' posMultiSet)) (Map.delete v2 (Map.delete v1 negMultiSet)) ?
+        --             Map.lemmaInsert v2 c2'' v1 c1'' posMultiSet
+        --         &&& Map.lemmaDelete v1 v2 negMultiSet
+        -- ==. MultiSet (Map.insert v1 c1'' (Map.insert v2 c2'' posMultiSet)) (Map.delete v1 (Map.delete v2 negMultiSet)) ?
+        --             assert (Map.disjoint negMultiSet posMultiSet) 
+        --         &&& Map.lemmaDisjoint'' v2 c2'' negMultiSet posMultiSet
+        --         &&& assert (Map.disjoint (Map.insert v2 c2'' posMultiSet) (Map.delete v2 negMultiSet))
+        --         &&& Map.lemmaLookupInsert2 posMultiSet v1 v2 c2''
+        --         &&& Map.lemmaLookupDelete2 negMultiSet v1 v2
+        -- ==. apply (MultiSet (Map.insert v2 c2'' posMultiSet) (Map.delete v2 negMultiSet)) op1
+        -- ==. apply (apply x op2) op1
+        -- *** QED
+        undefined
+
+      else
             apply (apply x op1) op2 ? 
                     assert (Map.disjoint posMultiSet negMultiSet) 
                 &&& assert (not (Map.member v1 (Map.delete v1 negMultiSet))) 
                 &&& assert (Map.disjoint posMultiSet (Map.delete v1 negMultiSet))
                 &&& Map.lemmaDisjoint' v1 c1'' posMultiSet (Map.delete v1 negMultiSet)
-        === apply (MultiSet (Map.insert v1 c1'' posMultiSet) (Map.delete v1 negMultiSet)) op2 ? 
-                    assert (Map.disjoint (Map.delete v1 negMultiSet) (Map.insert v1 c1'' posMultiSet))
-                &&& Map.lemmaDisjoint'' v2 c2'' (Map.delete v1 negMultiSet) (Map.insert v1 c1'' posMultiSet)
-                &&& assert (Map.disjoint (Map.insert v2 c2'' (Map.insert v1 c1'' posMultiSet)) (Map.delete v2 (Map.delete v1 negMultiSet)))
+        ==. apply (MultiSet (Map.insert v1 c1'' posMultiSet) (Map.delete v1 negMultiSet)) op2 ? 
+                    assert (Map.disjoint (Map.insert v1 c1'' posMultiSet) (Map.delete v1 negMultiSet))
                 &&& Map.lemmaLookupDelete2 negMultiSet v2 v1
                 &&& Map.lemmaLookupInsert2 posMultiSet v2 v1 c1''
-        === MultiSet (Map.insert v2 c2'' (Map.insert v1 c1'' posMultiSet)) (Map.delete v2 (Map.delete v1 negMultiSet)) ?
-                    Map.lemmaInsert v2 c2'' v1 c1'' posMultiSet
-                &&& Map.lemmaDelete v1 v2 negMultiSet
-        === MultiSet (Map.insert v1 c1'' (Map.insert v2 c2'' posMultiSet)) (Map.delete v1 (Map.delete v2 negMultiSet)) ?
-                    assert (Map.disjoint negMultiSet posMultiSet) 
-                &&& Map.lemmaDisjoint'' v2 c2'' negMultiSet posMultiSet
-                &&& assert (Map.disjoint (Map.insert v2 c2'' posMultiSet) (Map.delete v2 negMultiSet))
-                &&& Map.lemmaLookupInsert2 posMultiSet v1 v2 c2''
-                &&& Map.lemmaLookupDelete2 negMultiSet v1 v2
-        === apply (MultiSet (Map.insert v2 c2'' posMultiSet) (Map.delete v2 negMultiSet)) op1
-        === apply (apply x op2) op1
+                &&& Map.lemmaDisjoint'' v2 c2'' (Map.insert v1 c1'' posMultiSet) (Map.delete v1 negMultiSet)
+        ==. MultiSet (Map.delete v2 (Map.insert v1 c1'' posMultiSet)) (Map.insert v2 c2'' (Map.delete v1 negMultiSet)) ?
+                    Map.lemmaInsertDelete v1 c1'' v2 posMultiSet
+                &&& Map.lemmaInsertDelete v2 c2'' v1 negMultiSet
+        ==. MultiSet (Map.insert v1 c1'' (Map.delete v2 posMultiSet)) (Map.insert v2 c2'' (Map.delete v1 negMultiSet)) ?
+                    Map.lemmaLookupDelete2 posMultiSet v1 v2
+                &&& Map.lemmaLookupInsert2 negMultiSet v1 v2 c2''
+                &&& Map.lemmaDisjoint'' v2 c2'' posMultiSet negMultiSet
+                &&& Map.lemmaDisjoint'' v1 c1'' (Map.delete v2 posMultiSet) (Map.insert v2 c2'' negMultiSet)
+        ==. apply (MultiSet (Map.delete v2 posMultiSet) (Map.insert v2 c2'' negMultiSet)) op1
+        ==. apply (apply x op2) op1
         *** QED
-
-      else
-        --     apply (apply x op1) op2 ? 
-        --             assert (Map.disjoint posMultiSet negMultiSet) 
-        --         &&& assert (not (Map.member v1 negMultiSet)) 
-        --         &&& Map.lemmaDisjoint' v1 c1'' posMultiSet negMultiSet 
-        -- ==. apply (MultiSet (Map.insert v1 c1'' posMultiSet) negMultiSet) op2 ? 
-        --             assert (Map.disjoint (Map.insert v1 c1'' posMultiSet) negMultiSet)
-        --         &&& assert (not (Map.member v2 negMultiSet)) 
-        --         &&& Map.lemmaDisjoint'' v2 c2'' (Map.insert v1 c1'' posMultiSet) negMultiSet 
-        --         &&& Map.lemmaLookupInsert2 posMultiSet v2 v1 c1''
-        -- ==. MultiSet (Map.delete v2 (Map.insert v1 c1'' posMultiSet)) (Map.insert v2 c2'' negMultiSet) ?
-        --             Map.lemmaInsertDelete v1 c1'' v2 posMultiSet
-        -- ==. MultiSet (Map.insert v1 c1'' (Map.delete v2 posMultiSet)) (Map.insert v2 c2'' negMultiSet) ?
-        --             Map.lemmaDisjoint'' v2 c2'' posMultiSet negMultiSet
-        --         &&& Map.lemmaLookupDelete2 posMultiSet v1 v2
-        --         &&& assert (not (Map.member v1 (Map.insert v2 c2'' negMultiSet)))
-        --         &&& Map.lemmaNotMemberLookupNothing v1 (Map.insert v2 c2'' negMultiSet)
-        -- ==. apply (MultiSet (Map.delete v2 posMultiSet) (Map.insert v2 c2'' negMultiSet)) op1
-        -- ==. apply (apply x op2) op1
-        -- *** QED
-        undefined
-
 
     else
       undefined
