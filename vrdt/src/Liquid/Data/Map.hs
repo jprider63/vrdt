@@ -40,8 +40,8 @@ empty = Tip
 
 
 {-@ reflect member @-}
-{-@ member :: Eq k => k:k -> m:Map k v -> {vv:Bool | vv = S.member k (keys m)} @-}
-member :: Eq k => k -> Map k v -> Bool 
+{-@ member :: Ord k => k:k -> m:Map k v -> {vv:Bool | vv = S.member k (keys m)} @-}
+member :: Ord k => k -> Map k v -> Bool
 member _ Tip = False 
 member x (Map k _ m) = x == k || member x m 
 
@@ -71,7 +71,7 @@ insert k' v' (Map k v m)
   | k' < k    = Map k' v' (Map k v m) -- ? assume ()
   | otherwise = Map k v (insert k' v' m)
 
--- {-@ reflect keyLeqLema @-}
+{-@ reflect keyLeqLemma @-}
 {-@ 
 keyLeqLemma 
   :: Ord k 
@@ -98,7 +98,7 @@ delete :: Ord k => k -> Map k v -> Map k v
 delete _ Tip  = Tip 
 delete kd (Map k v m)
   -- | kd == k   = delete kd m
-  | kd == k   = m `by` keyLeqLemma kd k v m
+  | kd == k   = by m (keyLeqLemma kd k v m)
 
   | kd > k    = Map k v (delete kd m)
 
