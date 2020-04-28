@@ -24,6 +24,7 @@ module VRDT.MultiSet (
   , multiSetOpOrder
   ) where
 
+import           Data.Bits (xor)
 #ifdef NotLiquid
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -264,17 +265,146 @@ lawCommutativityNEq x@MultiSet{..} v1 c1 v2 c2
     op1 = MultiSetOpAdd v1 c1
     op2 = MultiSetOpAdd v2 c2
 
+{-@ reflect oneOfThree @-}
+oneOfThree :: Bool -> Bool -> Bool -> Bool
+oneOfThree a b c = (a `xor` b `xor` c) && not (a && b && c)
+
+{-@ ple lawCommutativityEq' @-}
+{-@ 
+lawCommutativityEq' 
+  :: Ord k 
+  => posMultiSet:Map k PosInteger 
+  -> {negMultiSet:Map k NegInteger | Map.disjoint posMultiSet negMultiSet}
+  -> v:k 
+  -> c1:Integer 
+  -> c2:Integer
+  -> {c'':PosInteger | oneOfThree True False (True == False) }
+  -> {apply (apply (MultiSet posMultiSet negMultiSet) (MultiSetOpAdd v c1)) (MultiSetOpAdd v c2) = MultiSet (Map.insert v c'' posMultiSet) (Map.delete v negMultiSet)}
+@-}
+  -- -> {c'':PosInteger | oneOfThree (Just (c'' - c1 - c2) = Map.lookup v posMultiSet) (Just (c'' - c1 - c2) = Map.lookup v negMultiSet) (c'' = c1 + c2)}
+  -- -> {c0:Integer | c0 == 0 || Just c0 = Map.lookup v posMultiSet || Just c0 = Map.lookup v negMultiSet}
+lawCommutativityEq' 
+  :: Ord k
+  => Map k Integer 
+  -> Map k Integer 
+  -> k 
+  -> Integer 
+  -> Integer 
+  -> Integer 
+  -> ()
+lawCommutativityEq' posMultiSet negMultiSet v c1 c2 c'' | c'' <= 0 = ()
+lawCommutativityEq' posMultiSet negMultiSet v c1 c2 _c'' 
+  -- | Nothing <- Map.lookup v posMultiSet
+  -- , Nothing <- Map.lookup v negMultiSet
+  = 
+  let c1' = case Map.lookup v posMultiSet of
+        Nothing -> case Map.lookup v negMultiSet of
+          Nothing -> c1
+          Just c -> c1 + c
+        Just c -> c1 + c
+  in
+
+  if c1' > 0 then
+    -- let c'' = case Map.lookup v (Map.insert v c1' posMultiSet) of
+    --       Nothing -> error "unreachable"
+    --       Just c -> c + c2
+    -- in
+    let c'' = case Map.lookup v posMultiSet of
+          Nothing -> case Map.lookup v negMultiSet of
+            Nothing -> c1 + c2
+            Just c -> c + c1 + c2
+          Just c -> c + c1 + c2
+    in
+
+          apply (apply (MultiSet posMultiSet negMultiSet) (MultiSetOpAdd v c1)) (MultiSetOpAdd v c2)
+              ?   assert (Map.disjoint posMultiSet negMultiSet) 
+              &&& Map.lemmaLookupInsert posMultiSet v c1'
+              -- &&& assume (c'' == _c'')
+              &&& assert (Just (_c'' - c1 - c2) == Map.lookup v posMultiSet || Just (_c'' - c1 - c2) == Map.lookup v negMultiSet || _c'' == c1 + c2) ? 
+                    case Map.lookup v posMultiSet of
+                      Just c -> 
+                            c -- ? assert (Map.lookup v negMultiSet == Nothing)
+                        === _c'' - c1 - c2
+                        *** QED
+                      Nothing -> case Map.lookup v negMultiSet of
+                        Nothing ->
+                              _c'' 
+                          === c1 + c2
+                          *** QED
+                        Just c -> 
+                              c
+                          === _c'' - c1 - c2
+                          *** QED
+              &&& assert (c'' == _c'')
+              &&& assert (Map.disjoint negMultiSet posMultiSet) 
+              &&& Map.lemmaDisjoint'' v c1' negMultiSet posMultiSet
+              &&& assert (Map.disjoint (Map.insert v c1' posMultiSet) (Map.delete v negMultiSet))
+              -- &&& assert (c1' == c1)
+              -- &&& assert (c1 > 0)
+              -- &&& 
+
+      === apply (MultiSet (Map.insert v c1' posMultiSet) (Map.delete v negMultiSet)) (MultiSetOpAdd v c2)
+              -- ?   assert True
+              -- ? Map.lookup v (Map.insert v c1' posMultiSet) == Just c1'
+              ?   Map.lemmaDisjoint'' v c'' (Map.delete v negMultiSet) (Map.insert v c1' posMultiSet)
+              &&& assert (Map.disjoint (Map.insert v c'' (Map.insert v c1' posMultiSet)) (Map.delete v (Map.delete v negMultiSet)))
+              -- &&& assume (Map.lookup v (Map.insert v c1' posMultiSet) == Just c1')
+      === MultiSet (Map.insert v c'' (Map.insert v c1' posMultiSet)) (Map.delete v (Map.delete v negMultiSet))
+              ?   assert (Map.disjoint (Map.insert v c'' posMultiSet) (Map.delete v negMultiSet))
+              &&& Map.lemmaDeleteTwice v negMultiSet
+              &&& Map.lemmaInsertTwice v c'' c1' posMultiSet
+      === MultiSet (Map.insert v c'' posMultiSet) (Map.delete v negMultiSet)
+      *** QED
+  else
+    undefined
+
+  -- | otherwise = undefined
+
+  -- where
+    -- c'' = c0 + c1 + c2
+    -- c1' = c0 + c1
+    -- c2' = c0 + c2
+
+    -- c1' = c'' - c2
+    -- c2' = c'' - c1
 
 {-@ lawCommutativityEq :: Ord a => x : MultiSet a -> v:a -> c1:Integer -> c2:Integer -> {apply (apply x (MultiSetOpAdd v c1)) (MultiSetOpAdd v c2) == apply (apply x (MultiSetOpAdd v c2)) (MultiSetOpAdd v c1)} @-}
 lawCommutativityEq :: Ord a => MultiSet a -> a -> Integer -> Integer -> ()
-lawCommutativityEq x@MultiSet{..} v c1 c2 = undefined
+lawCommutativityEq x@MultiSet{..} v c1 c2 = 
+  let c'' = case Map.lookup v posMultiSet of
+        Nothing -> case Map.lookup v negMultiSet of
+          Nothing -> c1 + c2
+          Just c -> c + c1 + c2
+        Just c -> c + c1 + c2
+  in
+  if c'' > 0 then
+    undefined
+  else
+    undefined
+
+  -- if c'' > 0 then
+  --       apply (apply x op1) op2
+  --         ?   lawCommutativityEq' posMultiSet negMultiSet v c1 c2 c''
+  --         &&& assert (Map.disjoint posMultiSet negMultiSet)
+  --         &&& assert (Map.disjoint negMultiSet posMultiSet)
+  --         &&& Map.lemmaDisjoint'' v c'' negMultiSet posMultiSet
+  --         &&& assert (Map.disjoint (Map.insert v c'' posMultiSet) (Map.delete v negMultiSet))
+  --   ==. MultiSet (Map.insert v c'' posMultiSet) (Map.delete v negMultiSet) ? lawCommutativityEq' posMultiSet negMultiSet v c2 c1 c''
+  --   ==. apply (apply x op2) op1
+  --   *** QED
+  -- else
+  --   --     apply (apply x op1) op2 ? lawCommutativityEq'' posMultiSet negMultiSet v c1 c2 c''
+  --   -- === MultiSet (Map.delete v posMultiSet) (Map.insert v c'' negMultiSet) ? lawCommutativityEq'' posMultiSet negMultiSet v c2 c1 c''
+  --   -- === apply (apply x op2) op1
+  --   -- *** QED
+  --   undefined
 
   where
-    v1 = v
-    v2 = v
+    -- v1 = v
+    -- v2 = v
 
-    op1 = MultiSetOpAdd v1 c1
-    op2 = MultiSetOpAdd v2 c2
+    op1 = MultiSetOpAdd v c1
+    op2 = MultiSetOpAdd v c2
 
 
 

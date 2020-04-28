@@ -237,4 +237,12 @@ lemmaNotMemberLookupNothing :: k -> Map k v -> ()
 lemmaNotMemberLookupNothing _ Tip = ()
 lemmaNotMemberLookupNothing k (Map _ _ m) = lemmaNotMemberLookupNothing k m
 
+{-@ lemmaDeleteTwice :: k:k -> m:Map k v -> {delete k m == delete k (delete k m)} @-}
+lemmaDeleteTwice :: k -> Map k v -> ()
+lemmaDeleteTwice k m = undefined -- TODO XXX
+
+{-@ lemmaInsertTwice :: k:k -> v1:v -> v2:v -> m:Map k v -> {insert k v1 (insert k v2 m) = insert k v1 m} @-}
+lemmaInsertTwice :: k -> v -> v -> Map k v -> ()
+lemmaInsertTwice _ _ _ = undefined -- TODO XXX
+
 #endif
