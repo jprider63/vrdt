@@ -24,6 +24,9 @@ lemmaDisjoint' k v m1 m2 = error "unused"
 lemmaLookupInsert2 :: m k v -> k -> k -> v -> () 
 lemmaLookupInsert2 k v m1 m2 = error "unused"
 
+lemmaLookupInsert :: Ord k => m k v -> k -> v -> () 
+lemmaLookupInsert _ _ _ = () 
+
 lemmaInsert :: k -> v -> k -> v -> m k v -> ()
 lemmaInsert _ _ _ _ _ = error "unused"
 
@@ -43,7 +46,19 @@ lemmaLessInsert :: k -> v -> m k v -> ()
 lemmaLessInsert _ _ _ = error "unused"
 
 lemmaDelete :: Ord k => k -> k -> m k v -> ()
-lemmaDelete k1 k2 _ = ()
+lemmaDelete _ _ _ = ()
+
+lemmaDeleteInsert :: Ord k => k -> v -> m k v -> ()
+lemmaDeleteInsert _ _ _ = ()
+
+lemmaInsertDelete' :: Ord k => k -> v -> m k v -> ()
+lemmaInsertDelete' _ _ _ = ()
+
+lemmaInsertTwice :: k -> v -> v -> m k v -> ()
+lemmaInsertTwice _ _ _ _ = ()
+
+lemmaDeleteTwice :: Ord k => k -> m k v -> ()
+lemmaDeleteTwice _ _ = ()
 #else
 
 
@@ -237,12 +252,60 @@ lemmaNotMemberLookupNothing :: k -> Map k v -> ()
 lemmaNotMemberLookupNothing _ Tip = ()
 lemmaNotMemberLookupNothing k (Map _ _ m) = lemmaNotMemberLookupNothing k m
 
-{-@ lemmaDeleteTwice :: k:k -> m:Map k v -> {delete k m == delete k (delete k m)} @-}
-lemmaDeleteTwice :: k -> Map k v -> ()
-lemmaDeleteTwice k m = undefined -- TODO XXX
+{-@ lemmaDeleteTwice :: Ord k => k:k -> m:Map k v -> {delete k m == delete k (delete k m)} @-}
+lemmaDeleteTwice :: Ord k => k -> Map k v -> ()
+lemmaDeleteTwice k Tip = ()
+lemmaDeleteTwice k m@(Map k' _ m') 
+  | k > k' = lemmaDeleteTwice k m'
+  | k < k' = 
+        delete k m
+    ==. delete k (delete k m)
+    *** QED
+  | k == k' =
+        delete k m
+    ==. delete k (delete k m)
+    *** QED
+
+
+{-@ lemmaDeleteInsert :: Ord k => k:k -> v:v -> m:Map k v -> {delete k m == delete k (insert k v m)} @-}
+lemmaDeleteInsert :: Ord k => k -> v -> Map k v -> ()
+lemmaDeleteInsert k v Tip =
+        delete k Tip
+    ==. delete k (insert k v Tip)
+    *** QED
+lemmaDeleteInsert k v m@(Map k' _ m')
+  | k > k' = lemmaDeleteInsert k v m'
+  | k < k' =
+        delete k m
+    ==. delete k (insert k v m)
+    *** QED
+  | k == k' =
+        delete k m
+    ==. delete k (insert k v m)
+    *** QED
+
+{-@ lemmaInsertDelete' :: Ord k => k:k -> v:v -> m:Map k v -> {insert k v m == insert k v (delete k m)} @-}
+lemmaInsertDelete' :: Ord k => k -> v -> Map k v -> ()
+lemmaInsertDelete' k v Tip =
+        insert k v Tip
+    ==. insert k v (delete k Tip)
+    *** QED
+lemmaInsertDelete' k v m@(Map k' _ m')
+  | k > k' = lemmaInsertDelete' k v m'
+  | k < k' =
+        insert k v m
+    ==. insert k v (delete k m)
+    *** QED
+  | k == k' =
+        insert k v m
+    ==. Map k v m' ? lemmaLessInsert k v m'
+    ==. insert k v m'
+    ==. insert k v (delete k m)
+    *** QED
 
 {-@ lemmaInsertTwice :: k:k -> v1:v -> v2:v -> m:Map k v -> {insert k v1 (insert k v2 m) = insert k v1 m} @-}
 lemmaInsertTwice :: k -> v -> v -> Map k v -> ()
-lemmaInsertTwice _ _ _ = undefined -- TODO XXX
+lemmaInsertTwice _ _ _ Tip = ()
+lemmaInsertTwice k v1 v2 (Map _ _ m') = lemmaInsertTwice k v1 v2 m'
 
 #endif
