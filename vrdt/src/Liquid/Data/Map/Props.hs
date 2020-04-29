@@ -36,6 +36,9 @@ lemmaNotMemberLookupNothing _ _ = error "unused"
 lemmaLookupDelete2 :: Ord k => m k v -> k ->  k -> () 
 lemmaLookupDelete2 _ _ _        = error "unused"
 
+lemmaLookupDelete :: Ord k => m k v -> k -> () 
+lemmaLookupDelete _ _         = ()
+
 lemmaDisjoint'' :: Ord k => k -> v -> m k v -> m k v -> ()
 lemmaDisjoint'' k v m1 m2 = error "unused"
 
