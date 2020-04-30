@@ -6,8 +6,8 @@ verify:
 	$(LIQUID) vrdt/src/Liquid/ProofCombinators.hs
 	$(LIQUID) vrdt/src/Liquid/Data/Maybe.hs
 	$(LIQUID) vrdt/src/Liquid/Data/Map.hs
-	# $(LIQUID) vrdt/src/VRDT/Class.hs
-	# $(LIQUID) vrdt/src/VRDT/Class/Proof.hs
+	$(LIQUID) vrdt/src/VRDT/Class.hs
+	$(LIQUID) vrdt/src/VRDT/Class/Proof.hs
 	$(LIQUID) vrdt/src/VRDT/LWW.hs
 	$(LIQUID) vrdt/src/VRDT/MultiSet.hs
 	$(LIQUID) vrdt/src/VRDT/MultiSet/Proof.hs
