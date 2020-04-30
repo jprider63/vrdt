@@ -46,7 +46,7 @@ import qualified Data.Set as S
 {-@
 data MultiSet a = MultiSet {
     posMultiSet ::  Map a PosInteger
-  , negMultiSet :: {v:Map a NegInteger | Map.disjoint posMultiSet v }
+  , negMultiSet :: {v:Map a NegInteger | Liquid.Data.Map.disjoint posMultiSet v }
   }
 @-} 
 data MultiSet a = MultiSet {
