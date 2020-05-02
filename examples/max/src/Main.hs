@@ -97,17 +97,6 @@ maxApp = do
         --     liftIO $ cb ()
         return ()
 
-instance Ord a => VRDT (Max a) where
-    type Operation (Max a) = Max a
-
-    enabled _ _ = True
-    apply       = applyMax
-
-    lawCommutativity _ _ _ = ()
-    lawNonCausal _ _ _     = ()
-
-
-
 
 instance Aeson.ToJSON (Max Integer) where
     toJSON (Max a) = Aeson.toJSON a
