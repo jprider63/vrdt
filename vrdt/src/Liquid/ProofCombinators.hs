@@ -208,9 +208,12 @@ assume :: Bool -> Proof
 {-@ assume assume :: b:Bool -> {v:Proof | b} @-}
 assume _ = ()
 
-{-@ inline by @-}
-by :: a -> b -> a 
-by x _ = x 
-{-# INLINE by   #-} 
+-- {-@ inline by @-}
+-- by :: a -> b -> a 
+-- by x _ = x 
+-- {-# INLINE by   #-} 
+{-@ reflect by @-}
+by :: a -> b -> a
+by x _ = x
 
 

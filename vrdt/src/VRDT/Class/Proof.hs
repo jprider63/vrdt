@@ -3,13 +3,20 @@
 
 module VRDT.Class.Proof where
 
-import VRDT.Class
+
+import           Liquid.ProofCombinators
+import           VRDT.Class
 
 
 -- JP: This definition differs from Shapiro's SEC since order doesn't matter for us.
-{-@ commutativeStrongEventualConsistency :: (VRDT a, Eq (Operation a)) => s0 : a -> {ops1 : [Operation a] | allEnabled s0 ops1} -> {ops2 : [Operation a] | allEnabled s0 ops2} -> {isPermutation ops1 ops2 => applyAll s0 ops1 = applyAll s0 ops2} @-}
-commutativeStrongEventualConsistency :: (VRDT a, Eq (Operation a)) => a -> [Operation a] -> [Operation a] -> ()
-commutativeStrongEventualConsistency _ _ _ = ()
+{-@ commutativeStrongEventualConsistency :: (Eq (Operation a), VRDT a) => s0 : a -> {ops1 : [Operation a] | allEnabled s0 ops1} -> {ops2 : [Operation a] | allEnabled s0 ops2} -> {isPermutation ops1 ops2 => applyAll s0 ops1 = applyAll s0 ops2} @-}
+commutativeStrongEventualConsistency :: (Eq (Operation a), VRDT a) => a -> [Operation a] -> [Operation a] -> ()
+commutativeStrongEventualConsistency _ [] [] = ()
+commutativeStrongEventualConsistency _ _ [] = ()
+commutativeStrongEventualConsistency _ [] _ = ()
+commutativeStrongEventualConsistency s0 (op1:ops1) (op2:ops2) = ()
+    --     commutativeStrongEventualConsistency (apply s0 op1) ops1 ops2
+    -- &&& commutativeStrongEventualConsistency (apply s0 op2) ops1 ops2
 
 {-@ reflect allEnabled @-}
 allEnabled :: VRDT a => a -> [Operation a] -> Bool
