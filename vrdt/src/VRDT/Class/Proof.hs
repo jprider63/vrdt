@@ -14,9 +14,15 @@ commutativeStrongEventualConsistency :: (Eq (Operation a), VRDT a) => a -> [Oper
 commutativeStrongEventualConsistency _ [] [] = ()
 commutativeStrongEventualConsistency _ _ [] = ()
 commutativeStrongEventualConsistency _ [] _ = ()
-commutativeStrongEventualConsistency s0 (op1:ops1) (op2:ops2) = ()
-    --     commutativeStrongEventualConsistency (apply s0 op1) ops1 ops2
-    -- &&& commutativeStrongEventualConsistency (apply s0 op2) ops1 ops2
+commutativeStrongEventualConsistency s0 ops1 ops2 | not (isPermutation ops1 ops2) = ()
+-- commutativeStrongEventualConsistency s0 (op1:ops1) (op2:ops2) = ()
+commutativeStrongEventualConsistency s0 (op1:ops1) ops2 = case removeFirst op1 ops2 of
+  Nothing -> 
+    () -- unreachable
+  Just ops2' ->
+    commutativeStrongEventualConsistency (apply s0 op1) ops1 ops2'
+      --     commutativeStrongEventualConsistency (apply s0 op1) ops1 ops2
+      -- &&& commutativeStrongEventualConsistency (apply s0 op2) ops1 ops2
 
 {-@ reflect allEnabled @-}
 allEnabled :: VRDT a => a -> [Operation a] -> Bool
