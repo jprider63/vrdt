@@ -108,10 +108,10 @@ instance Aeson.FromJSON Event
 -- newtype EventId = EventId { unEventId :: UniqueId }
 type EventId = UniqueId
 
-instance Ord t => VRDT (LWW t a) where
-    type Operation (LWW t a) = LWW t a
-    enabled = LWW.enabledLWW
-    apply = LWW.applyLWW
+-- instance Ord t => VRDT (LWW t a) where
+--     type Operation (LWW t a) = LWW t a
+--     enabled = LWW.enabledLWW
+--     apply = LWW.applyLWW
 
 
 main :: IO ()
