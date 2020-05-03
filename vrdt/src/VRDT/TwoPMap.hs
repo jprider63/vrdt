@@ -4,7 +4,9 @@
 
 module VRDT.TwoPMap where
 
+#if NotLiquid
 import qualified Data.Aeson as Aeson
+#endif
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe
@@ -31,63 +33,82 @@ data TwoPMapOp k v =
   | TwoPMapDelete k
   deriving (Generic)
 
-instance (VRDT v, Ord k) => VRDT (TwoPMap k v) where
-    type Operation (TwoPMap k v) = TwoPMapOp k v
 
-    enabled (TwoPMap m p t) (TwoPMapInsert k v) = 
-        let pendingEnabled = case Map.lookup k p of
-              Nothing ->
-                True
-              Just ops ->
-                -- Each pending op must be enabled.
-                snd $ foldr (\op (v, acc) -> (apply v op, acc && enabled v op)) (v, True) ops
-        in
-        not (Map.member k m || Set.member k t) && pendingEnabled
-    enabled (TwoPMap m _p t) (TwoPMapApply k op) = case Map.lookup k m of
-        Nothing ->
-            -- JP: What do we do here? Just return True and then require Insert to be enabled for all pending?
-            True
-        Just v ->
-            enabled v op
-    enabled (TwoPMap m _p t) (TwoPMapDelete k) = True
-    
-    apply (TwoPMap m p t) (TwoPMapInsert k v) = 
-        -- Check if deleted.
-        if Set.member k t then
-            TwoPMap m p t
-        else
-            -- Apply pending operations.
-            let (opsM, p') = Map.updateLookupWithKey (const $ const Nothing) k p in
-            let v' = maybe v (foldr (\op v -> apply v op) v) opsM in -- $ Map.lookup k p in
-            -- let p' = Map.delete k p in
+-- instance (VRDT v, Ord k) => VRDT (TwoPMap k v) where
+--     type Operation (TwoPMap k v) = TwoPMapOp k v
+-- 
+--     enabled m op = error "TODO"
+--     apply m op = error "TODO"
+--     lawCommutativity _ _ _ = ()
 
-            let m' = Map.insert k v' m in
-            TwoPMap m' p' t
-    apply (TwoPMap m p t) (TwoPMapApply k op) = 
-        -- Check if deleted.
-        if Set.member k t then
-            TwoPMap m p t
-        else
-            let (updatedM, m') = Map.updateLookupWithKey (\_ v -> Just $ apply v op) k m in
-            
-            -- Add to pending if not inserted.
-            let p' = if isJust updatedM then p else Map.insertWith (++) k [op] p in
-
-            TwoPMap m' p' t
-    apply (TwoPMap m p t) (TwoPMapDelete k) =
-        let m' = Map.delete k m in
-        let p' = Map.delete k p in
-        let t' = Set.insert k t in
-        TwoPMap m' p' t'
-
-    lawCommutativity _ _ _ = ()
-    
-
+#if NotLiquid
 instance (Ord k, VRDT v) => VRDTInitial (TwoPMap k v) where
     initVRDT = TwoPMap mempty mempty mempty
     
 instance (Aeson.ToJSON k, Aeson.ToJSON v, Aeson.ToJSON (Operation v)) => Aeson.ToJSON (TwoPMapOp k v)
 instance (Aeson.FromJSON k, Aeson.FromJSON v, Aeson.FromJSON (Operation v)) => Aeson.FromJSON (TwoPMapOp k v)
+#endif
 
+
+{-@ reflect enabledTwoPMap @-}
+enabledTwoPMap :: (VRDT v, Ord k) => TwoPMap k v -> TwoPMapOp k v -> Bool
+enabledTwoPMap (TwoPMap m p t) (TwoPMapInsert k v) = 
+    let pendingEnabled = case Map.lookup k p of
+          Nothing ->
+            True
+          Just ops ->
+            -- Each pending op must be enabledTwoPMap.
+            snd $ foldr (\op (v, acc) -> (apply v op, acc && enabled v op)) (v, True) ops
+    in
+    not (Map.member k m || Set.member k t) && pendingEnabled
+enabledTwoPMap (TwoPMap m _p t) (TwoPMapApply k op) = case Map.lookup k m of
+    Nothing ->
+        -- JP: What do we do here? Just return True and then require Insert to be enabledTwoPMap for all pending?
+        True
+    Just v ->
+        enabled v op
+enabledTwoPMap (TwoPMap m _p t) (TwoPMapDelete k) = True
+
+
+{-@ reflect applyTwoPMap @-}
+applyTwoPMap :: (VRDT v, Ord k) => TwoPMap k v -> TwoPMapOp k v -> TwoPMap k v
+applyTwoPMap (TwoPMap m p t) (TwoPMapInsert k v) = 
+    -- Check if deleted.
+    if Set.member k t then
+        TwoPMap m p t
+    else
+        -- Apply pending operations.
+        let (opsM, p') = Map.updateLookupWithKey (const $ const Nothing) k p in
+        let v' = maybe v (foldr (\op v -> apply v op) v) opsM in -- $ Map.lookup k p in
+        -- let p' = Map.delete k p in
+
+        let m' = Map.insert k v' m in
+        TwoPMap m' p' t
+applyTwoPMap (TwoPMap m p t) (TwoPMapApply k op) = 
+    -- Check if deleted.
+    if Set.member k t then
+        TwoPMap m p t
+    else
+        let (updatedM, m') = Map.updateLookupWithKey (\_ v -> Just $ apply v op) k m in
+        
+        -- Add to pending if not inserted.
+        let p' = if isJust updatedM then p else Map.insertWith (++) k [op] p in
+
+        TwoPMap m' p' t
+applyTwoPMap (TwoPMap m p t) (TwoPMapDelete k) =
+    let m' = Map.delete k m in
+    let p' = Map.delete k p in
+    let t' = Set.insert k t in
+    TwoPMap m' p' t'
+
+{-@ lawNonCausal :: (Ord k, VRDT v) => x : TwoPMap k v -> {op1 : TwoPMapOp k v | enabledTwoPMap x op1} -> {op2 : TwoPMapOp k v | enabledTwoPMap x op2} -> {enabledTwoPMap (applyTwoPMap x op1) op2 <=> enabledTwoPMap (applyTwoPMap x op2) op1} @-}
+lawNonCausal :: (Ord k, VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
+lawNonCausal x op1 op2 = ()
+
+    
+
+{-@ lawCommutativity :: (Ord k, VRDT v) => x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(enabledTwoPMap x op1 && enabledTwoPMap x op2  && enabledTwoPMap (applyTwoPMap x op1) op2 && enabledTwoPMap (applyTwoPMap x op2) op1) => applyTwoPMap (applyTwoPMap x op1) op2 == applyTwoPMap (applyTwoPMap x op2) op1} @-}
+lawCommutativity :: (Ord k, VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
+lawCommutativity x op1 op2 = ()
 
 
