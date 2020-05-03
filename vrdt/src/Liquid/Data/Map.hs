@@ -71,7 +71,7 @@ insert k' v' (Map k v m)
   | k' < k    = Map k' v' (Map k v m) -- ? assume ()
   | otherwise = Map k v (insert k' v' m)
 
--- {-@ reflect keyLeqLema @-}
+{-@ reflect keyLeqLemma @-}
 {-@ 
 keyLeqLemma 
   :: Ord k 
