@@ -1,4 +1,5 @@
 {-@ LIQUID "--reflection" @-}
+{-@ LIQUID "--ple-local" @-}
 
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -6,10 +7,16 @@ module VRDT.TwoPMap where
 
 #if NotLiquid
 import qualified Data.Aeson as Aeson
-#endif
+import           Data.Maybe
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe
+#else
+import           Liquid.Data.Maybe
+import           Liquid.Data.Map (Map)
+import qualified Liquid.Data.Map as Map
+import           Prelude hiding (Maybe(..), isJust, maybe)
+#endif
+
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics
@@ -101,12 +108,15 @@ applyTwoPMap (TwoPMap m p t) (TwoPMapDelete k) =
     let t' = Set.insert k t in
     TwoPMap m' p' t'
 
+{-@ ple lawNonCausal @-}
 {-@ lawNonCausal :: (Ord k, VRDT v) => x : TwoPMap k v -> {op1 : TwoPMapOp k v | enabledTwoPMap x op1} -> {op2 : TwoPMapOp k v | enabledTwoPMap x op2} -> {enabledTwoPMap (applyTwoPMap x op1) op2 <=> enabledTwoPMap (applyTwoPMap x op2) op1} @-}
 lawNonCausal :: (Ord k, VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
+lawNonCausal x (TwoPMapDelete k) op2 = ()
 lawNonCausal x op1 op2 = ()
 
     
 
+{-@ ple lawCommutativity @-}
 {-@ lawCommutativity :: (Ord k, VRDT v) => x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(enabledTwoPMap x op1 && enabledTwoPMap x op2  && enabledTwoPMap (applyTwoPMap x op1) op2 && enabledTwoPMap (applyTwoPMap x op2) op1) => applyTwoPMap (applyTwoPMap x op1) op2 == applyTwoPMap (applyTwoPMap x op2) op1} @-}
 lawCommutativity :: (Ord k, VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
 lawCommutativity x op1 op2 = ()

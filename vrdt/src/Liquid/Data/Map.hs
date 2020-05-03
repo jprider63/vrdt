@@ -40,8 +40,8 @@ empty = Tip
 
 
 {-@ reflect member @-}
-{-@ member :: Eq k => k:k -> m:Map k v -> {vv:Bool | vv = S.member k (keys m)} @-}
-member :: Eq k => k -> Map k v -> Bool 
+{-@ member :: Ord k => k:k -> m:Map k v -> {vv:Bool | vv = S.member k (keys m)} @-}
+member :: Ord k => k -> Map k v -> Bool 
 member _ Tip = False 
 member x (Map k _ m) = x == k || member x m 
 
@@ -132,3 +132,18 @@ keys (Map k _ m) = S.singleton k `S.union` keys m
 {-@ reflect disjoint @-}
 disjoint :: Ord k => Map k v -> Map k v -> Bool 
 disjoint m1 m2 = S.null (S.intersection (keys m1) (keys m2))
+
+{-@ reflect updateLookupWithKey @-}
+updateLookupWithKey :: Ord k => (k -> a -> Maybe a) -> k -> Map k a -> (Maybe a, Map k a)
+updateLookupWithKey f k m = case lookup k m of
+  Nothing -> (Nothing, m)
+  Just x -> case f k x of
+    Nothing -> (Just x, delete k m)
+    Just x' -> (Just x, insert k x' m)
+
+{-@ reflect insertWith @-}
+insertWith :: Ord k => (a -> a -> a) -> k -> a -> Map k a -> Map k a
+insertWith f k v m = case lookup k m of
+  Nothing -> insert k v m
+  Just v' -> insert k (f v v') m
+
