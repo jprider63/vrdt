@@ -212,7 +212,7 @@ assume _ = ()
 -- by :: a -> b -> a 
 -- by x _ = x 
 -- {-# INLINE by   #-} 
-{-@ reflect by @-}
+{-@ inline by @-}
 by :: a -> b -> a
 by x _ = x
 
