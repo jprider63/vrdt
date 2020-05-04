@@ -89,6 +89,7 @@ removeFirst o (h:t) =
 lemmaRemoveFirstEnabled :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> [Operation a] -> ()
 lemmaRemoveFirstEnabled x op os rs = undefined -- TODO XXX
 
+{-@ ple lemmaRemoveFirstEnabled' @-}
 {-@ lemmaRemoveFirstEnabled' :: (Eq (Operation a), VRDT a) 
  => x:a 
  -> op:Operation a 
@@ -97,7 +98,53 @@ lemmaRemoveFirstEnabled x op os rs = undefined -- TODO XXX
  -> {enabled x op}
 @-}
 lemmaRemoveFirstEnabled' :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> [Operation a] -> ()
-lemmaRemoveFirstEnabled' x op os rs = undefined -- TODO XXX
+lemmaRemoveFirstEnabled' x op [] _ = ()
+lemmaRemoveFirstEnabled' x op _ [] = ()
+lemmaRemoveFirstEnabled' x op os rs | not (allEnabled x os) = ()
+lemmaRemoveFirstEnabled' x op os@(h:t) rs
+  | h == op   = ()
+  | otherwise = case removeFirst op os of
+      Nothing -> ()
+      Just _rs -> 
+            assert (rs == _rs)
+        &&& lemmaRemoveFirstElem op os rs
+        &&& lemmaElemEnabled' x op os
+
+{-@ ple lemmaElemEnabled' @-}
+{-@ lemmaElemEnabled' :: (Eq (Operation a), VRDT a) 
+ => x:a 
+ -> op:Operation a 
+ -> {os:[Operation a] | allEnabled x os && List.elem' op os}
+ -> {enabled x op}
+@-}
+lemmaElemEnabled' :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> ()
+lemmaElemEnabled' x op [] = ()
+lemmaElemEnabled' x op ops@(h:t) 
+  | op == h   = ()
+  | otherwise = case t of
+    [] -> lemmaElemEnabled' x op t
+    (h':t') ->
+          assert (List.elem' op t)
+      -- &&& (
+      --       allEnabled x ops
+      --   === (enabled x h && allEnabled (apply x h) t)
+      --   *** QED
+      -- )
+      &&& assert (enabled x h)
+      &&& assert (allEnabled (apply x h) t)
+      &&& assert (enabled (apply x h) h')
+      &&& lawNonCausal x h h'
+      &&& assert (enabled (apply x h') h)
+      &&& (
+            allEnabled x t
+        === (enabled x h' && allEnabled (apply x h') t')
+        *** QED
+      )
+      &&& assert (enabled x h')
+      &&& assert (allEnabled (apply x h') t')
+      &&& assert (allEnabled x t)
+      &&& lemmaElemEnabled' x op t
+
 
 {-@ ple lemmaRemoveFirstElem @-}
 {-@
