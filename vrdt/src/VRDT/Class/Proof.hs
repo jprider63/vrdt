@@ -4,6 +4,7 @@
 module VRDT.Class.Proof where
 
 
+import qualified Liquid.Data.List as List
 import           Liquid.ProofCombinators
 import           VRDT.Class
 
@@ -98,16 +99,46 @@ lemmaRemoveFirstEnabled x op os rs = undefined -- TODO XXX
 lemmaRemoveFirstEnabled' :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> [Operation a] -> ()
 lemmaRemoveFirstEnabled' x op os rs = undefined -- TODO XXX
 
+-- {-@ ple lemmaRemoveFirstElem @-}
+{-@
+lemmaRemoveFirstElem :: (Eq (Operation a), VRDT a)
+ => op:Operation a 
+ -> os:[Operation a]
+ -> {rs:[Operation a] | removeFirst op os == Just rs}
+ -> {List.elem' op os}
+@-}
+lemmaRemoveFirstElem :: (Eq (Operation a)) => Operation a -> [Operation a] -> [Operation a] -> ()
+lemmaRemoveFirstElem op _ _ = undefined -- TODO
+-- lemmaRemoveFirstElem op [] _ = ()
+-- lemmaRemoveFirstElem op _ [] = ()
+-- lemmaRemoveFirstElem op (_:t) (r:rs)
+--   | op == r = ()
+--   | otherwise = lemmaRemoveFirstElem op t rs
+
+
+
+-- TODO: Precondition doesn't parse.
+-- -> {op':Operation a | elem op' os && op /= op'}
+
+{-@ ple lemmaElemEnabled @-}
 {-@ lemmaElemEnabled :: (Eq (Operation a), VRDT a) 
  => x:a 
  -> {os:[Operation a] | allEnabled x os} 
- -> {op:Operation a | elem op os}
- -> {op':Operation a | elem op' os}
- -> {enabled (apply x op) op'}
+ -> op:Operation a
+ -> op':Operation a
+ -> {(List.elem' op os && List.elem' op' os && op /= op') => enabled (apply x op) op'}
 @-}
 lemmaElemEnabled :: (Eq (Operation a), VRDT a) => a -> [Operation a] -> Operation a -> Operation a -> ()
-lemmaElemEnabled x os op op' = undefined -- TODO XXX
-
+lemmaElemEnabled x [] op op' = -- () -- unreachable
+  assert (elem op []) &&&
+  (   elem op []
+  === False
+  *** QED
+  )
+lemmaElemEnabled x (o:os) op op' = ()
+-- lemmaElemEnabled x os op op' = case removeFirst op os of
+--   Nothing -> () -- unreachable
+--   Just os' -> 
 
 {-@ reflect cons @-}
 cons :: a -> [a] -> [a]
@@ -137,6 +168,9 @@ lemmaRemoveFirstApplied x op os@(op':os') rs = case removeFirst op os' of
         ?   lemmaRemoveFirstEnabled' x op os rs
         &&& assert (enabled x op)
         &&& assert (enabled x op')
+        &&& lemmaRemoveFirstElem op os rs
+        &&& assert (List.elem' op os)
+        &&& assert (List.elem' op' os)
         &&& lemmaElemEnabled x os op' op
         &&& assert (enabled (apply x op') op)
         &&& lemmaElemEnabled x os op op'
