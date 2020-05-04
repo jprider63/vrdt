@@ -99,7 +99,7 @@ lemmaRemoveFirstEnabled x op os rs = undefined -- TODO XXX
 lemmaRemoveFirstEnabled' :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> [Operation a] -> ()
 lemmaRemoveFirstEnabled' x op os rs = undefined -- TODO XXX
 
--- {-@ ple lemmaRemoveFirstElem @-}
+{-@ ple lemmaRemoveFirstElem @-}
 {-@
 lemmaRemoveFirstElem :: (Eq (Operation a), VRDT a)
  => op:Operation a 
@@ -108,19 +108,22 @@ lemmaRemoveFirstElem :: (Eq (Operation a), VRDT a)
  -> {List.elem' op os}
 @-}
 lemmaRemoveFirstElem :: (Eq (Operation a)) => Operation a -> [Operation a] -> [Operation a] -> ()
-lemmaRemoveFirstElem op _ _ = undefined -- TODO
--- lemmaRemoveFirstElem op [] _ = ()
--- lemmaRemoveFirstElem op _ [] = ()
--- lemmaRemoveFirstElem op (_:t) (r:rs)
---   | op == r = ()
---   | otherwise = lemmaRemoveFirstElem op t rs
+lemmaRemoveFirstElem op [] _ = ()
+lemmaRemoveFirstElem op _ [] = ()
+lemmaRemoveFirstElem op os@(_:t) rs@(r:rs')
+  | op == r = ()
+  | otherwise = case removeFirst op os of
+    Nothing -> ()
+    Just _rs -> case removeFirst op t of
+      Nothing -> ()
+      Just rs'' -> lemmaRemoveFirstElem op t rs''
 
 
 
 -- TODO: Precondition doesn't parse.
 -- -> {op':Operation a | elem op' os && op /= op'}
 
-{-@ ple lemmaElemEnabled @-}
+-- {-@ ple lemmaElemEnabled @-}
 {-@ lemmaElemEnabled :: (Eq (Operation a), VRDT a) 
  => x:a 
  -> {os:[Operation a] | allEnabled x os} 
@@ -129,13 +132,17 @@ lemmaRemoveFirstElem op _ _ = undefined -- TODO
  -> {(List.elem' op os && List.elem' op' os && op /= op') => enabled (apply x op) op'}
 @-}
 lemmaElemEnabled :: (Eq (Operation a), VRDT a) => a -> [Operation a] -> Operation a -> Operation a -> ()
-lemmaElemEnabled x [] op op' = -- () -- unreachable
-  assert (elem op []) &&&
-  (   elem op []
-  === False
-  *** QED
-  )
-lemmaElemEnabled x (o:os) op op' = ()
+lemmaElemEnabled x os op op' | not (List.elem' op os && List.elem' op' os && op /= op') = ()
+lemmaElemEnabled x [] op op' = () -- unreachable
+--   assert (elem op []) &&&
+--   (   elem op []
+--   === False
+--   *** QED
+--   )
+lemmaElemEnabled x (o:os) op op' = undefined -- TODO XXX
+--   | o == op   = ()
+--   | o == op'  = ()
+--   | otherwise = ()
 -- lemmaElemEnabled x os op op' = case removeFirst op os of
 --   Nothing -> () -- unreachable
 --   Just os' -> 
