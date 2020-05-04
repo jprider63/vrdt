@@ -73,10 +73,41 @@ removeFirst o (h:t) =
         Nothing -> Nothing
         Just t' -> Just (h:t')
 
+
+
+
+
 -- {-@ ple lemmaRemoveFirstEnabled @-}
-{-@ lemmaRemoveFirstEnabled :: (Eq (Operation a), VRDT a) => x:a -> op:Operation a -> {os:[Operation a] | allEnabled x os} -> {rs:[Operation a] | removeFirst op os == Just rs} -> {allEnabled x rs} @-}
+{-@ lemmaRemoveFirstEnabled :: (Eq (Operation a), VRDT a) 
+ => x:a 
+ -> op:Operation a 
+ -> {os:[Operation a] | allEnabled x os} 
+ -> {rs:[Operation a] | removeFirst op os == Just rs} 
+ -> {allEnabled x rs}
+@-}
 lemmaRemoveFirstEnabled :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> [Operation a] -> ()
 lemmaRemoveFirstEnabled x op os rs = undefined -- TODO XXX
+
+{-@ lemmaRemoveFirstEnabled' :: (Eq (Operation a), VRDT a) 
+ => x:a 
+ -> op:Operation a 
+ -> {os:[Operation a] | allEnabled x os} 
+ -> {rs:[Operation a] | removeFirst op os == Just rs} 
+ -> {enabled x op}
+@-}
+lemmaRemoveFirstEnabled' :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> [Operation a] -> ()
+lemmaRemoveFirstEnabled' x op os rs = undefined -- TODO XXX
+
+{-@ lemmaElemEnabled :: (Eq (Operation a), VRDT a) 
+ => x:a 
+ -> {os:[Operation a] | allEnabled x os} 
+ -> {op:Operation a | elem op os}
+ -> {op':Operation a | elem op' os}
+ -> {enabled (apply x op) op'}
+@-}
+lemmaElemEnabled :: (Eq (Operation a), VRDT a) => a -> [Operation a] -> Operation a -> Operation a -> ()
+lemmaElemEnabled x os op op' = undefined -- TODO XXX
+
 
 {-@ reflect cons @-}
 cons :: a -> [a] -> [a]
@@ -85,31 +116,40 @@ cons a as = a:as
 -- TODO: This is a tc parse error:
 -- {-@ lemmaRemoveFirstApplied :: (Eq (Operation a), VRDT a) => x:a -> op:Operation a -> {os:[Operation a] | allEnabled x os} -> {rs:[Operation a] | removeFirst op os == Just rs} -> {applyAll x (op:rs) = applyAll x os} @-}
 {-@ ple lemmaRemoveFirstApplied @-}
-{-@ lemmaRemoveFirstApplied :: (Eq (Operation a), VRDT a) => x:a -> op:Operation a -> {os:[Operation a] | allEnabled x os} -> {rs:[Operation a] | removeFirst op os == Just rs} -> {applyAll x (cons op rs) = applyAll x os} @-}
+{-@ lemmaRemoveFirstApplied :: (Eq (Operation a), VRDT a) 
+ => x:a 
+ -> op:Operation a 
+ -> {os:[Operation a] | allEnabled x os} 
+ -> {rs:[Operation a] | removeFirst op os == Just rs} 
+ -> {applyAll x (cons op rs) = applyAll x os}
+@-}
 lemmaRemoveFirstApplied :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> [Operation a] -> ()
 lemmaRemoveFirstApplied x op [] _  = ()
 lemmaRemoveFirstApplied x op (op':os') rs | op == op' = ()
 lemmaRemoveFirstApplied x op os@(op':os') rs = case removeFirst op os' of
-  Nothing -> () -- TODO: unreachable
+  Nothing -> ()
   Just rs' ->
         applyAll x (op:rs)
-    === applyAll (apply x op) rs
-        -- ? assume (rs == op':rs') -- TODO XXX
+    ==. applyAll (apply x op) rs
         ?   lemmaRemoveFirstNeq op op' os' rs rs'
-    === applyAll (apply x op) (op':rs')
-    === applyAll (apply (apply x op) op') rs' 
-        ?   assume (enabled x op) -- TODO XXX
+    ==. applyAll (apply x op) (op':rs')
+    ==. applyAll (apply (apply x op) op') rs' 
+        ?   lemmaRemoveFirstEnabled' x op os rs
+        &&& assert (enabled x op)
         &&& assert (enabled x op')
-        &&& assume (enabled (apply x op') op) -- TODO XXX
-        &&& assume (enabled (apply x op) op') -- TODO XXX
+        &&& lemmaElemEnabled x os op' op
+        &&& assert (enabled (apply x op') op)
+        &&& lemmaElemEnabled x os op op'
+        &&& assert (enabled (apply x op) op')
         &&& lawCommutativity x op op'
-    === applyAll (apply (apply x op') op) rs'
-    === applyAll (apply x op') (op:rs')
+    ==. applyAll (apply (apply x op') op) rs'
+    ==. applyAll (apply x op') (op:rs')
         ?   lemmaRemoveFirstApplied (apply x op') op os' rs'
-    === applyAll (apply x op') os'
-    === applyAll x (op':os')
-    === applyAll x os
+    ==. applyAll (apply x op') os'
+    ==. applyAll x (op':os')
+    ==. applyAll x os
     *** QED
+
 
 -- TODO: LH can't see this precondition?
 --  -> {op':Operation a | op /= op'} 
