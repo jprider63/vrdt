@@ -47,7 +47,7 @@ instance Ord t => VRDT (LWW t a) where
     
     -- lawCommutativity x op1 op2 = ()
     -- lawCommutativity x@(LWW t0 v0) op1@(LWW t1 v1) op2@(LWW t2 v2) = ()
-    lawCommutativity (LWW t0 v0) (LWW t1 v1) (LWW t2 v2) = ()
+    lawCommutativity _ _ _ = ()
 
     lawNonCausal x op1 op2 = ()
 

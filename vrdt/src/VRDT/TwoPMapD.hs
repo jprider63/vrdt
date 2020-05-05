@@ -104,15 +104,22 @@ applyTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t)
         TwoPMap m' p' t
 applyTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) (TwoPMapDelete k) =
     let m' = Map.delete k m in
-    let p' = Map.delete k p in
-    let t' = Set.insert k t in
-    TwoPMap m' p' t'
+    TwoPMap m' p t
+
+{-@ reflect foo @-}
+foo :: Ord k => TwoPMap k v -> k -> TwoPMap k v
+foo (TwoPMap m p t) k = TwoPMap (Map.delete k m) p t
+
+{-@ ple bar @-}
+{-@ bar :: Ord k => x : TwoPMap k v -> k : k -> {foo x k == x}  @-}
+bar :: Ord k => TwoPMap k v -> k -> ()
+bar _ _ = ()
 
 {-@ ple lawNonCausal @-}
-{-@ lawNonCausal :: Ord k => d:VRDT v -> x : TwoPMap k v -> {op1 : TwoPMapOp k v | enabledTwoPMap d x op1} -> {op2 : TwoPMapOp k v | enabledTwoPMap d x op2} -> {enabledTwoPMap d (applyTwoPMap d x op1) op2 <=> enabledTwoPMap d (applyTwoPMap d x op2) op1} @-}
-lawNonCausal :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
-lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) x  (TwoPMapDelete k) op2 = ()
-lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) x op1 op2 = ()
+{-@ lawNonCausal :: Ord k => d:VRDT v -> x : TwoPMap k v -> op1 : TwoPMapOp k v -> { (applyTwoPMap d x op1)  /= x  } @-}
+lawNonCausal :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> ()
+lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) x  (TwoPMapDelete k) = ()
+lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) x op1 = ()
 
     
 

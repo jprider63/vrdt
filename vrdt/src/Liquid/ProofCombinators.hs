@@ -40,6 +40,7 @@ module Liquid.ProofCombinators (
   , assume
 
   , by
+  , cast
 
 ) where
 
@@ -211,9 +212,10 @@ assume _ = ()
 -- {-@ inline by @-}
 -- by :: a -> b -> a 
 -- by x _ = x 
--- {-# INLINE by   #-} 
+{-# INLINE by   #-} 
 {-@ inline by @-}
 by :: a -> b -> a
 by x _ = x
 
-
+cast :: a -> b -> b
+cast _ x = x
