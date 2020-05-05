@@ -45,8 +45,14 @@ commutativeStrongEventualConsistency s0 ops1@(op1:t1) ops2@(op2:t2) = case remov
 
 {-@ reflect allEnabled @-}
 allEnabled :: VRDT a => a -> [Operation a] -> Bool
-allEnabled _  []       = True
-allEnabled s0 (op:ops) = enabled s0 op && allEnabled (apply s0 op) ops
+allEnabled s0 [] = True
+allEnabled s0 ops@(op:ops') = enabled s0 op && allEnabled s0 ops' && allEnabled (apply s0 op) ops'
+-- allEnabled s0 ops@(op:ops') = allEnabled' s0 ops && allEnabled (apply s0 op) ops'
+-- 
+-- {-@ reflect allEnabled' @-}
+-- allEnabled' :: VRDT a => a -> [Operation a] -> Bool
+-- allEnabled' _  []       = True
+-- allEnabled' s0 (op:ops) = enabled s0 op && allEnabled' s0 ops
 
 {-@ reflect applyAll @-}
 applyAll :: VRDT a => a -> [Operation a] -> a
@@ -121,29 +127,92 @@ lemmaElemEnabled' :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operatio
 lemmaElemEnabled' x op [] = ()
 lemmaElemEnabled' x op ops@(h:t) 
   | op == h   = ()
-  | otherwise = case t of
-    [] -> lemmaElemEnabled' x op t
-    (h':t') ->
-          assert (List.elem' op t)
-      -- &&& (
-      --       allEnabled x ops
-      --   === (enabled x h && allEnabled (apply x h) t)
-      --   *** QED
-      -- )
-      &&& assert (enabled x h)
-      &&& assert (allEnabled (apply x h) t)
-      &&& assert (enabled (apply x h) h')
-      &&& lawNonCausal x h h'
-      &&& assert (enabled (apply x h') h)
-      &&& (
-            allEnabled x t
-        === (enabled x h' && allEnabled (apply x h') t')
-        *** QED
-      )
-      &&& assert (enabled x h')
-      &&& assert (allEnabled (apply x h') t')
-      &&& assert (allEnabled x t)
-      &&& lemmaElemEnabled' x op t
+  | otherwise = 
+        assert (List.elem' op t)
+    &&& lemmaAllEnabled x h t
+    -- &&& assert (allEnabled x t)
+    &&& lemmaElemEnabled' x op t
+-- case t of
+--     [] -> lemmaElemEnabled' x op t
+--     (h':t') ->
+--           assert (List.elem' op t)
+--       &&& (
+--             allEnabled x ops
+--         === (enabled x h && allEnabled' (apply x h) t)
+--         *** QED
+--       )
+--       &&& assert (enabled x h)
+--       &&& assert (allEnabled (apply x h) t)
+--       &&& assert (enabled (apply x h) h')
+--       &&& lawNonCausal x h h'
+--       &&& assert (enabled (apply x h') h)
+--       &&& (
+--             allEnabled x t
+--         === (enabled x h' && allEnabled (apply x h') t')
+--         *** QED
+--       )
+--       &&& assert (enabled x h')
+--       &&& assert (allEnabled (apply x h') t')
+--       &&& assert (allEnabled x t)
+--       &&& lemmaElemEnabled' x op t
+
+{-@ ple lemmaElemEnabled'' @-}
+{-@ lemmaElemEnabled'' :: (Eq (Operation a), VRDT a) 
+ => x:a 
+ -> op':Operation a 
+ -> {os:[Operation a] | allEnabled x (cons op' os)} 
+ -> op:Operation a
+ -> {List.elem' op os => enabled (apply x op) op'} 
+@-}
+ -- -> {op:Operation a | List.elem' op os} 
+lemmaElemEnabled'' :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> Operation a -> ()
+lemmaElemEnabled'' x op' ops op | not (List.elem' op ops) = ()
+lemmaElemEnabled'' x op' [] op = assert (List.elem' op [])
+lemmaElemEnabled'' x op' ops@(h:t) op
+  | h == op   = 
+        assert (allEnabled x (op':op:t))
+    &&& assert (enabled x op' && allEnabled x (op:t) && allEnabled (apply x op') (op:t))
+    &&& assert (enabled (apply x op') op)
+    &&& lawNonCausal x op' op
+    &&& assert (enabled (apply x op) op') -- GOAL
+  | otherwise =
+        assert (allEnabled x (op':h:t))
+    &&& assert (enabled x op' && allEnabled x (h:t) && allEnabled (apply x op') (h:t))
+    -- &&& assert (enabled (apply x op') h && allEnabled (apply x op') t && allEnabled (apply (apply x op') h) t)
+    &&& assert (List.elem' op t)
+    &&& lemmaElemEnabled'' (apply x op') h t op
+    &&& assert (enabled (apply (apply x op') op) h)
+    -- &&& assert (enabled (apply x op') op)
+    -- &&& lawNonCausal x op' op
+    &&& lawCommutativity x op op'
+    &&& assert (enabled (apply (apply x op) op') h)
+    &&& assert (enabled (apply x op) op') -- GOAL
+
+-- {-@ ple lemmaNonCausal @-}
+-- {-@ lemmaNonCausal :: VRDT t 
+--  => x : t 
+--  -> {op1 : Operation t | enabled x op1} 
+--  -> {op2 : Operation t | enabled (apply x op1) op2 && enabled (apply x op2) op1} 
+--  -> {enabled x op2} 
+-- @-}
+-- lemmaNonCausal :: VRDT t => t -> Operation t -> Operation t -> ()
+-- lemmaNonCausal x op1 op2 = lawNonCausal x op1 op2
+-- 
+-- (a && b && c) => d
+-- This doesn't work. How do we go backwards up the enabled chain?
+
+
+{-@ ple lemmaAllEnabled @-}
+{-@ lemmaAllEnabled :: (Eq (Operation a), VRDT a) => x:a -> h:Operation a -> {t:[Operation a] | allEnabled x (cons h t)} -> {allEnabled x t} @-}
+lemmaAllEnabled :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> ()
+lemmaAllEnabled x op [] = ()
+lemmaAllEnabled x op (h:t) = 
+        assert (allEnabled x (op:h:t))
+    &&& (
+        allEnabled x (op:h:t)
+    ==. (enabled x op && allEnabled x (h:t) && allEnabled (apply x op) (h:t))
+    *** QED
+    )
 
 
 {-@ ple lemmaRemoveFirstElem @-}
@@ -170,7 +239,7 @@ lemmaRemoveFirstElem op os@(_:t) rs@(r:rs')
 -- TODO: Precondition doesn't parse.
 -- -> {op':Operation a | elem op' os && op /= op'}
 
--- {-@ ple lemmaElemEnabled @-}
+{-@ ple lemmaElemEnabled @-}
 {-@ lemmaElemEnabled :: (Eq (Operation a), VRDT a) 
  => x:a 
  -> {os:[Operation a] | allEnabled x os} 
@@ -186,10 +255,22 @@ lemmaElemEnabled x [] op op' = () -- unreachable
 --   === False
 --   *** QED
 --   )
-lemmaElemEnabled x (o:os) op op' = undefined -- TODO XXX
---   | o == op   = ()
---   | o == op'  = ()
---   | otherwise = ()
+lemmaElemEnabled x (o:os) op op'
+  | o == op   = () -- TODO XXX
+  | o == op'  = -- lemmaElemEnabled x os op op'
+        (
+        allEnabled x (o:os)
+    === (enabled x o && allEnabled x os && allEnabled (apply x o) os)
+    *** QED
+    )
+    &&& assert (allEnabled (apply x op') os) 
+    &&& assert (allEnabled (apply x op') os) 
+    -- &&& lawNonCausal x op op'
+    -- &&& lemmaAllEnabled' (apply x o) os op'
+    &&& lemmaElemEnabled'' x op' os op
+    &&& assert (enabled (apply x op) op') -- GOAL
+
+  | otherwise = lemmaElemEnabled x os op op'
 -- lemmaElemEnabled x os op op' = case removeFirst op os of
 --   Nothing -> () -- unreachable
 --   Just os' -> 
