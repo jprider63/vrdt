@@ -179,9 +179,9 @@ lawNonCausal d@(CVRDT apply enabled lawCommutativity lawNonCausalR) x@(TwoPMap m
   , Just v' <- Map.lookup k' m
   , Just x' <- applyTwoMapH0 apply vo k v
   , Just x'' <- applyTwoMapH0 apply vo' k' v'
-  , Just q <- Map.lookup k m'
-  , Just q' <- Map.lookup k m''
-  , k' == k
+  -- , Just q <- Map.lookup k m'
+  -- , Just q' <- Map.lookup k m''
+  -- , k' == k
   =  Map.lookupInsertLemma k' k x' m  `cast`
      Map.lookupInsertLemma k k' x'' m `cast`
      (lawNonCausalR v vo vo')
