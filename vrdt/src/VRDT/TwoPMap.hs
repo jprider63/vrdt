@@ -116,9 +116,9 @@ lawNonCausal x op1 op2 = ()
 
     
 
--- {-@ ple lawCommutativity @-}
--- {-@ lawCommutativity :: (Ord k, VRDT v) => x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(enabledTwoPMap x op1 && enabledTwoPMap x op2  && enabledTwoPMap (applyTwoPMap x op1) op2 && enabledTwoPMap (applyTwoPMap x op2) op1) => applyTwoPMap (applyTwoPMap x op1) op2 == applyTwoPMap (applyTwoPMap x op2) op1} @-}
--- lawCommutativity :: (Ord k, VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
--- lawCommutativity x op1 op2 = ()
+{-@ ple lawCommutativity @-}
+{-@ lawCommutativity :: (Ord k, VRDT v) => x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(enabledTwoPMap x op1 && enabledTwoPMap x op2  && enabledTwoPMap (applyTwoPMap x op1) op2 && enabledTwoPMap (applyTwoPMap x op2) op1) => applyTwoPMap (applyTwoPMap x op1) op2 == applyTwoPMap (applyTwoPMap x op2) op1} @-}
+lawCommutativity :: (Ord k, VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
+lawCommutativity x op1 op2 = ()
 
 
