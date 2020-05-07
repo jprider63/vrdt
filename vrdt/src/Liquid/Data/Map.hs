@@ -71,6 +71,11 @@ insert k' v' (Map k v m)
   | k' < k    = Map k' v' (Map k v m) -- ? assume ()
   | otherwise = Map k v (insert k' v' m)
 
+{-@ ple lookupInsertLemma @-}
+{-@ lookupInsertLemma :: Ord k => k:k -> k':k -> v:v -> m:Map k v -> {(k == k' => lookup k (insert k' v m) == Just v) && (k /= k' => lookup k (insert k' v m) == lookup k m)} @-}
+lookupInsertLemma :: Ord k => k -> k -> v -> Map k v -> ()
+lookupInsertLemma k k' v Tip = ()
+lookupInsertLemma k k' v (Map k'' _ m) = lookupInsertLemma k k' v m
 --{-@ reflect keyLeqLemma @-}
 {-@ 
 keyLeqLemma 

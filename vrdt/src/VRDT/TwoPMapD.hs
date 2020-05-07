@@ -77,6 +77,9 @@ enabledTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m _p
         enabled v op
 enabledTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m _p t) (TwoPMapDelete k) = True
 
+{-@ reflect applyTwoMapH0 @-}
+applyTwoMapH0 :: (b -> c -> b) -> c -> a -> b  -> Maybe b
+applyTwoMapH0 apply op _ v = Just $ apply v op
 
 {-@ reflect applyTwoPMap @-}
 applyTwoPMap :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> TwoPMap k v
@@ -97,7 +100,7 @@ applyTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t)
     if Set.member k t then
         TwoPMap m p t
     else
-        let (updatedM, m') = Map.updateLookupWithKey (\_ v -> Just $ apply v op) k m in
+        let (updatedM, m') = Map.updateLookupWithKey (applyTwoMapH0 apply op) k m in
         
         -- Add to pending if not inserted.
         let p' = if isJust updatedM then p else Map.insertWith (++) k [op] p in
@@ -116,15 +119,15 @@ lawNonCausal :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) x (TwoPMapDelete k) (TwoPMapDelete k') = () -- DONE
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) _ (TwoPMapInsert k' v') | Set.member k' t  = () -- DONE 
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) (TwoPMapInsert k v) _   | Set.member k t  = () -- DONE
-lawNonCausal d@(CVRDT apply enabled lawCommutativity lawNonCausal) x@(TwoPMap m p t) op1@(TwoPMapDelete k) op2@(TwoPMapInsert k' v')
-  | not (Set.member k' t)
-  ,  (isJust (Map.lookup k' p'))
-  =  ()
-  -- | otherwise
-  -- = ()
-  where m' = Map.delete k m
-        p' = Map.delete k p
-        t' = Set.insert k t         -- SMT error
+-- lawNonCausal d@(CVRDT apply enabled lawCommutativity lawNonCausal) x@(TwoPMap m p t) op1@(TwoPMapDelete k) op2@(TwoPMapInsert k' v')
+--   | not (Set.member k' t)
+--   ,  (isJust (Map.lookup k' p'))
+--   =  ()
+--   -- | otherwise
+--   -- = ()
+--   where m' = Map.delete k m
+--         p' = Map.delete k p
+--         t' = Set.insert k t         -- SMT error
 
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) (TwoPMapDelete k) (TwoPMapApply k' vop)
 --   | Just x <- Map.lookup k' (Map.delete k m)
@@ -141,15 +144,48 @@ lawNonCausal d@(CVRDT apply enabled lawCommutativity lawNonCausal) x@(TwoPMap m 
 --   | otherwise
 --   = ()
 
-lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) (TwoPMapApply k vo) (TwoPMapApply k' vo')
-  | Set.member k t && Set.member k' t
-  = ()
-  | not (Set.member k t) && Set.member k' t
-  , Nothing <- Map.lookup k m
-  = ()
-  | not (Set.member k t) && Set.member k' t
+lawNonCausal d@(CVRDT apply enabled lawCommutativity lawNonCausal) x@(TwoPMap m p t) op1@(TwoPMapApply k vo) op2@(TwoPMapApply k' vo')
+  -- | Set.member k t && Set.member k' t
+  -- = ()
+  -- | not (Set.member k t) && Set.member k' t
+  -- , Nothing <- Map.lookup k m
+  -- = ()
+  -- | not (Set.member k t) && Set.member k' t
+  -- , Just v <- Map.lookup k m
+  -- , Just x' <- applyTwoMapH0 apply vo k v
+  -- = Map.lookupInsertLemma k' k x' m
+  -- | Set.member k t && not (Set.member k' t)
+  -- , Just v <- Map.lookup k' m
+  -- , Just x' <- applyTwoMapH0 apply vo' k' v
+  -- = Map.lookupInsertLemma k k' x' m
+  -- | not (Set.member k t) && not (Set.member k' t)
+  -- , Just v <- Map.lookup k m
+  -- , Just v' <- Map.lookup k' m
+  -- , Just x' <- applyTwoMapH0 apply vo k v
+  -- , Just x'' <- applyTwoMapH0 apply vo' k' v'
+  -- , not (isJust $ Map.lookup k m'') || not (isJust $ Map.lookup k' m')
+  -- = Map.lookupInsertLemma k' k x' m 
+  -- ? Map.lookupInsertLemma k k' x'' m
+  -- | not (Set.member k t) && not (Set.member k' t)
+  -- , Just v <- Map.lookup k m
+  -- , Just v' <- Map.lookup k' m
+  -- , Just x' <- applyTwoMapH0 apply vo k v
+  -- , Just x'' <- applyTwoMapH0 apply vo' k' v'
+  -- , k' /= k
+  -- =  Map.lookupInsertLemma k' k x' m  `cast`
+  --    Map.lookupInsertLemma k k' x'' m
+  | not (Set.member k t) && not (Set.member k' t)
   , Just v <- Map.lookup k m
-  = () --assert (isJust (updateLookupWithKey ))
+  , Just v' <- Map.lookup k' m
+  , Just x' <- applyTwoMapH0 apply vo k v
+  , Just x'' <- applyTwoMapH0 apply vo' k' v'
+  , k' == k
+  =  Map.lookupInsertLemma k' k x' m  `cast`
+     Map.lookupInsertLemma k k' x'' m
+  -- | otherwise
+  -- = ()
+  where mm0@(TwoPMap m' p' t') = applyTwoPMap d x op1
+        mm1@(TwoPMap m'' p'' t'') = applyTwoPMap d x op2
 
 
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) x (TwoPMapInsert k v) (TwoPMapInsert k' v') = undefined
