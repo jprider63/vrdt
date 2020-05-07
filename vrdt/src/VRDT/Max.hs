@@ -1,5 +1,6 @@
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
+{-@ LIQUID "--no-adt" @-}
 
 {-# LANGUAGE TypeFamilies, TypeFamilyDependencies #-}
 
@@ -24,7 +25,7 @@ data Max a = Max {
 
 -- {-@ ple lawCommutativity @-}
 -- {-@ ple lawNonCausal @-}
-instance Ord a => VRDT (Max a) where
+instance Ord a => CRDT (Max a) where
     type Operation (Max a) = Max a
 
     enabled max op = True
@@ -33,6 +34,7 @@ instance Ord a => VRDT (Max a) where
     apply (Max a) (Max b)         = Max b
 
     lawCommutativity max op1 op2 = ()
-    
+
+instance Ord a => VRDT (Max a) where
     lawNonCausal max op1 op2 = ()
 

@@ -5,7 +5,7 @@
 module VRDT.Class where
 
 -- | Class for (operation based) verified conflict-free replicated datatypes.
-class VRDT t where
+class CRDT t where
     -- | Type that represents operations on `t`.
     type Operation t = op | op -> t
 
@@ -17,9 +17,11 @@ class VRDT t where
 
     -- | Commutativity law.
     -- {-@ lawCommutativity :: x : t -> op1 : Operation t -> op2 : Operation t -> {enabled2 x op1 op2 => apply (apply x op1) op2 == apply (apply x op2) op1} @-}
-    {-@ lawCommutativity :: x : t -> op1 : Operation t -> op2 : Operation t -> {(enabled x op1 && enabled x op2  && enabled (apply x op1) op2 && enabled (apply x op2) op1) => apply (apply x op1) op2 == apply (apply x op2) op1} @-}
+    -- {-@ lawCommutativity :: x : t -> op1 : Operation t -> op2 : Operation t -> {(enabled x op1 && enabled x op2  && enabled (apply x op1) op2 && enabled (apply x op2) op1) => apply (apply x op1) op2 == apply (apply x op2) op1} @-}
+    {-@ lawCommutativity :: x : t -> op1 : Operation t -> {op2 : Operation t | (enabled x op1 && enabled x op2  && enabled (apply x op1) op2 && enabled (apply x op2) op1)} -> {apply (apply x op1) op2 == apply (apply x op2) op1} @-}
     lawCommutativity :: t -> Operation t -> Operation t -> ()
 
+class CRDT t => VRDT t where
     {-@ lawNonCausal :: x : t -> {op1 : Operation t | enabled x op1} -> {op2 : Operation t | enabled x op2} -> {enabled (apply x op1) op2 <=> enabled (apply x op2) op1} @-}
     lawNonCausal :: t -> Operation t -> Operation t -> ()
 
