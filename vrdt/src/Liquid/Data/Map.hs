@@ -55,7 +55,6 @@ null :: Map k v -> Bool
 null Tip = True 
 null _   = False  
 
-
 {-@ measure size @-}
 size :: Map k v -> Int 
 {-@ size :: Map k v -> Nat @-} 
@@ -109,8 +108,21 @@ delete kd (Map k v m)
 
   -- kd < k
   | otherwise = keyLeqLemma kd k v m `cast` Map k v m 
-  
 
+{-@ ple deleteLtLemma @-}
+{-@ deleteLtLemma :: Ord k => kd:k -> k:k -> v:v -> m:Map {vv:k | vv > k} v -> {kd < k => delete kd m == m} @-}
+deleteLtLemma :: Ord k => k -> k -> v -> Map k v -> ()
+deleteLtLemma kd k v Tip = ()
+deleteLtLemma kd k v (Map _ _ m ) = deleteLtLemma kd k v m
+
+{-@ ple deleteCommutative @-}
+{-@ deleteCommutative :: Ord k => x:k -> y:k -> m:Map k v -> {delete x (delete y m) == delete y (delete x m)} @-}
+deleteCommutative :: Ord k => k -> k -> Map k v -> ()
+deleteCommutative x y Tip = ()
+deleteCommutative x y m'@(Map k v m)
+  = deleteCommutative x y m `cast`
+    deleteLtLemma x k v m `cast`
+    deleteLtLemma y k v m
 
 {-@ reflect lookup @-}
 lookup :: Ord k => k -> Map k v -> Maybe v 

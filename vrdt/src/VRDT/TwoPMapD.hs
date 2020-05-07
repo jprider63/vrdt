@@ -12,9 +12,10 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 #else
 import           Liquid.Data.Maybe
+import           Liquid.Data.List
 import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
-import           Prelude hiding (Maybe(..), isJust, maybe)
+import           Prelude hiding (Maybe(..), isJust, maybe, foldr)
 #endif
 
 import           Data.Set (Set)
@@ -81,6 +82,10 @@ enabledTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m _p
 applyTwoMapH0 :: (b -> c -> b) -> c -> a -> b  -> Maybe b
 applyTwoMapH0 apply op _ v = Just $ apply v op
 
+{-@ reflect applyTwoMapH1 @-}
+applyTwoMapH1 :: (a -> b -> a) -> b -> a -> a
+applyTwoMapH1 apply op v = apply v op
+
 {-@ reflect applyTwoPMap @-}
 applyTwoPMap :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> TwoPMap k v
 applyTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal)  (TwoPMap m p t) (TwoPMapInsert k v) = 
@@ -90,7 +95,7 @@ applyTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal)  (TwoPMap m p t
     else
         -- Apply pending operations.
         let (opsM, p') = Map.updateLookupWithKey (const $ const Nothing) k p in
-        let v' = maybe v (foldr (\op v -> apply v op) v) opsM in -- $ Map.lookup k p in
+        let v' = maybe v (foldr (applyTwoMapH1 apply) v) opsM in -- $ Map.lookup k p in
         -- let p' = Map.delete k p in
 
         let m' = Map.insert k v' m in
@@ -118,7 +123,6 @@ applyTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t)
 lawNonCausal :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
 -- delete/delete
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) x (TwoPMapDelete k) (TwoPMapDelete k') = () -- DONE
-
 -- insert/any when set member k t = True
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) _ (TwoPMapInsert k' v') | Set.member k' t  = () -- DONE 
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) (TwoPMapInsert k v) _   | Set.member k t  = () -- DONE
@@ -149,41 +153,41 @@ lawNonCausal :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v
 --   = ()
 
 -- apply/apply
-lawNonCausal d@(CVRDT apply enabled lawCommutativity lawNonCausalR) x@(TwoPMap m p t) op1@(TwoPMapApply k vo) op2@(TwoPMapApply k' vo')
-  | not (Set.member k t) && Set.member k' t
-  , Just v <- Map.lookup k m
-  , Just x' <- applyTwoMapH0 apply vo k v
-  = Map.lookupInsertLemma k' k x' m
+-- lawNonCausal d@(CVRDT apply enabled lawCommutativity lawNonCausalR) x@(TwoPMap m p t) op1@(TwoPMapApply k vo) op2@(TwoPMapApply k' vo')
+--   | not (Set.member k t) && Set.member k' t
+--   , Just v <- Map.lookup k m
+--   , Just x' <- applyTwoMapH0 apply vo k v
+--   = Map.lookupInsertLemma k' k x' m
 
-  | Set.member k t && not (Set.member k' t)
-  , Just v <- Map.lookup k' m
-  , Just x' <- applyTwoMapH0 apply vo' k' v
-  = Map.lookupInsertLemma k k' x' m
+--   | Set.member k t && not (Set.member k' t)
+--   , Just v <- Map.lookup k' m
+--   , Just x' <- applyTwoMapH0 apply vo' k' v
+--   = Map.lookupInsertLemma k k' x' m
 
 
-  | not (Set.member k t) && not (Set.member k' t)
-  , Just v <- Map.lookup k m
-  , Just v' <- Map.lookup k' m
-  , Just x' <- applyTwoMapH0 apply vo k v
-  , Just x'' <- applyTwoMapH0 apply vo' k' v'
-  =  Map.lookupInsertLemma k' k x' m  `cast`
-     Map.lookupInsertLemma k k' x'' m `cast`
-     (lawNonCausalR v vo vo')
-     *** QED
-  | not (Set.member k t) && not (Set.member k' t)
-  , Nothing <- Map.lookup k m
-  , Just v' <- Map.lookup k' m
-  , Just x'' <- applyTwoMapH0 apply vo' k' v'
-  = Map.lookupInsertLemma k k' x'' m
-  | not (Set.member k t) && not (Set.member k' t)
-  , Just v <- Map.lookup k m
-  , Nothing <- Map.lookup k' m
-  , Just x' <- applyTwoMapH0 apply vo k v
-  = Map.lookupInsertLemma k' k x' m
-  | otherwise
-  = ()
-  where mm0@(TwoPMap m' p' t') = applyTwoPMap d x op1
-        mm1@(TwoPMap m'' p'' t'') = applyTwoPMap d x op2
+--   | not (Set.member k t) && not (Set.member k' t)
+--   , Just v <- Map.lookup k m
+--   , Just v' <- Map.lookup k' m
+--   , Just x' <- applyTwoMapH0 apply vo k v
+--   , Just x'' <- applyTwoMapH0 apply vo' k' v'
+--   =  Map.lookupInsertLemma k' k x' m  `cast`
+--      Map.lookupInsertLemma k k' x'' m `cast`
+--      (lawNonCausalR v vo vo')
+--      *** QED
+--   | not (Set.member k t) && not (Set.member k' t)
+--   , Nothing <- Map.lookup k m
+--   , Just v' <- Map.lookup k' m
+--   , Just x'' <- applyTwoMapH0 apply vo' k' v'
+--   = Map.lookupInsertLemma k k' x'' m
+--   | not (Set.member k t) && not (Set.member k' t)
+--   , Just v <- Map.lookup k m
+--   , Nothing <- Map.lookup k' m
+--   , Just x' <- applyTwoMapH0 apply vo k v
+--   = Map.lookupInsertLemma k' k x' m
+--   | otherwise
+--   = ()
+--   where mm0@(TwoPMap m' p' t') = applyTwoPMap d x op1
+--         mm1@(TwoPMap m'' p'' t'') = applyTwoPMap d x op2
 
 
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) x (TwoPMapInsert k v) (TwoPMapInsert k' v') = undefined
@@ -198,6 +202,10 @@ lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) x _ _ = undefin
 {-@ ple lawCommutativity @-}
 {-@ lawCommutativity :: Ord k => d:VRDT v -> x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(enabledTwoPMap d x op1 && enabledTwoPMap d x op2  && enabledTwoPMap d (applyTwoPMap d x op1) op2 && enabledTwoPMap d (applyTwoPMap d x op2) op1) => applyTwoPMap d (applyTwoPMap d x op1) op2 == applyTwoPMap d (applyTwoPMap d x op2) op1} @-}
 lawCommutativity :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
-lawCommutativity (CVRDT apply enabled lawCommutativity lawNonCausal) x op1 op2 = undefined
+lawCommutativity (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) (TwoPMapDelete k) (TwoPMapDelete k') = Map.deleteCommutative k k' m
+            `cast` Map.deleteCommutative k k' p
+            `cast` (Set.insert k' (Set.insert k t) === Set.insert k (Set.insert k' t))
+            `cast` ()
+lawCommutativity (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) op1 op2 = undefined
 
 
