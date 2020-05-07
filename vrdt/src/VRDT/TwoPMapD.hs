@@ -116,7 +116,10 @@ applyTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t)
 {-@ ple lawNonCausal @-}
 {-@ lawNonCausal :: Ord k =>  d:VRDT v -> x : TwoPMap k v -> {op1 : TwoPMapOp k v | enabledTwoPMap d x op1} -> {op2 : TwoPMapOp k v | enabledTwoPMap d x op2} -> {enabledTwoPMap d (applyTwoPMap d x op1) op2 <=> enabledTwoPMap d (applyTwoPMap d x op2) op1} @-}
 lawNonCausal :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
+-- delete/delete
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) x (TwoPMapDelete k) (TwoPMapDelete k') = () -- DONE
+
+-- insert/any when set member k t = True
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) _ (TwoPMapInsert k' v') | Set.member k' t  = () -- DONE 
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) (TwoPMapInsert k v) _   | Set.member k t  = () -- DONE
 -- lawNonCausal d@(CVRDT apply enabled lawCommutativity lawNonCausal) x@(TwoPMap m p t) op1@(TwoPMapDelete k) op2@(TwoPMapInsert k' v')
@@ -129,6 +132,7 @@ lawNonCausal :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v
 --         p' = Map.delete k p
 --         t' = Set.insert k t         -- SMT error
 
+-- apply/delete
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) (TwoPMapDelete k) (TwoPMapApply k' vop)
 --   | Just x <- Map.lookup k' (Map.delete k m)
 --   , Just y <- Map.lookup k' m
@@ -144,50 +148,40 @@ lawNonCausal :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v
 --   | otherwise
 --   = ()
 
+-- apply/apply
 lawNonCausal d@(CVRDT apply enabled lawCommutativity lawNonCausalR) x@(TwoPMap m p t) op1@(TwoPMapApply k vo) op2@(TwoPMapApply k' vo')
-  -- | Set.member k t && Set.member k' t
-  -- = ()
-  -- | not (Set.member k t) && Set.member k' t
-  -- , Nothing <- Map.lookup k m
-  -- = ()
-  -- | not (Set.member k t) && Set.member k' t
-  -- , Just v <- Map.lookup k m
-  -- , Just x' <- applyTwoMapH0 apply vo k v
-  -- = Map.lookupInsertLemma k' k x' m
-  -- | Set.member k t && not (Set.member k' t)
-  -- , Just v <- Map.lookup k' m
-  -- , Just x' <- applyTwoMapH0 apply vo' k' v
-  -- = Map.lookupInsertLemma k k' x' m
-  -- | not (Set.member k t) && not (Set.member k' t)
-  -- , Just v <- Map.lookup k m
-  -- , Just v' <- Map.lookup k' m
-  -- , Just x' <- applyTwoMapH0 apply vo k v
-  -- , Just x'' <- applyTwoMapH0 apply vo' k' v'
-  -- , not (isJust $ Map.lookup k m'') || not (isJust $ Map.lookup k' m')
-  -- = Map.lookupInsertLemma k' k x' m 
-  -- ? Map.lookupInsertLemma k k' x'' m
-  -- | not (Set.member k t) && not (Set.member k' t)
-  -- , Just v <- Map.lookup k m
-  -- , Just v' <- Map.lookup k' m
-  -- , Just x' <- applyTwoMapH0 apply vo k v
-  -- , Just x'' <- applyTwoMapH0 apply vo' k' v'
-  -- , k' /= k
-  -- =  Map.lookupInsertLemma k' k x' m  `cast`
-  --    Map.lookupInsertLemma k k' x'' m
+  | not (Set.member k t) && Set.member k' t
+  , Just v <- Map.lookup k m
+  , Just x' <- applyTwoMapH0 apply vo k v
+  = Map.lookupInsertLemma k' k x' m
+
+  | Set.member k t && not (Set.member k' t)
+  , Just v <- Map.lookup k' m
+  , Just x' <- applyTwoMapH0 apply vo' k' v
+  = Map.lookupInsertLemma k k' x' m
+
+
   | not (Set.member k t) && not (Set.member k' t)
   , Just v <- Map.lookup k m
   , Just v' <- Map.lookup k' m
   , Just x' <- applyTwoMapH0 apply vo k v
   , Just x'' <- applyTwoMapH0 apply vo' k' v'
-  -- , Just q <- Map.lookup k m'
-  -- , Just q' <- Map.lookup k m''
-  -- , k' == k
   =  Map.lookupInsertLemma k' k x' m  `cast`
      Map.lookupInsertLemma k k' x'' m `cast`
      (lawNonCausalR v vo vo')
      *** QED
-  -- | otherwise
-  -- = ()
+  | not (Set.member k t) && not (Set.member k' t)
+  , Nothing <- Map.lookup k m
+  , Just v' <- Map.lookup k' m
+  , Just x'' <- applyTwoMapH0 apply vo' k' v'
+  = Map.lookupInsertLemma k k' x'' m
+  | not (Set.member k t) && not (Set.member k' t)
+  , Just v <- Map.lookup k m
+  , Nothing <- Map.lookup k' m
+  , Just x' <- applyTwoMapH0 apply vo k v
+  = Map.lookupInsertLemma k' k x' m
+  | otherwise
+  = ()
   where mm0@(TwoPMap m' p' t') = applyTwoPMap d x op1
         mm1@(TwoPMap m'' p'' t'') = applyTwoPMap d x op2
 
