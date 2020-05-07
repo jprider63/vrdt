@@ -51,7 +51,8 @@ capplyLWW l1@(LWW t1 _) l2@(LWW t2 _)
 
 {-@ clawCommutativityLWW :: Ord t => x : (LWW t a) -> op1 : Operation (LWW t a) -> op2 : Operation (LWW t a) -> {(cenabledLWW x op1 && cenabledLWW x op2  && cenabledLWW (capplyLWW x op1) op2 && cenabledLWW (capplyLWW x op2) op1) => capplyLWW (capplyLWW x op1) op2 == capplyLWW (capplyLWW x op2) op1} @-}
 clawCommutativityLWW :: Ord t => LWW t a -> Operation (LWW t a) -> Operation (LWW t a) -> ()
-clawCommutativityLWW _ _ _ = ()
+clawCommutativityLWW x@(LWW t0 v0) op1@(LWW t1 v1) op2@(LWW t2 v2) = ()
+
 
 
 {-@ clawNonCausalLWW :: Ord t => x : (LWW t a) -> {op1 : Operation (LWW t a) | cenabledLWW x op1} -> {op2 : Operation (LWW t a) | cenabledLWW x op2} -> {cenabledLWW (capplyLWW x op1) op2 <=> cenabledLWW (capplyLWW x op2) op1} @-}
