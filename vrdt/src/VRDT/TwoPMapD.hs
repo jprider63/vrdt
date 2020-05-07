@@ -14,7 +14,7 @@ import qualified Data.Map as Map
 import           Liquid.Data.Maybe
 import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
-import           Prelude hiding (Maybe(..), isJust, maybe)
+import           Prelude hiding (Maybe(..), isJust, maybe, foldr)
 #endif
 
 import           Data.Set (Set)
@@ -66,7 +66,7 @@ enabledTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p 
             True
           Just ops ->
             -- Each pending op must be enabledTwoPMap.
-            snd $ foldr (\op (v, acc) -> (apply v op, acc && enabled v op)) (v, True) ops
+            snd (foldr (helper apply enabled) (v, True) ops)
     in
     not (Map.member k m || Set.member k t) && pendingEnabled
 enabledTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m _p t) (TwoPMapApply k op) = case Map.lookup k m of
@@ -76,6 +76,19 @@ enabledTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m _p
     Just v ->
         enabled v op
 enabledTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m _p t) (TwoPMapDelete k) = True
+
+{-@ reflect foldr @-}
+foldr :: (a -> b -> b) -> b -> [a] -> b
+foldr _ b [] = b 
+foldr f b (x:xs) = foldr f (f x b) xs 
+
+{-@ reflect mySnd @-}
+mySnd :: (a,b) -> b 
+mySnd (_,x) = x 
+
+{-@ reflect helper @-}
+-- helper :: (v -> Operation v -> Bool) -> Operation v -> (VRDT (Operation v), Bool) -> (VRDT (Operation v), Bool)
+helper apply enabled op (v,acc) = (apply v op, acc && enabled v op)
 
 
 {-@ reflect applyTwoPMap @-}

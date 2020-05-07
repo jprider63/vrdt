@@ -217,5 +217,6 @@ assume _ = ()
 by :: a -> b -> a
 by x _ = x
 
+{-@ inline cast @-}
 cast :: a -> b -> b
 cast _ x = x
