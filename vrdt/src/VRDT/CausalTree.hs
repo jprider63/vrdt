@@ -7,7 +7,7 @@ module VRDT.CausalTree where
 import           Data.Aeson (ToJSON(..), FromJSON(..), (.:), (.=))
 import qualified Data.Aeson as Aeson
 #else
-import           Prelude (Bool(..), Maybe(..), Ord(..), String, Show, Int, Monad(..), ($), otherwise, Eq(..), Num(..), (++), (<$>), concat)
+import           Prelude (Bool(..), Maybe(..), Ord(..), String, Show, Int, Monad(..), ($), otherwise, Eq(..), Num(..), (++), (<$>), concat, (&&))
 #endif
 
 -- import           Liquid.Data.List (List(..))
@@ -62,13 +62,46 @@ data CausalTreeWeave id a = CausalTreeWeave {
   }
   deriving (Show)
 
+{-@ reflect enabled @-}
+-- Enabled if the id is unique (doesn't appear in the CausalTree).
+enabled :: Ord id => CausalTree id a -> CausalTreeOp id a -> Bool
+enabled (CausalTree weave pending) (CausalTreeOp _ (CausalTreeAtom id _)) = enabledWeave weave id && enabledLists (Map.toList pending) id
+
+{-@ reflect enabledWeave @-}
+enabledWeave :: Eq id => CausalTreeWeave id a -> id -> Bool
+enabledWeave (CausalTreeWeave atom children) id = enabledAtom atom id && enabledChildren children id
+
+{-@ reflect enabledAtom @-}
+enabledAtom :: Eq id => CausalTreeAtom id a -> id -> Bool
+enabledAtom (CausalTreeAtom id _) id' = id /= id'
+
+{-@ reflect enabledChildren @-}
+enabledChildren :: Eq id => [CausalTreeWeave id a] -> id -> Bool
+enabledChildren [] _ = True
+enabledChildren (h:t) id = enabledWeave h id && enabledChildren t id
+
+{-@ reflect enabledLists @-}
+enabledLists :: Eq id => [(id, [CausalTreeAtom id a])] -> id -> Bool
+enabledLists [] _ = True
+enabledLists ((_,h):t) id = enabledAtoms h id && enabledLists t id
+
+{-@ reflect enabledAtoms @-}
+enabledAtoms :: Eq id => [CausalTreeAtom id a] -> id -> Bool
+enabledAtoms [] _ = True
+enabledAtoms (h:t) id = enabledAtom h id && enabledAtoms t id
+
+
+
+
+
+
 {-@ reflect apply @-}
 apply :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTree id a
 apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
 
 
 {-@ reflect applyAtom @-}
-{-@ lazy applyAtom @-} -- TODO: Prove termination. XXX
+-- {-@ lazy applyAtom @-} -- TODO: Prove termination. XXX
 -- {-@ applyAtom :: Ord id => ct:CausalTree id a -> id -> CausalTreeAtom id a -> CausalTree id a / [length (causalTreeWeaveChildren ct)] @-}
 applyAtom :: Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> CausalTree id a
 applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave parentId atom of
@@ -85,7 +118,7 @@ applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave 
         List.foldl' (\ct atom -> applyAtom ct opId atom) ct $ concat pendingAtomsM
 
 
-{-@ lazy insertInWeave @-} -- TODO: Prove termination. XXX
+-- {-@ lazy insertInWeave @-} -- TODO: Prove termination. XXX
 -- {-@ insertInWeave :: Ord id => w:CausalTreeWeave id a -> id -> CausalTreeAtom id a -> Maybe (CausalTreeWeave id a) / [causalTreeWeaveLength w] @-}
 insertInWeave :: Ord id => CausalTreeWeave id a -> id -> CausalTreeAtom id a -> Maybe (CausalTreeWeave id a)
 insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
@@ -126,6 +159,13 @@ atomGreaterThan (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2 (Cau
 atomGreaterThan (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2 _)                        = False
 
 
+{-@ lawCommutativity :: Ord id => x : CausalTree id a -> op1 : CausalTreeOp id a -> op2 : CausalTreeOp id a -> {(enabled x op1 && enabled x op2  && enabled (apply x op1) op2 && enabled (apply x op2) op1) => apply (apply x op1) op2 == apply (apply x op2) op1} @-}
+lawCommutativity :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
+lawCommutativity _ _ _ = ()
+
+{-@ lawNonCausal :: Ord id => x : CausalTree id a -> {op1 : CausalTreeOp id a | enabled x op1} -> {op2 : CausalTreeOp id a | enabled x op2} -> {enabled (apply x op1) op2 <=> enabled (apply x op2) op1} @-}
+lawNonCausal :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
+lawNonCausal _ _ _ = ()
 
 #ifdef NotLiquid
 
