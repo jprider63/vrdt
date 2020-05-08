@@ -67,7 +67,7 @@ enabledTwoPMap (TwoPMap m p t) (TwoPMapInsert k v) =
             -- Each pending op must be enabledTwoPMap.
             snd $ foldr (\op (v, acc) -> (apply v op, acc && enabled v op)) (v, True) ops
     in
-    not (Map.member k m || Set.member k t) && pendingEnabled
+    not (Map.member k m) && pendingEnabled
 enabledTwoPMap (TwoPMap m _p t) (TwoPMapApply k op) = case Map.lookup k m of
     Nothing ->
         -- JP: What do we do here? Just return True and then require Insert to be enabledTwoPMap for all pending?
