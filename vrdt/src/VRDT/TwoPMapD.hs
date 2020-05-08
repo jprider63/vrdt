@@ -131,14 +131,15 @@ lawNonCausal :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) (TwoPMapInsert k v) _   | Set.member k t  = () -- DONE
 
 -- counter example
+-- the delete side will always be True, so we want to show that the enabled Insert (Delete ...) side is also True. However, the following case shows that the Insert (Delete ...) side is not always true...
 lawNonCausal d@(CVRDT apply enabled lawCommutativity lawNonCausal) x@(TwoPMap m p t) op1@(TwoPMapDelete k) op2@(TwoPMapInsert k' v')
   | not (Set.member k' t)
   , Nothing <- Map.lookup k' p'
   , k == k'
   , enabledTwoPMap d (applyTwoPMap d x op1) op2
   = assert (not (Set.member k t)) `cast`
-    assert (Set.member k t')--  `cast`
-    -- assert (not)
+    assert (Set.member k t') `cast`
+    assert (not (enabledTwoPMap d (applyTwoPMap d x op1) op2)) -- contradiction!
   
 -- lawNonCausal d@(CVRDT apply enabled lawCommutativity lawNonCausal) x@(TwoPMap m p t) op1@(TwoPMapDelete k) op2@(TwoPMapInsert k' v')
 --   | not (Set.member k' t)
