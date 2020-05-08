@@ -58,6 +58,9 @@ instance (Aeson.ToJSON k, Aeson.ToJSON v, Aeson.ToJSON (Operation v)) => Aeson.T
 instance (Aeson.FromJSON k, Aeson.FromJSON v, Aeson.FromJSON (Operation v)) => Aeson.FromJSON (TwoPMapOp k v)
 #endif
 
+{-@ reflect enabledTwoPMapH0 @-}
+enabledTwoPMapH0 :: (a -> b -> a) -> (a -> b -> Bool) -> b -> (a, Bool) -> (a, Bool)
+enabledTwoPMapH0 apply enabled op (v, acc) = (apply v op, acc && enabled v op)
 
 {-@ reflect enabledTwoPMap @-}
 enabledTwoPMap :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> Bool
@@ -67,7 +70,7 @@ enabledTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p 
             True
           Just ops ->
             -- Each pending op must be enabledTwoPMap.
-            snd $ foldr (\op (v, acc) -> (apply v op, acc && enabled v op)) (v, True) ops
+            snd $ foldr (enabledTwoPMapH0 apply enabled) (v, True) ops
     in
     not (Map.member k m || Set.member k t) && pendingEnabled
 enabledTwoPMap (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m _p t) (TwoPMapApply k op) = case Map.lookup k m of
@@ -126,15 +129,33 @@ lawNonCausal :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v
 -- insert/any when set member k t = True
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) _ (TwoPMapInsert k' v') | Set.member k' t  = () -- DONE 
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) (TwoPMapInsert k v) _   | Set.member k t  = () -- DONE
+
+-- counter example
+lawNonCausal d@(CVRDT apply enabled lawCommutativity lawNonCausal) x@(TwoPMap m p t) op1@(TwoPMapDelete k) op2@(TwoPMapInsert k' v')
+  | not (Set.member k' t)
+  , Nothing <- Map.lookup k' p'
+  , k == k'
+  , enabledTwoPMap d (applyTwoPMap d x op1) op2
+  = assert (not (Set.member k t)) `cast`
+    assert (Set.member k t')--  `cast`
+    -- assert (not)
+  
 -- lawNonCausal d@(CVRDT apply enabled lawCommutativity lawNonCausal) x@(TwoPMap m p t) op1@(TwoPMapDelete k) op2@(TwoPMapInsert k' v')
 --   | not (Set.member k' t)
---   ,  (isJust (Map.lookup k' p'))
---   =  ()
+--   , Nothing <- Map.lookup k' p'
+--   -- show that enabledTwoPMap
+--   =  Map.member k' m' `cast`
+--      Map.member k' m `cast` -- assert (not (Map.member k' m)) `cast`
+--      -- assert (Map.member k' m || not (Map.member k' m')) `cast`
+--      -- assert (Set.member k t || not (Set.member k t'))
+--      -- assume (not (Map.member k' m')) `cast` need to prove these two
+
+--      assume (not (Set.member k' t'))
 --   -- | otherwise
 --   -- = ()
---   where m' = Map.delete k m
---         p' = Map.delete k p
---         t' = Set.insert k t         -- SMT error
+  where m' = Map.delete k m
+        p' = Map.delete k p
+        t' = Set.insert k t         -- SMT error
 
 -- apply/delete
 -- lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) (TwoPMapDelete k) (TwoPMapApply k' vop)
@@ -202,10 +223,13 @@ lawNonCausal (CVRDT apply enabled lawCommutativity lawNonCausal) x _ _ = undefin
 {-@ ple lawCommutativity @-}
 {-@ lawCommutativity :: Ord k => d:VRDT v -> x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(enabledTwoPMap d x op1 && enabledTwoPMap d x op2  && enabledTwoPMap d (applyTwoPMap d x op1) op2 && enabledTwoPMap d (applyTwoPMap d x op2) op1) => applyTwoPMap d (applyTwoPMap d x op1) op2 == applyTwoPMap d (applyTwoPMap d x op2) op1} @-}
 lawCommutativity :: Ord k => VRDT v -> TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
-lawCommutativity (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) (TwoPMapDelete k) (TwoPMapDelete k') = Map.deleteCommutative k k' m
+lawCommutativity (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) (TwoPMapDelete k) (TwoPMapDelete k') =
+             Map.deleteCommutative k k' m
             `cast` Map.deleteCommutative k k' p
             `cast` (Set.insert k' (Set.insert k t) === Set.insert k (Set.insert k' t))
             `cast` ()
+-- lawCommutativity d@(CVRDT apply enabled lawCommutativity lawNonCausal) mmOrig@(TwoPMap m p t) op1@(TwoPMapDelete k) op2@(TwoPMapApply k' vo) = ()
+--   where mm0@(TwoPMap m1 p1 t1) = applyTwoPMap d mmOrig op1
 lawCommutativity (CVRDT apply enabled lawCommutativity lawNonCausal) (TwoPMap m p t) op1 op2 = undefined
 
 
