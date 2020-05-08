@@ -26,6 +26,7 @@ module VRDT.MultiSet (
 
 import           Data.Bits (xor)
 #ifdef NotLiquid
+import qualified Data.Aeson as Aeson
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe
@@ -36,10 +37,14 @@ import           Liquid.Data.Maybe
 #endif
 import qualified Liquid.Data.Map.Props as Map
 import           Liquid.ProofCombinators
+import           GHC.Generics
 import           Prelude hiding (null, Maybe(..))
 import qualified Data.Set as S
 
--- import VRDT.Class
+#ifdef NotLiquid
+import           VRDT.Class (VRDTInitial(..), VRDT)
+import qualified VRDT.Class as VRDT
+#endif
 
 {-@ type PosInteger = {c:Integer | c > 0} @-}
 {-@ type NegInteger = {c:Integer | c <= 0} @-}
@@ -54,7 +59,24 @@ data MultiSet a = MultiSet {
     posMultiSet :: Map a Integer -- ^ Map for elements currently in the set.
   , negMultiSet :: Map a Integer -- ^ Map for elements not currently in the set.
   }
+  deriving (Generic)
   
+#if NotLiquid
+instance Ord a => VRDT (MultiSet a) where
+    type Operation (MultiSet a) = MultiSetOp a
+
+    enabled _ _ = error "TODO"
+    apply _ _ = error "TODO"
+
+instance Ord a => VRDTInitial (MultiSet a) where
+    initVRDT = MultiSet mempty mempty
+
+instance (Aeson.ToJSONKey a) => Aeson.ToJSON (MultiSet a)
+instance (Ord a, Aeson.FromJSONKey a) => Aeson.FromJSON (MultiSet a)
+instance (Aeson.ToJSON a) => Aeson.ToJSON (MultiSetOp a)
+instance (Aeson.FromJSON a) => Aeson.FromJSON (MultiSetOp a)
+#endif
+    
 -- {-@
 -- data MultiSetOp a = 
 --     MultiSetOpAdd {
@@ -75,6 +97,7 @@ data MultiSetOp a =
       multiSetOpRemValue :: a
     , multiSetOpRem :: Integer -- ^ Remove `n` instances of element.
     }
+  deriving (Generic)
 
 {-@ measure multiSetOpOrder @-}
 {-@ multiSetOpOrder :: MultiSetOp a -> Nat @-}

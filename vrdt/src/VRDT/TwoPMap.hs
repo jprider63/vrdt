@@ -41,14 +41,14 @@ data TwoPMapOp k v =
   deriving (Generic)
 
 
--- instance (VRDT v, Ord k) => VRDT (TwoPMap k v) where
---     type Operation (TwoPMap k v) = TwoPMapOp k v
--- 
---     enabled m op = error "TODO"
---     apply m op = error "TODO"
+#if NotLiquid
+instance (VRDT v, Ord k) => VRDT (TwoPMap k v) where
+    type Operation (TwoPMap k v) = TwoPMapOp k v
+
+    enabled = enabledTwoPMap
+    apply = applyTwoPMap
 --     lawCommutativity _ _ _ = ()
 
-#if NotLiquid
 instance (Ord k, VRDT v) => VRDTInitial (TwoPMap k v) where
     initVRDT = TwoPMap mempty mempty mempty
     

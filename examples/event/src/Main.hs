@@ -33,7 +33,7 @@ import           VRDT.Class
 import           VRDT.Class.TH
 import           VRDT.LWW (LWW(..))
 import qualified VRDT.LWW as LWW
--- import           VRDT.MultiSet (MultiSet(..))
+import           VRDT.MultiSet (MultiSet(..))
 import           VRDT.TwoPMap (TwoPMap(..), TwoPMapOp(..))
 import qualified VRDT.TwoPMap
 import qualified VRDT.Types as VRDT
@@ -52,13 +52,15 @@ data Event = Event {
   , eventStartTime :: LWWU UTCTime
   , eventEndTime :: LWWU UTCTime
   , eventLocation :: LWWU Text
-  -- , eventGuests :: MultiSet Text
+  , eventRSVPs :: MultiSet Text
   -- Messages?
   }
   deriving (Generic)
 
 $(deriveVRDT ''Event)
 
+-- instance Aeson.ToJSON EventOp
+-- instance Aeson.FromJSON EventOp
 instance Aeson.ToJSON Event
 instance Aeson.FromJSON Event
 
@@ -290,11 +292,12 @@ createEvent clientId = do
         startDate <- validateInput "Start Date" dateValidation Nothing >>= toLWW
         endDate <- validateInput "End Date" dateValidation Nothing >>= toLWW
         location <- validateInput "Location" Right Nothing >>= toLWW
+        let rsvps = pure $ pure initVRDT
 
         cancelE <- fixed 3 $ textButtonStatic def "Cancel"
         createE <- fixed 3 $ textButtonStatic def "Create event"
 
-    let eventMD = (liftM5 . liftM5) Event title description startDate endDate location
+    let eventMD = (liftM6 . liftM6) Event title description startDate endDate location rsvps
     let insertEventE = catMaybes $ sampleOn createE eventMD
     insertE <- lift $ to2PMapInsert clientId insertEventE
 
@@ -391,3 +394,9 @@ escapePressed = do
 --     l0 :: a -> LWWU a
 --     l0 = LWW (UTCTimestamp now clientId)
 -- 
+
+
+-- https://hackage.haskell.org/package/base-4.14.0.0/docs/src/GHC.Base.html#liftM5
+liftM6  :: (Monad m) => (a1 -> a2 -> a3 -> a4 -> a5 -> a6 -> r) -> m a1 -> m a2 -> m a3 -> m a4 -> m a5 -> m a6 -> m r
+liftM6 f m1 m2 m3 m4 m5 m6 = do { x1 <- m1; x2 <- m2; x3 <- m3; x4 <- m4; x5 <- m5; x6 <- m6; return (f x1 x2 x3 x4 x5 x6) }
+
