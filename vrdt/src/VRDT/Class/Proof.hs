@@ -124,8 +124,13 @@ lemmaRemoveElemIsJust op2 (op1:ops1)
 lemmaAllCompatibleTail :: VRDT a => Operation a -> [Operation a] -> ()
 lemmaAllCompatibleTail op ops = undefined -- TODO
 
--- {-@ lemmaRemoveFirstLength :: Eq (Operation a) => op:Operation a -> os:[Operation a] -> {rs:[Operation a] | removeFirst op os == Just rs} -> {List.length' rs < List.length' os} @-}
-{-@ lemmaRemoveFirstLength :: Eq (Operation a) => op:Operation a -> os:[Operation a] -> {rs:[Operation a] | removeFirst op os == Just rs} -> {length rs < length os} @-}
+{-@ lemmaAllCompatibleElem :: (Eq (Operation a), VRDT a) => op:Operation a -> op':Operation a -> {ops:[Operation a] | List.elem' op (cons op' ops) && allCompatible (cons op' ops)} -> {compatible op' op} @-}
+lemmaAllCompatibleElem :: (Eq (Operation a), VRDT a) => Operation a -> Operation a -> [Operation a] -> ()
+lemmaAllCompatibleElem = undefined
+
+
+
+-- {-@ lemmaRemoveFirstLength :: Eq (Operation a) => op:Operation a -> os:[Operation a] -> {rs:[Operation a] | removeFirst op os == Just rs} -> {length rs < length os} @-}
 lemmaRemoveFirstLength :: Eq (Operation a) => Operation a -> [Operation a] -> [Operation a] -> ()
 lemmaRemoveFirstLength op os ts = undefined -- TODO?
 
@@ -155,38 +160,40 @@ lemmaRemoveFirstApplyAll x op ops@(op1:ops') rs
     Nothing ->
       ()
     Just ops'' ->
-          lemmaAllCompatibleTail op1 ops
-      &&& lemmaRemoveFirstApplyAll x op ops' ops''
+          applyAll x ops
+      === applyAll (apply x op1) ops'
+        ?   lemmaAllCompatibleTail op1 ops'
+        &&& lemmaRemoveFirstApplyAll (apply x op1) op ops' ops''
+      === applyAll (apply (apply x op1) op) ops''
+        ?   lemmaRemoveFirstElem op ops rs
+        &&& lemmaAllCompatibleElem op op1 ops'
+        &&& lawCompatibilityCommutativity op op1
+        &&& lawCommutativity x op1 op
+      === applyAll (apply (apply x op) op1) ops''
+      === applyAll (apply x op) rs
+      *** QED
 
 
-  -- | otherwise = case ops' of
-  --   [] -> ()
-  --   (op2:ops'') ->
-  --         applyAll x ops
-  --     === applyAll (apply x op1) ops'
-  --     === applyAll (apply (apply x op1) op2) ops''
-  --     === applyAll (apply x op) rs
-  --     *** QED
 
 
--- {-@ ple lemmaRemoveFirstElem @-}
--- {-@
--- lemmaRemoveFirstElem :: (Eq (Operation a), VRDT a)
---  => op:Operation a 
---  -> os:[Operation a]
---  -> {rs:[Operation a] | removeFirst op os == Just rs}
---  -> {List.elem' op os}
--- @-}
--- lemmaRemoveFirstElem :: (Eq (Operation a)) => Operation a -> [Operation a] -> [Operation a] -> ()
--- lemmaRemoveFirstElem op [] _ = ()
--- lemmaRemoveFirstElem op _ [] = ()
--- lemmaRemoveFirstElem op os@(_:t) rs@(r:rs')
---   | op == r = ()
---   | otherwise = case removeFirst op os of
---     Nothing -> ()
---     Just _rs -> case removeFirst op t of
---       Nothing -> ()
---       Just rs'' -> lemmaRemoveFirstElem op t rs''
+{-@ ple lemmaRemoveFirstElem @-}
+{-@
+lemmaRemoveFirstElem :: (Eq (Operation a), VRDT a)
+ => op:Operation a 
+ -> os:[Operation a]
+ -> {rs:[Operation a] | removeFirst op os == Just rs}
+ -> {List.elem' op os}
+@-}
+lemmaRemoveFirstElem :: (Eq (Operation a)) => Operation a -> [Operation a] -> [Operation a] -> ()
+lemmaRemoveFirstElem op [] _ = ()
+lemmaRemoveFirstElem op _ [] = ()
+lemmaRemoveFirstElem op os@(_:t) rs@(r:rs')
+  | op == r = ()
+  | otherwise = case removeFirst op os of
+    Nothing -> ()
+    Just _rs -> case removeFirst op t of
+      Nothing -> ()
+      Just rs'' -> lemmaRemoveFirstElem op t rs''
 
 
 
