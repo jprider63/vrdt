@@ -5,7 +5,7 @@
 
 module Liquid.Data.List where 
 
-import Prelude hiding (concat, reverse)
+import Prelude hiding (concat, reverse, length)
 
 -- type List a = [a]
 
@@ -19,10 +19,10 @@ elem' x (h:t)
   | otherwise = elem' x t
 
 -- {-@ length' :: ls:[a] -> {v:Int | v = length ls} @-}
-{-@ reflect length' @-}
-length' :: [a] -> Int
-length' [] = 0
-length' (h:t) = 1 + length' t
+{-@ measure length @-}
+length :: [a] -> Int
+length [] = 0
+length (h:t) = 1 + length t
 
 {-@ reflect reverse @-}
 reverse :: [a] -> [a]

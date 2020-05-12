@@ -4,12 +4,11 @@
 
 module VRDT.Class.Proof where
 
-
 import           Liquid.Data.Maybe
 import qualified Liquid.Data.List as List
 import           Liquid.ProofCombinators
 import           VRDT.Class
-import           Prelude hiding (Maybe(..))
+import           Prelude hiding (Maybe(..), length)
 
 {-@ ple noncausalSEC @-}
 {-@ noncausalSEC :: (Eq (Operation a), VRDT a) => s0:a -> ops1:[Operation a] -> ops2:[Operation a] -> {(isPermutation ops1 ops2 && allCompatible ops1) => (applyAll s0 ops1 = applyAll s0 ops2)} @-}
@@ -43,7 +42,7 @@ noncausalSEC s0 ops1@(op1:ops1') ops2@(op2:ops2')
       -- &&& lemmaRemoveFirstLength op2 ops1 ops1''
       -- &&& assert (lengthPred ops1'')
       -- &&& assert (lengthPred ops1)
-      &&& assume (length ops1'' < length ops1) -- TODO
+      &&& assume (List.length ops1'' < List.length ops1) -- TODO
       &&& lemmaRemoveFirstPermutation op2 ops2' ops1 ops1''
       &&& noncausalSEC (apply s0 op2) ops1'' ops2'
 
@@ -130,8 +129,8 @@ lemmaRemoveFirstLength :: Eq (Operation a) => Operation a -> [Operation a] -> [O
 lemmaRemoveFirstLength op os ts = undefined -- TODO?
 
 lengthPred :: [a] -> Bool
-lengthPred l@[] = length l == List.length' l
-lengthPred l@(h:t) = length l == List.length' l && lengthPred t
+lengthPred l@[] = List.length l == List.length l
+lengthPred l@(h:t) = List.length l == List.length l && lengthPred t
 
 
 {-@ lemmaRemoveFirstPermutation :: Eq (Operation a) => op2:Operation a -> ops2':[Operation a] -> {ops1:[Operation a] | isPermutation ops1 (cons op2 ops2')} -> {rs:[Operation a] | removeFirst op2 ops1 == Just rs} -> {isPermutation rs ops2'} @-}
