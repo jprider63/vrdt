@@ -62,7 +62,7 @@ apply (TwoPMap m p t) (TwoPMapInsert k v) = TwoPMap (Map.insert k v m) p t
 compatible :: TwoPMapOp k v -> TwoPMapOp k v -> Bool
 compatible (TwoPMapInsert k v) (TwoPMapInsert k' v') | k == k' = False
 -- ... TwoPMapApply
-compativle _                   _                               = True
+compatible _                   _                               = True
 
 
 apply (TwoPMap m p t) (TwoPMapInsert k v) 

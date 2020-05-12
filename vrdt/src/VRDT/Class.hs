@@ -49,10 +49,6 @@ class VRDT t where
     {-@ lawCompatibilityCommutativity :: op1 : Operation t -> op2 : Operation t -> {compatible op1 op2 = compatible op2 op1} @-}
     lawCompatibilityCommutativity :: Operation t -> Operation t -> ()
 
-    -- | `compatible` must be transitive.
-    {-@ lawCompatibilityTransitivity :: op1 : Operation t -> op2 : Operation t -> op3:Operation t -> {compatible op1 op2 && compatible op2 op3 = compatible op1 op3} @-}
-    lawCompatibilityTransitivity :: Operation t -> Operation t -> Operation t -> ()
-
 
 
 -- {-@ inline enabled2 @-}

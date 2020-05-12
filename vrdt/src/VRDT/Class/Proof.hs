@@ -10,18 +10,18 @@ import           Liquid.ProofCombinators
 import           VRDT.Class
 import           Prelude hiding (Maybe(..), length)
 
-{-@ ple noncausalSEC @-}
-{-@ noncausalSEC :: (Eq (Operation a), VRDT a) => s0:a -> ops1:[Operation a] -> ops2:[Operation a] -> {(isPermutation ops1 ops2 && allCompatible ops1) => (applyAll s0 ops1 = applyAll s0 ops2)} @-}
-noncausalSEC :: (Eq (Operation a), VRDT a) => a -> [Operation a] -> [Operation a] -> ()
-noncausalSEC s0 [] [] = ()
-noncausalSEC s0 [] _ = ()
-noncausalSEC s0 _ [] = ()
-noncausalSEC s0 ops1 ops2 | not (isPermutation ops1 ops2) = ()
-noncausalSEC s0 ops1 ops2 | not (allCompatible ops1) = ()
-noncausalSEC s0 ops1@(op1:ops1') ops2@(op2:ops2') 
+{-@ ple strongConvergence @-}
+{-@ strongConvergence :: (Eq (Operation a), VRDT a) => s0:a -> ops1:[Operation a] -> ops2:[Operation a] -> {(isPermutation ops1 ops2 && allCompatible ops1) => (applyAll s0 ops1 = applyAll s0 ops2)} @-}
+strongConvergence :: (Eq (Operation a), VRDT a) => a -> [Operation a] -> [Operation a] -> ()
+strongConvergence s0 [] [] = ()
+strongConvergence s0 [] _ = ()
+strongConvergence s0 _ [] = ()
+strongConvergence s0 ops1 ops2 | not (isPermutation ops1 ops2) = ()
+strongConvergence s0 ops1 ops2 | not (allCompatible ops1) = ()
+strongConvergence s0 ops1@(op1:ops1') ops2@(op2:ops2') 
   | op1 == op2 = 
         lemmaAllCompatibleTail op1 ops1'
-    &&& noncausalSEC (apply s0 op1) ops1' ops2'
+    &&& strongConvergence (apply s0 op1) ops1' ops2'
   | otherwise = case removeFirst op2 ops1 of
     Nothing ->
           assert (isPermutation ops1 ops2)
@@ -42,9 +42,10 @@ noncausalSEC s0 ops1@(op1:ops1') ops2@(op2:ops2')
       -- &&& lemmaRemoveFirstLength op2 ops1 ops1''
       -- &&& assert (lengthPred ops1'')
       -- &&& assert (lengthPred ops1)
+      -- &&& assume (List.length ops1'' < List.length ops1) -- TODO
       &&& assume (List.length ops1'' < List.length ops1) -- TODO
       &&& lemmaRemoveFirstPermutation op2 ops2' ops1 ops1''
-      &&& noncausalSEC (apply s0 op2) ops1'' ops2'
+      &&& strongConvergence (apply s0 op2) ops1'' ops2'
 
 
 
@@ -58,7 +59,7 @@ allCompatible' :: VRDT a => Operation a -> [Operation a] -> Bool
 allCompatible' _  []        = True
 -- allCompatible' op (op':ops) = compatible op op' && allCompatible' op ops
 -- allCompatible' op (op':ops) = compatible op op' && compatible op' op && allCompatible' op ops && allCompatible' op' ops
-allCompatible' op (op':ops) = compatible op op' && allCompatible' op ops -- && allCompatible' op' ops
+allCompatible' op (op':ops) = compatible op op' && allCompatible' op ops && allCompatible' op' ops
 
 {-@ reflect applyAll @-}
 applyAll :: VRDT a => a -> [Operation a] -> a
@@ -129,7 +130,7 @@ lemmaAllCompatibleElem = undefined
 
 
 
--- {-@ lemmaRemoveFirstLength :: Eq (Operation a) => op:Operation a -> os:[Operation a] -> {rs:[Operation a] | removeFirst op os == Just rs} -> {length rs < length os} @-}
+{-@ lemmaRemoveFirstLength :: Eq (Operation a) => op:Operation a -> os:[Operation a] -> {rs:[Operation a] | removeFirst op os == Just rs} -> {length rs < length os} @-}
 lemmaRemoveFirstLength :: Eq (Operation a) => Operation a -> [Operation a] -> [Operation a] -> ()
 lemmaRemoveFirstLength op os ts = undefined -- TODO?
 
