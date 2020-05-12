@@ -1,4 +1,5 @@
 {-@ LIQUID "--reflection" @-}
+{-@ LIQUID "--oldple" @-}
 {-@ LIQUID "--ple-local" @-}
 
 module VRDT.Class.Proof where
@@ -123,7 +124,8 @@ lemmaRemoveElemIsJust op2 (op1:ops1)
 lemmaAllCompatibleTail :: VRDT a => Operation a -> [Operation a] -> ()
 lemmaAllCompatibleTail op ops = undefined -- TODO
 
-{-@ lemmaRemoveFirstLength :: Eq (Operation a) => op:Operation a -> os:[Operation a] -> {rs:[Operation a] | removeFirst op os == Just rs} -> {List.length' rs < List.length' os} @-}
+-- {-@ lemmaRemoveFirstLength :: Eq (Operation a) => op:Operation a -> os:[Operation a] -> {rs:[Operation a] | removeFirst op os == Just rs} -> {List.length' rs < List.length' os} @-}
+{-@ lemmaRemoveFirstLength :: Eq (Operation a) => op:Operation a -> os:[Operation a] -> {rs:[Operation a] | removeFirst op os == Just rs} -> {length rs < length os} @-}
 lemmaRemoveFirstLength :: Eq (Operation a) => Operation a -> [Operation a] -> [Operation a] -> ()
 lemmaRemoveFirstLength op os ts = undefined -- TODO?
 
@@ -141,9 +143,30 @@ lemmaRemoveFirstPermutation = undefined -- TODO
 lemmaRemoveFirstAllCompatible :: (Eq (Operation a), VRDT a) => Operation a -> [Operation a] -> [Operation a] -> ()
 lemmaRemoveFirstAllCompatible = undefined -- TODO
 
+{-@ ple lemmaRemoveFirstApplyAll @-}
 {-@ lemmaRemoveFirstApplyAll :: (Eq (Operation a), VRDT a) => x:a -> op:Operation a -> {os:[Operation a] | allCompatible os} -> {rs:[Operation a] | removeFirst op os == Just rs} -> {applyAll x os = applyAll (apply x op) rs} @-}
 lemmaRemoveFirstApplyAll :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> [Operation a] -> ()
-lemmaRemoveFirstApplyAll = undefined
+lemmaRemoveFirstApplyAll x op [] [] = ()
+lemmaRemoveFirstApplyAll x op _  [] = ()
+lemmaRemoveFirstApplyAll x op ops _ | not (allCompatible ops) = ()
+lemmaRemoveFirstApplyAll x op ops@(op1:ops') rs
+  | op1 == op = ()
+  | otherwise = case removeFirst op ops' of
+    Nothing ->
+      ()
+    Just ops'' ->
+          lemmaAllCompatibleTail op1 ops
+      &&& lemmaRemoveFirstApplyAll x op ops' ops''
+
+
+  -- | otherwise = case ops' of
+  --   [] -> ()
+  --   (op2:ops'') ->
+  --         applyAll x ops
+  --     === applyAll (apply x op1) ops'
+  --     === applyAll (apply (apply x op1) op2) ops''
+  --     === applyAll (apply x op) rs
+  --     *** QED
 
 
 -- {-@ ple lemmaRemoveFirstElem @-}
