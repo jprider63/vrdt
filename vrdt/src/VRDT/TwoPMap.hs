@@ -40,6 +40,36 @@ data TwoPMapOp k v =
   | TwoPMapDelete k
   deriving (Generic)
 
+{-
+-- Bad version 1. 
+-- Doesn't allow you to delete and insert safely.
+
+compatible :: TwoPMapOp k v -> TwoPMapOp k v -> Bool
+compatible (TwoPMapDelete k') (TwoPMapInsert k v) 
+  | k == k'   = False
+  | otherwise = True
+compatible (TwoPMapInsert k v) (TwoPMapDelete k') 
+  | k == k'   = True
+  | otherwise = True
+compatible (TwoPMapInsert k v) (TwoPMapInsert k' v') | k == k'   = False
+compatible (TwoPMapInsert k v) (TwoPMapInsert k' v') | otherwise = True
+compatible (TwoPMapDelete k)   (TwoPMapDelete k')                = True
+
+apply (TwoPMap m p t) (TwoPMapInsert k v) = TwoPMap (Map.insert k v m) p t
+
+-- Good version.
+
+compatible :: TwoPMapOp k v -> TwoPMapOp k v -> Bool
+compatible (TwoPMapInsert k v) (TwoPMapInsert k' v') | k == k' = False
+-- ... TwoPMapApply
+compativle _                   _                               = True
+
+
+apply (TwoPMap m p t) (TwoPMapInsert k v) 
+  | Set.member k t = TwoPMap m p t
+  | otherwise = TwoPMap (Map.insert k v m) p t
+-}
+
 
 #if NotLiquid
 instance (VRDT v, Ord k) => VRDT (TwoPMap k v) where

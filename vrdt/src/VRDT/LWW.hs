@@ -45,6 +45,22 @@ instance Ord t => VRDT (LWW t a) where
 -- instance Ord t => VRDT (LWW t a) where
 --     type Operation (LWW t a) = LWW t a
 -- 
+--     compatible (LWW t1 _) (LWW t2 _) = t1 /= t2
+-- 
+--     apply l1 l2
+--       | t1 > t2   = l1
+--       | otherwise = l2
+--       where
+--         t1 = lwwTime l1
+--         t2 = lwwTime l2
+-- 
+-- 
+--     lawCommutativity x op1 op2 = ()
+
+--     lawNonCausal x op1 op2 = ()
+-- instance Ord t => VRDT (LWW t a) where
+--     type Operation (LWW t a) = LWW t a
+-- 
 --     enabled (LWW t1 _) (LWW t2 _) = t1 /= t2
 -- 
 --     apply l1@(LWW t1 _) l2@(LWW t2 _)
@@ -84,27 +100,38 @@ applyLWW l1 l2
     t1 = lwwTime l1
     t2 = lwwTime l2
 
--- applyLWW l1@(LWW t1 _) l2@(LWW t2 _) 
---   | t1 > t2   = l1
---   | otherwise = l2
-
-{-@ reflect enabledLWW @-}
-enabledLWW :: Eq t => LWW t a -> LWW t a -> Bool
-enabledLWW l1 l2 = t1 /= t2
+{-@ reflect compatibleLWW @-}
+compatibleLWW :: Eq t => LWW t a -> LWW t a -> Bool
+compatibleLWW l1 l2 = t1 /= t2
   where
     t1 = lwwTime l1
     t2 = lwwTime l2
 
-{-@ reflect enabled2LWW @-}
-enabled2LWW :: Ord t => LWW t a -> LWW t a -> LWW t a -> Bool
-enabled2LWW x op1 op2 = enabledLWW x op1 && enabledLWW x op2  && enabledLWW (applyLWW x op1) op2 && enabledLWW (applyLWW x op2) op1
-
--- {-@ ple lawCommutativityLWW @-}
-{-@ lawCommutativityLWW :: Ord t => x : LWW t a -> op1 : LWW t a -> op2 : LWW t a -> {enabled2LWW x op1 op2 => applyLWW op2 (applyLWW op1 x) == applyLWW op1 (applyLWW op2 x)} @-}
+{-@ lawCommutativityLWW :: Ord t => x : LWW t a -> op1 : LWW t a -> op2 : LWW t a -> {compatibleLWW op1 op2 => (applyLWW op2 (applyLWW op1 x) == applyLWW op1 (applyLWW op2 x))} @-}
 lawCommutativityLWW :: Ord t => LWW t a -> LWW t a -> LWW t a -> ()
 lawCommutativityLWW lww op1 op2 = ()
 
-{-@ lawNonCausalLWW :: Ord t => x : LWW t a -> {op1 : LWW t a | enabledLWW x op1} -> {op2 : LWW t a | enabledLWW x op2} -> {enabledLWW (applyLWW x op1) op2 <=> enabledLWW (applyLWW x op2) op1} @-}
-lawNonCausalLWW :: Ord t => LWW t a -> LWW t a -> LWW t a -> ()
-lawNonCausalLWW lww op1 op2 = ()
-
+-- applyLWW l1@(LWW t1 _) l2@(LWW t2 _) 
+--   | t1 > t2   = l1
+--   | otherwise = l2
+-- 
+-- {-@ reflect enabledLWW @-}
+-- enabledLWW :: Eq t => LWW t a -> LWW t a -> Bool
+-- enabledLWW l1 l2 = t1 /= t2
+--   where
+--     t1 = lwwTime l1
+--     t2 = lwwTime l2
+-- 
+-- {-@ reflect enabled2LWW @-}
+-- enabled2LWW :: Ord t => LWW t a -> LWW t a -> LWW t a -> Bool
+-- enabled2LWW x op1 op2 = enabledLWW x op1 && enabledLWW x op2  && enabledLWW (applyLWW x op1) op2 && enabledLWW (applyLWW x op2) op1
+-- 
+-- -- {-@ ple lawCommutativityLWW @-}
+-- {-@ lawCommutativityLWW :: Ord t => x : LWW t a -> op1 : LWW t a -> op2 : LWW t a -> {enabled2LWW x op1 op2 => applyLWW op2 (applyLWW op1 x) == applyLWW op1 (applyLWW op2 x)} @-}
+-- lawCommutativityLWW :: Ord t => LWW t a -> LWW t a -> LWW t a -> ()
+-- lawCommutativityLWW lww op1 op2 = ()
+-- 
+-- {-@ lawNonCausalLWW :: Ord t => x : LWW t a -> {op1 : LWW t a | enabledLWW x op1} -> {op2 : LWW t a | enabledLWW x op2} -> {enabledLWW (applyLWW x op1) op2 <=> enabledLWW (applyLWW x op2) op1} @-}
+-- lawNonCausalLWW :: Ord t => LWW t a -> LWW t a -> LWW t a -> ()
+-- lawNonCausalLWW lww op1 op2 = ()
+-- 
