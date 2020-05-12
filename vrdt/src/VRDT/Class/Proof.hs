@@ -8,15 +8,20 @@ import qualified Liquid.Data.List as List
 import           Liquid.ProofCombinators
 import           VRDT.Class
 
+{-@ ple noncausalSEC @-}
 {-@ noncausalSEC :: (Eq (Operation a), VRDT a) => s0:a -> ops1:[Operation a] -> ops2:[Operation a] -> {(isPermutation ops1 ops2 && allCompatible ops1) => (applyAll s0 ops1 = applyAll s0 ops2)} @-}
 noncausalSEC :: (Eq (Operation a), VRDT a) => a -> [Operation a] -> [Operation a] -> ()
-noncausalSEC s0 ops1 ops2 = ()
+noncausalSEC s0 [] [] = ()
+noncausalSEC s0 [] _ = ()
+noncausalSEC s0 _ [] = ()
+noncausalSEC s0 ops1 ops2 | not (isPermutation ops1 ops2) = ()
+noncausalSEC s0 ops1 (op2:ops2) = case removeFirst op2 ops1 of
+  Nothing ->
+    assert (isPermutation ops1 ops2)
+  Just ops1' -> 
+    noncausalSEC s0 ops1' ops2
 
 
-{-@ lemmaCompatibleCommututativity :: VRDT a => x:a -> op1:Operation a -> op2:Operation a -> {compatible op1 op2 = compatible op2 op1} @-}
-lemmaCompatibleCommututativity :: VRDT a => a -> Operation a -> Operation a -> ()
--- lemmaCompatibleCommututativity x op1 op2 = lawCommutativity x op1 op2
-lemmaCompatibleCommututativity x op1 op2 = lawCommutativity x op1 op2 &&& lawCommutativity x op2 op1
 
 {-@ reflect allCompatible @-}
 allCompatible :: VRDT a => [Operation a] -> Bool
