@@ -197,13 +197,19 @@ lemmaRemoveFirstApplyAll x op ops@(op1:ops') rs
       === applyAll (apply (apply x op1) op) ops''
         ?   lemmaRemoveFirstElem op ops rs
         &&& lawCompatibilityCommutativity op op1
+        &&& lemmaAllCompatibleElem op op1 ops'
         &&& lawCommutativity x op1 op
       === applyAll (apply (apply x op) op1) ops''
       === applyAll (apply x op) rs
       *** QED
 
-
-
+{-@ ple lemmaAllCompatibleElem  @-}
+{-@ lemmaAllCompatibleElem :: (Eq (Operation a), VRDT a) => op:Operation a -> op':Operation a -> {ops:[Operation a] | List.elem' op ops && allCompatible' op' ops} -> {compatible op' op} @-}
+lemmaAllCompatibleElem :: (Eq (Operation a), VRDT a) => Operation a -> Operation a -> [Operation a] -> ()
+lemmaAllCompatibleElem op op' [] =  ()
+lemmaAllCompatibleElem op op' (op'':ops)
+  | op == op'' = ()
+  | otherwise = lemmaAllCompatibleElem op op' ops
 
 {-@ ple lemmaRemoveFirstElem @-}
 {-@
