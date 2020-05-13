@@ -18,7 +18,7 @@ elem' x (h:t)
   | x == h    = True
   | otherwise = elem' x t
 
--- {-@ length' :: ls:[a] -> {v:Int | v = length ls} @-}
+{-@ length :: ls:[a] -> {v:Int | v = len ls} @-}
 {-@ measure length @-}
 length :: [a] -> Int
 length [] = 0
@@ -43,3 +43,7 @@ tail (h:l) = l
 {-@ head :: {x:[a] | length x > 0} -> a @-}
 head :: [a] -> a
 head (h:l) = h
+
+{-@ reflect empty @-}
+empty :: [a]
+empty = []

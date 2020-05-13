@@ -9,6 +9,7 @@ import qualified Liquid.Data.List as List
 import           Liquid.ProofCombinators
 import           VRDT.Class
 import           Prelude hiding (Maybe(..), length, fromJust, tail)
+import qualified Data.Set as S
 
 {-@ ple strongConvergence @-}
 {-@ strongConvergence :: (Eq (Operation a), VRDT a) => s0:a -> ops1:[Operation a] -> ops2:[Operation a] -> {(isPermutation ops1 ops2 && allCompatible ops1) => (applyAll s0 ops1 = applyAll s0 ops2)} @-}
@@ -43,12 +44,13 @@ strongConvergence s0 ops1@(op1:ops1') ops2@(op2:ops2')
       &&& lemmaRemoveFirstPermutation op2 ops2' ops1 ops1''
       &&& strongConvergence (apply s0 op2) ops1'' ops2'
 
-
+-- {-@ reflect elems @-}
+-- elems :: 
 
 {-@ reflect allCompatible @-}
 {-@ ple allCompatible @-}
 {-@ allCompatible :: VRDT a => xs:[Operation a] ->
-  {vv:Bool | (vv && List.length xs > 0) => allCompatible (List.tail xs)} @-}
+  {vv:Bool | (vv && len xs > 0) => allCompatible (List.tail xs)} @-}
 allCompatible :: VRDT a => [Operation a] -> Bool
 allCompatible [] = True
 allCompatible (op1:ops) = allCompatible' op1 ops
@@ -67,7 +69,7 @@ applyAll s (op:ops) = applyAll (apply s op) ops
 
 {-@ reflect isPermutation @-}
 {-@ ple isPermutation @-}
-{-@ isPermutation :: Eq o => xs:[o] -> ys:[o] -> {v:Bool | v => List.length xs == List.length ys} @-}
+{-@ isPermutation :: Eq o => xs:[o] -> ys:[o] -> {v:Bool | v => len xs == len ys} @-}
 isPermutation :: Eq o => [o] -> [o] -> Bool
 isPermutation []    []    = True
 isPermutation (_:_) []    = False
@@ -79,7 +81,7 @@ isPermutation (op1:ops1') ops2 = case removeFirst op1 ops2 of
 {-@ reflect removeFirst @-}
 {-@ ple removeFirst @-}
 {-@ removeFirst :: Eq o => x:o -> xs:[o] ->
-   {vv:Maybe [o] | (isJust vv => 1 + List.length (fromJust vv) == List.length xs) &&
+   {vv:Maybe [o] | (isJust vv => 1 + len (fromJust vv) == len xs) &&
                    (List.elem' x xs => isJust vv)} @-}
 removeFirst :: Eq o => o -> [o] -> Maybe [o]
 removeFirst o [] = Nothing
@@ -121,41 +123,28 @@ lemmaAllCompatibleTail :: VRDT a => Operation a -> [Operation a] -> ()
 lemmaAllCompatibleTail op [] = ()
 lemmaAllCompatibleTail op (_:ops) = lemmaAllCompatibleTail op ops
 
-lengthPred :: [a] -> Bool
-lengthPred l@[] = List.length l == List.length l
-lengthPred l@(h:t) = List.length l == List.length l && lengthPred t
-
-{-@ ple lemmaPermutationSymmetric @-}
-{-@ lemmaPermutationSymmetric :: Eq a => ops1:[a] -> {ops2:[a] | isPermutation ops1 ops2 } -> {isPermutation ops2 ops1} @-}
-lemmaPermutationSymmetric :: Eq a => [a] -> [a] -> ()
-lemmaPermutationSymmetric []    _    = ()
-lemmaPermutationSymmetric _    [] = ()
-lemmaPermutationSymmetric ops1@(op1:ops1') ops2@(op2:ops2')
-  | op1 == op2 = isPermutation ops1 ops2 === isPermutation ops1' ops2'
-                 ? lemmaPermutationSymmetric ops1' ops2'
-                 *** QED
-  | Just (_op2:ops2NoOp1)<- removeFirst op1 ops2
-  , Just (_op1:ops1NoOp2)<- removeFirst op2 ops1
-  =   isPermutation (op1:ops1') (op2:ops2')
-  === isPermutation ops1' (_op2:ops2NoOp1)
-      ? lemmaPermutationSymmetric ops1' (_op2:ops2NoOp1)
-  === isPermutation (_op2:ops2NoOp1) ops1'
-      ? assert (isJust (removeFirst _op2 ops1'))
-  === (let Just ops1NoOp2' = removeFirst _op2 ops1' in
-         isPermutation ops2NoOp1 ops1NoOp2')
-  -- === isPermutation ops2NoOp1 ops1NoOp2
-  --     ? lemmaPermutationSymmetric ops2NoOp1 ops1NoOp2
-  *** QED
-  | otherwise = ()
-
 
 
 {-@ ple lemmaRemoveFirstPermutation @-}
 {-@ lemmaRemoveFirstPermutation :: Eq a => op2:a -> ops2':[a] -> {ops1:[a] | isPermutation ops1 (cons op2 ops2')} -> {rs:[a] | removeFirst op2 ops1 == Just rs} -> {isPermutation rs ops2'} @-}
 lemmaRemoveFirstPermutation :: Eq a => a -> [a] -> [a] -> [a] -> ()
-lemmaRemoveFirstPermutation op2 ops2 (op1:ops1) rs =
-  lemmaPermutationSymmetric ops2 rs
-  ? lemmaPermutationSymmetric (op2:ops2) (op1:ops1)
+lemmaRemoveFirstPermutation op2 ops2 [] rs = ()
+lemmaRemoveFirstPermutation op2 [] (op1:ops1) rs
+  | op1 == op2 = ()
+  | otherwise = ()
+lemmaRemoveFirstPermutation op2 ops2 (op1:ops1) rs
+  | op1 == op2
+  = ()
+  | Just ops2_op1 <- removeFirst op1 ops2
+  = assert (isPermutation ops1 (op2:ops2_op1))
+    ? lemmaPermutationContainsElem op2 ops2_op1 ops1
+    ? assert (isJust (removeFirst op2 ops1))
+    ? case removeFirst op2 ops1 of
+        Just ops1_op2 -> lemmaRemoveFirstPermutation op2 ops2_op1 ops1 ops1_op2
+                         ? assert (isPermutation ops1_op2 ops2_op1)
+                         ? (isPermutation (op1:ops1_op2) ops2 ==. isPermutation ops1_op2 ops2_op1)
+  
+
 -- lemmaRemoveFirstPermutation op2 _ [] rs = () -- TODO
 -- lemmaRemoveFirstPermutation op2 [] _ rs = ()
 -- lemmaRemoveFirstPermutation op2 ops2@(op2':ops2') ops1@(op1:ops1') (r:rs)  =
@@ -203,16 +192,16 @@ lemmaRemoveFirstApplyAll x op ops@(op1:ops') rs
       ()
     Just ops'' ->
           applyAll x ops
-      === applyAll (apply x op1) ops'
+      ==. applyAll (apply x op1) ops'
         ?   lemmaAllCompatibleTail op1 ops'
         &&& lemmaRemoveFirstApplyAll (apply x op1) op ops' ops''
-      === applyAll (apply (apply x op1) op) ops''
+      ==. applyAll (apply (apply x op1) op) ops''
         ?   lemmaRemoveFirstElem op ops rs
         &&& lawCompatibilityCommutativity op op1
         &&& lemmaAllCompatibleElem op op1 ops'
         &&& lawCommutativity x op1 op
-      === applyAll (apply (apply x op) op1) ops''
-      === applyAll (apply x op) rs
+      ==. applyAll (apply (apply x op) op1) ops''
+      ==. applyAll (apply x op) rs
       *** QED
 
 {-@ ple lemmaAllCompatibleElem  @-}
@@ -279,15 +268,15 @@ lemmaRemoveFirstElem op os@(_:t) rs@(r:rs')
 --         --     commutativeStrongEventualConsistency (apply s0 op1) ops1 ops2
 --         -- &&& commutativeStrongEventualConsistency (apply s0 op2) ops1 ops2
 --           applyAll s0 (op1:t1)
---       === applyAll (apply s0 op1) t1
+--       ==. applyAll (apply s0 op1) t1
 --             ?   lemmaRemoveFirstEnabled s0 op1 ops2 ops2'
 --             &&& assert (allEnabled s0 ops2')
 --             &&& assume (allEnabled (apply s0 op1) ops2') -- TODO XXX
 --             &&& commutativeStrongEventualConsistency (apply s0 op1) t1 ops2'
---       === applyAll (apply s0 op1) ops2'
---       === applyAll s0 (op1:ops2')
+--       ==. applyAll (apply s0 op1) ops2'
+--       ==. applyAll s0 (op1:ops2')
 --             ?   lemmaRemoveFirstApplied s0 op1 ops2 ops2'
---       === applyAll s0 ops2
+--       ==. applyAll s0 ops2
 --       *** QED
 -- 
 -- {-@ reflect allEnabled @-}
@@ -359,7 +348,7 @@ lemmaRemoveFirstElem op os@(_:t) rs@(r:rs')
 -- --           assert (List.elem' op t)
 -- --       &&& (
 -- --             allEnabled x ops
--- --         === (enabled x h && allEnabled' (apply x h) t)
+-- --         ==. (enabled x h && allEnabled' (apply x h) t)
 -- --         *** QED
 -- --       )
 -- --       &&& assert (enabled x h)
@@ -369,7 +358,7 @@ lemmaRemoveFirstElem op os@(_:t) rs@(r:rs')
 -- --       &&& assert (enabled (apply x h') h)
 -- --       &&& (
 -- --             allEnabled x t
--- --         === (enabled x h' && allEnabled (apply x h') t')
+-- --         ==. (enabled x h' && allEnabled (apply x h') t')
 -- --         *** QED
 -- --       )
 -- --       &&& assert (enabled x h')
@@ -452,7 +441,7 @@ lemmaRemoveFirstElem op os@(_:t) rs@(r:rs')
 -- lemmaElemEnabled x [] op op' = () -- unreachable
 -- --   assert (elem op []) &&&
 -- --   (   elem op []
--- --   === False
+-- --   ==. False
 -- --   *** QED
 -- --   )
 -- lemmaElemEnabled x (o:os) op op'
@@ -460,7 +449,7 @@ lemmaRemoveFirstElem op os@(_:t) rs@(r:rs')
 --   | o == op'  = -- lemmaElemEnabled x os op op'
 --         (
 --         allEnabled x (o:os)
---     === (enabled x o && allEnabled x os && allEnabled (apply x o) os)
+--     ==. (enabled x o && allEnabled x os && allEnabled (apply x o) os)
 --     *** QED
 --     )
 --     &&& assert (allEnabled (apply x op') os) 
