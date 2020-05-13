@@ -17,7 +17,7 @@ maybe :: b -> (a -> b) -> Maybe a -> b
 maybe d _ Nothing  = d
 maybe _ f (Just v) = f v
 
-{-@ reflect fromJust @-}
+{-@ measure fromJust @-}
 {-@ fromJust :: vv:{Maybe a | isJust vv} -> a @-}
 fromJust :: Maybe a -> a
 fromJust (Just a) = a
