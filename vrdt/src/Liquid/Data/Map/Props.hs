@@ -139,8 +139,8 @@ lemmaInsertDelete k1 v1 k2 (Map k v m)
     *** QED
   | otherwise = ()
 
-{-@ lemmaLessInsert :: k:k -> v:v -> m:Map {k':k | k < k'} v -> {insert k v m == Map k v m} @-}
-lemmaLessInsert :: k -> v -> Map k v -> ()
+{-@ lemmaLessInsert :: Ord k => k:k -> v:v -> m:Map {k':k | k < k'} v -> {insert k v m == Map k v m} @-}
+lemmaLessInsert :: Ord k => k -> v -> Map k v -> ()
 lemmaLessInsert _ _ Tip = ()
 lemmaLessInsert k v m@(Map k' _ m') = lemmaLessInsert k v m'
 
@@ -245,13 +245,13 @@ lemmaDelete k1 k2 (Map k v m)
     *** QED
   | otherwise         = ()
 
-{-@ lemmaLessNotMember :: kd:k -> m:Map {k:k | kd < k} v -> {not (member kd m)} @-}
-lemmaLessNotMember :: k -> Map k v -> ()
+{-@ lemmaLessNotMember :: Ord k => kd:k -> m:Map {k:k | kd < k} v -> {not (member kd m)} @-}
+lemmaLessNotMember :: Ord k => k -> Map k v -> ()
 lemmaLessNotMember _ Tip = ()
 lemmaLessNotMember k (Map _ _ m) = lemmaLessNotMember k m
 
-{-@ lemmaNotMemberLookupNothing :: k:k -> {m:Map k v | not (member k m)} -> {lookup k m == Nothing} @-}
-lemmaNotMemberLookupNothing :: k -> Map k v -> ()
+{-@ lemmaNotMemberLookupNothing :: Ord k => k:k -> {m:Map k v | not (member k m)} -> {lookup k m == Nothing} @-}
+lemmaNotMemberLookupNothing :: Ord k => k -> Map k v -> ()
 lemmaNotMemberLookupNothing _ Tip = ()
 lemmaNotMemberLookupNothing k (Map _ _ m) = lemmaNotMemberLookupNothing k m
 
@@ -306,8 +306,8 @@ lemmaInsertDelete' k v m@(Map k' _ m')
     ==. insert k v (delete k m)
     *** QED
 
-{-@ lemmaInsertTwice :: k:k -> v1:v -> v2:v -> m:Map k v -> {insert k v1 (insert k v2 m) = insert k v1 m} @-}
-lemmaInsertTwice :: k -> v -> v -> Map k v -> ()
+{-@ lemmaInsertTwice :: Ord k => k:k -> v1:v -> v2:v -> m:Map k v -> {insert k v1 (insert k v2 m) = insert k v1 m} @-}
+lemmaInsertTwice :: Ord k => k -> v -> v -> Map k v -> ()
 lemmaInsertTwice _ _ _ Tip = ()
 lemmaInsertTwice k v1 v2 (Map _ _ m') = lemmaInsertTwice k v1 v2 m'
 

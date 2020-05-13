@@ -19,7 +19,6 @@ module VRDT.MultiSet (
   , deleteMany
   , deleteAll
 
-  , enabled
   , apply
   , multiSetOpOrder
   ) where
@@ -52,7 +51,7 @@ import qualified VRDT.Class as VRDT
 {-@
 data MultiSet a = MultiSet {
     posMultiSet ::  Map a PosInteger
-  , negMultiSet :: {v:Map a NegInteger | Map.disjoint posMultiSet v }
+  , negMultiSet :: {v:Map a NegInteger | Liquid.Data.Map.disjoint posMultiSet v }
   }
 @-} 
 data MultiSet a = MultiSet {
@@ -139,9 +138,9 @@ multiSetOpOrder (MultiSetOpRemove _ _) = 1
 -- 
 --     lawCommutativity MultiSet{..} op1 op2 = ()
 
-{-@ reflect enabled @-}
-enabled :: MultiSet k -> MultiSetOp k -> Bool 
-enabled _ _ = True 
+{-@ reflect compatible @-}
+compatible :: MultiSetOp k -> MultiSetOp k -> Bool 
+compatible _ _ = True 
 
 {-@ ple apply @-}
 {-@ reflect apply @-}
@@ -289,21 +288,14 @@ lawCommutativityNEq x@MultiSet{..} v1 c1 v2 c2
     op2 = MultiSetOpAdd v2 c2
 
 
-{-@ reflect toC'' @-}
-toC'' :: Ord a => Map a Integer -> Map a Integer -> a -> Integer -> Integer -> Integer
-toC'' posMultiSet negMultiSet v c1 c2 = case Map.lookup v posMultiSet of
-  Nothing -> case Map.lookup v negMultiSet of
-    Nothing -> c1 + c2
-    Just c -> c + c1 + c2
-  Just c -> c + c1 + c2
 
 {-@ ple lawCommutativityEq' @-}
 {-@ 
 lawCommutativityEq' 
   :: Ord k 
-  => posMultiSet:Map k PosInteger 
+  => v:k 
+  -> posMultiSet:Map k PosInteger 
   -> {negMultiSet:Map k NegInteger | Map.disjoint posMultiSet negMultiSet}
-  -> v:k 
   -> c1:Integer 
   -> c2:Integer
   -> {c'':PosInteger | c'' == toC'' posMultiSet negMultiSet v c1 c2}
@@ -311,15 +303,15 @@ lawCommutativityEq'
 @-}
 lawCommutativityEq' 
   :: Ord k
-  => Map k Integer 
+  => k
   -> Map k Integer 
-  -> k 
+  -> Map k Integer 
   -> Integer 
   -> Integer 
   -> Integer 
   -> ()
-lawCommutativityEq' posMultiSet negMultiSet v c1 c2 c'' | c'' <= 0 = ()
-lawCommutativityEq' posMultiSet negMultiSet v c1 c2 _c'' = 
+lawCommutativityEq' v posMultiSet negMultiSet c1 c2 c'' | c'' <= 0 = ()
+lawCommutativityEq' v posMultiSet negMultiSet c1 c2 _c'' = 
   let c1' = case Map.lookup v posMultiSet of
         Nothing -> case Map.lookup v negMultiSet of
           Nothing -> c1
@@ -369,25 +361,25 @@ lawCommutativityEq' posMultiSet negMultiSet v c1 c2 _c'' =
 {-@ 
 lawCommutativityEq''
   :: Ord k 
-  => posMultiSet:Map k PosInteger 
+  =>  v:k 
+  -> posMultiSet:Map k PosInteger 
   -> {negMultiSet:Map k NegInteger | Map.disjoint posMultiSet negMultiSet}
-  -> v:k 
   -> c1:Integer 
   -> c2:Integer
-  -> {c'':NegInteger | c'' == toC'' posMultiSet negMultiSet v c1 c2}
+  -> {c'':NegInteger | c'' == Map.toC'' posMultiSet negMultiSet v c1 c2}
   -> {apply (apply (MultiSet posMultiSet negMultiSet) (MultiSetOpAdd v c1)) (MultiSetOpAdd v c2) = MultiSet (Map.delete v posMultiSet) (Map.insert v c'' negMultiSet)}
 @-}
 lawCommutativityEq''
   :: Ord k
-  => Map k Integer 
+  => k
   -> Map k Integer 
-  -> k 
+  -> Map k Integer 
   -> Integer 
   -> Integer 
   -> Integer 
   -> ()
-lawCommutativityEq'' posMultiSet negMultiSet v c1 c2 c'' | c'' > 0 = ()
-lawCommutativityEq'' posMultiSet negMultiSet v c1 c2 _c'' = 
+lawCommutativityEq'' v posMultiSet negMultiSet c1 c2 c'' | c'' > 0 = ()
+lawCommutativityEq'' v posMultiSet negMultiSet c1 c2 _c'' = 
   let c1' = case Map.lookup v posMultiSet of
         Nothing -> case Map.lookup v negMultiSet of
           Nothing -> c1
@@ -438,17 +430,17 @@ lawCommutativityEq x@MultiSet{..} v c1 c2 =
 
   if c'' > 0 then
         apply (apply x op1) op2
-          ?   lawCommutativityEq' posMultiSet negMultiSet v c1 c2 c''
+          ?   lawCommutativityEq' v posMultiSet negMultiSet c1 c2 c''
           &&& assert (Map.disjoint posMultiSet negMultiSet)
           &&& assert (Map.disjoint negMultiSet posMultiSet)
           &&& Map.lemmaDisjoint'' v c'' negMultiSet posMultiSet
           &&& assert (Map.disjoint (Map.insert v c'' posMultiSet) (Map.delete v negMultiSet))
-    ==. MultiSet (Map.insert v c'' posMultiSet) (Map.delete v negMultiSet) ? lawCommutativityEq' posMultiSet negMultiSet v c2 c1 c''
+    ==. MultiSet (Map.insert v c'' posMultiSet) (Map.delete v negMultiSet) ? lawCommutativityEq' v posMultiSet negMultiSet c2 c1 c''
     ==. apply (apply x op2) op1
     *** QED
   else
-        apply (apply x op1) op2 ? lawCommutativityEq'' posMultiSet negMultiSet v c1 c2 c''
-    ==. MultiSet (Map.delete v posMultiSet) (Map.insert v c'' negMultiSet) ? lawCommutativityEq'' posMultiSet negMultiSet v c2 c1 c''
+        apply (apply x op1) op2 ? lawCommutativityEq'' v posMultiSet negMultiSet c1 c2 c''
+    ==. MultiSet (Map.delete v posMultiSet) (Map.insert v c'' negMultiSet) ? lawCommutativityEq'' v posMultiSet negMultiSet c2 c1 c''
     ==. apply (apply x op2) op1
     *** QED
 
@@ -498,10 +490,10 @@ lawCommutativity x@MultiSet{..} op1@(MultiSetOpRemove v1 c1) op2@(MultiSetOpRemo
     *** QED
 
 
-{-@ ple lawNonCausal @-}
-{-@ lawNonCausal :: Ord t => x : MultiSet t -> {op1 : MultiSetOp t | enabled x op1} -> {op2 : MultiSetOp t | enabled x op2} -> {enabled (apply x op1) op2 <=> enabled (apply x op2) op1} @-}
-lawNonCausal :: Ord t => MultiSet t -> MultiSetOp t -> MultiSetOp t -> ()
-lawNonCausal _ _ _ = () 
+-- {-@ ple lawNonCausal @-}
+-- {-@ lawNonCausal :: Ord t => x : MultiSet t -> {op1 : MultiSetOp t | enabled x op1} -> {op2 : MultiSetOp t | enabled x op2} -> {enabled (apply x op1) op2 <=> enabled (apply x op2) op1} @-}
+-- lawNonCausal :: Ord t => MultiSet t -> MultiSetOp t -> MultiSetOp t -> ()
+-- lawNonCausal _ _ _ = () 
 
 null :: MultiSet a -> Bool
 null = Map.null . posMultiSet
