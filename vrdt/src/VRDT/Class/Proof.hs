@@ -128,14 +128,26 @@ lengthPred l@(h:t) = List.length l == List.length l && lengthPred t
 {-@ ple lemmaPermutationSymmetric @-}
 {-@ lemmaPermutationSymmetric :: Eq a => ops1:[a] -> {ops2:[a] | isPermutation ops1 ops2 } -> {isPermutation ops2 ops1} @-}
 lemmaPermutationSymmetric :: Eq a => [a] -> [a] -> ()
-lemmaPermutationSymmetric []    []    = ()
-lemmaPermutationSymmetric (_:_) []    = ()
-lemmaPermutationSymmetric []    (_:_) = ()
-lemmaPermutationSymmetric x@[_]    [y] = ()
-lemmaPermutationSymmetric x@[_]    (y:ys) = ()
-lemmaPermutationSymmetric _    [_] = ()
-lemmaPermutationSymmetric ops1@(op1:ops1'') ops2@(op2:ops2'') = ()
---   | 
+lemmaPermutationSymmetric []    _    = ()
+lemmaPermutationSymmetric _    [] = ()
+lemmaPermutationSymmetric ops1@(op1:ops1') ops2@(op2:ops2')
+  | op1 == op2 = isPermutation ops1 ops2 === isPermutation ops1' ops2'
+                 ? lemmaPermutationSymmetric ops1' ops2'
+                 *** QED
+  | Just (_op2:ops2NoOp1)<- removeFirst op1 ops2
+  , Just (_op1:ops1NoOp2)<- removeFirst op2 ops1
+  =   isPermutation (op1:ops1') (op2:ops2')
+  === isPermutation ops1' (_op2:ops2NoOp1)
+      ? lemmaPermutationSymmetric ops1' (_op2:ops2NoOp1)
+  === isPermutation (_op2:ops2NoOp1) ops1'
+      ? assert (isJust (removeFirst _op2 ops1'))
+  === (let Just ops1NoOp2' = removeFirst _op2 ops1' in
+         isPermutation ops2NoOp1 ops1NoOp2')
+  -- === isPermutation ops2NoOp1 ops1NoOp2
+  --     ? lemmaPermutationSymmetric ops2NoOp1 ops1NoOp2
+  *** QED
+  | otherwise = ()
+
 
 
 {-@ ple lemmaRemoveFirstPermutation @-}
