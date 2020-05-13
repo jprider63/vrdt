@@ -8,7 +8,7 @@ import           Liquid.Data.Maybe
 import qualified Liquid.Data.List as List
 import           Liquid.ProofCombinators
 import           VRDT.Class
-import           Prelude hiding (Maybe(..), length)
+import           Prelude hiding (Maybe(..), length, fromJust, tail)
 
 {-@ ple strongConvergence @-}
 {-@ strongConvergence :: (Eq (Operation a), VRDT a) => s0:a -> ops1:[Operation a] -> ops2:[Operation a] -> {(isPermutation ops1 ops2 && allCompatible ops1) => (applyAll s0 ops1 = applyAll s0 ops2)} @-}
@@ -27,7 +27,7 @@ strongConvergence s0 ops1@(op1:ops1') ops2@(op2:ops2')
           assert (isPermutation ops1 ops2)
       &&& lemmaPermutationContainsElem op2 ops2' ops1
       &&& assert (List.elem' op2 ops1)
-      &&& lemmaRemoveElemIsJust op2 ops1
+      -- &&& lemmaRemoveElemIsJust op2 ops1
     Just ops1'' ->
           lemmaRemoveFirstAllCompatible op2 ops1 ops1''
       &&& (
@@ -39,17 +39,15 @@ strongConvergence s0 ops1@(op1:ops1') ops2@(op2:ops2')
       ==. applyAll (apply s0 op2) ops2'
       *** QED
       )
-      -- &&& lemmaRemoveFirstLength op2 ops1 ops1''
-      -- &&& assert (lengthPred ops1'')
-      -- &&& assert (lengthPred ops1)
-      -- &&& assume (List.length ops1'' < List.length ops1) -- TODO
-      &&& assume (List.length ops1'' < List.length ops1) -- TODO
       &&& lemmaRemoveFirstPermutation op2 ops2' ops1 ops1''
       &&& strongConvergence (apply s0 op2) ops1'' ops2'
 
 
 
 {-@ reflect allCompatible @-}
+{-@ ple allCompatible @-}
+{-@ allCompatible :: VRDT a => xs:[Operation a] ->
+  {vv:Bool | (vv && List.length xs > 0) => allCompatible (List.tail xs)} @-}
 allCompatible :: VRDT a => [Operation a] -> Bool
 allCompatible [] = True
 allCompatible (op1:ops) = allCompatible' op1 ops
@@ -67,6 +65,8 @@ applyAll s []       = s
 applyAll s (op:ops) = applyAll (apply s op) ops
 
 {-@ reflect isPermutation @-}
+{-@ ple isPermutation @-}
+{-@ isPermutation :: Eq o => xs:[o] -> ys:[o] -> {v:Bool | v => List.length xs == List.length ys} @-}
 isPermutation :: Eq o => [o] -> [o] -> Bool
 isPermutation []    []    = True
 isPermutation (_:_) []    = False
@@ -76,6 +76,10 @@ isPermutation (op1:ops1') ops2 = case removeFirst op1 ops2 of
     Just ops2' -> isPermutation ops1' ops2'
 
 {-@ reflect removeFirst @-}
+{-@ ple removeFirst @-}
+{-@ removeFirst :: Eq o => x:o -> xs:[o] ->
+   {vv:Maybe [o] | (isJust vv => 1 + List.length (fromJust vv) == List.length xs) &&
+                   (List.elem' x xs => isJust vv)} @-}
 removeFirst :: Eq o => o -> [o] -> Maybe [o]
 removeFirst o [] = Nothing
 removeFirst o (h:t) = 
@@ -95,44 +99,33 @@ removeFirst o (h:t) =
 cons :: a -> [a] -> [a]
 cons a as = a:as
 
--- {-@ ple lemmaPermutationContainsElem @-}
-{-@ lemmaPermutationContainsElem :: Eq (Operation a) => op2:Operation a -> ops2':[Operation a] -> {ops1:[Operation a] | isPermutation ops1 (cons op2 ops2')} -> {List.elem' op2 ops1} @-}
-lemmaPermutationContainsElem :: Eq (Operation a) => Operation a -> [Operation a] -> [Operation a] -> ()
-lemmaPermutationContainsElem op2 ops2' ops1 = undefined -- TODO
+{-@ ple lemmaPermutationContainsElem @-}
+{-@ lemmaPermutationContainsElem :: Eq a => op2:a -> ops2':[a] -> {ops1:[a] | isPermutation ops1 (cons op2 ops2')} -> {List.elem' op2 ops1} @-}
+lemmaPermutationContainsElem :: Eq a => a -> [a] -> [a] -> ()
 
--- lemmaPermutationContainsElem op2 [] [] = ()
--- lemmaPermutationContainsElem op2 _  [] = ()
--- -- lemmaPermutationContainsElem op2 [] _  = ()
--- lemmaPermutationContainsElem op2 (op2':ops2') ops1@(op1:_) 
---   | op1 == op2 = ()
---   | otherwise  = case removeFirst op2' ops1 of
---     Nothing ->
---       ()
---     Just ops1' ->
---       lemmaPermutationContainsElem op2 ops2' ops1'
-
-
-{-@ ple lemmaRemoveElemIsJust @-}
-{-@ lemmaRemoveElemIsJust :: Eq (Operation a) => op2:Operation a -> {ops1:[Operation a] | List.elem' op2 ops1} -> {isJust (removeFirst op2 ops1)} @-}
-lemmaRemoveElemIsJust :: Eq (Operation a) => Operation a -> [Operation a] -> ()
-lemmaRemoveElemIsJust op2 [] = ()
-lemmaRemoveElemIsJust op2 (op1:ops1) 
+lemmaPermutationContainsElem op2 _ [] = ()
+lemmaPermutationContainsElem op2 [] (op1:ops1)
   | op1 == op2 = ()
-  | otherwise  = lemmaRemoveElemIsJust op2 ops1
+  | otherwise = ()
+lemmaPermutationContainsElem op2 (op2':ops2) ops1@(op1:ops1') 
+  | op1 == op2 = ()
+  | otherwise  = case removeFirst op1 (op2:op2':ops2) of
+      Nothing -> ()
+                   -- Nothing ->       ()
+      Just (op2'':ops2') -> lemmaPermutationContainsElem op2'' ops2' ops1'
+      -- lemmaPermutationContainsElem op2 ops2' ops1'
 
+
+{-@ ple lemmaAllCompatibleTail @-}
 {-@ lemmaAllCompatibleTail :: VRDT a => op:Operation a -> {ops:[Operation a] | allCompatible (cons op ops)} -> {allCompatible ops} @-}
 lemmaAllCompatibleTail :: VRDT a => Operation a -> [Operation a] -> ()
-lemmaAllCompatibleTail op ops = undefined -- TODO
+lemmaAllCompatibleTail op [] = ()
+lemmaAllCompatibleTail op (_:ops) = lemmaAllCompatibleTail op ops
+
 
 {-@ lemmaAllCompatibleElem :: (Eq (Operation a), VRDT a) => op:Operation a -> op':Operation a -> {ops:[Operation a] | List.elem' op (cons op' ops) && allCompatible (cons op' ops)} -> {compatible op' op} @-}
 lemmaAllCompatibleElem :: (Eq (Operation a), VRDT a) => Operation a -> Operation a -> [Operation a] -> ()
 lemmaAllCompatibleElem = undefined
-
-
-
-{-@ lemmaRemoveFirstLength :: Eq (Operation a) => op:Operation a -> os:[Operation a] -> {rs:[Operation a] | removeFirst op os == Just rs} -> {length rs < length os} @-}
-lemmaRemoveFirstLength :: Eq (Operation a) => Operation a -> [Operation a] -> [Operation a] -> ()
-lemmaRemoveFirstLength op os ts = undefined -- TODO?
 
 lengthPred :: [a] -> Bool
 lengthPred l@[] = List.length l == List.length l

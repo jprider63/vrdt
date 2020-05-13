@@ -34,3 +34,8 @@ concat :: [a] -> [a] -> [a]
 concat [] l = l
 concat (h:t) l = h:(concat t l)
 
+{-@ measure tail @-}
+{-@ tail :: {x:[a] | length x > 0} -> [a] @-}
+tail :: [a] -> [a]
+tail (h:l) = l
+
