@@ -22,17 +22,15 @@ data Max a = Max {
   }
   deriving (Eq, Ord)
 
--- {-@ ple lawCommutativity @-}
--- {-@ ple lawNonCausal @-}
 instance Ord a => VRDT (Max a) where
     type Operation (Max a) = Max a
 
-    enabled max op = True
+    compatible op1 op2 = True
 
     apply (Max a) (Max b) | a > b = Max a
     apply (Max a) (Max b)         = Max b
 
     lawCommutativity max op1 op2 = ()
     
-    lawNonCausal max op1 op2 = ()
+    lawCompatibilityCommutativity op1 op2 = ()
 
