@@ -26,10 +26,11 @@ data Min a = Min {
 instance Ord a => VRDT (Min a) where
     type Operation (Min a) = Min a
 
-    enabled _ _ = True
     apply (Min a) (Min b) | a < b = Min a
     apply (Min a) (Min b)         = Min b
 
+    compatible _ _ = True
+
     lawCommutativity min op1 op2 = ()
-    lawNonCausal min op1 op2 = ()
+    lawCompatibilityCommutativity _ _ = ()
 
