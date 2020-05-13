@@ -39,3 +39,7 @@ concat (h:t) l = h:(concat t l)
 tail :: [a] -> [a]
 tail (h:l) = l
 
+{-@ measure head @-}
+{-@ head :: {x:[a] | length x > 0} -> a @-}
+head :: [a] -> a
+head (h:l) = h

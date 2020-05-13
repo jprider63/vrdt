@@ -29,6 +29,7 @@ strongConvergence s0 ops1@(op1:ops1') ops2@(op2:ops2')
       &&& assert (List.elem' op2 ops1)
       -- &&& lemmaRemoveElemIsJust op2 ops1
     Just ops1'' ->
+          -- lemmaPermutationSymmetric (op2:ops1) ops1''
           lemmaRemoveFirstAllCompatible op2 ops1 ops1''
       &&& (
           applyAll s0 ops1 ? lemmaRemoveFirstApplyAll s0 op2 ops1 ops1''
@@ -111,9 +112,7 @@ lemmaPermutationContainsElem op2 (op2':ops2) ops1@(op1:ops1')
   | op1 == op2 = ()
   | otherwise  = case removeFirst op1 (op2:op2':ops2) of
       Nothing -> ()
-                   -- Nothing ->       ()
       Just (op2'':ops2') -> lemmaPermutationContainsElem op2'' ops2' ops1'
-      -- lemmaPermutationContainsElem op2 ops2' ops1'
 
 
 {-@ ple lemmaAllCompatibleTail @-}
@@ -122,24 +121,62 @@ lemmaAllCompatibleTail :: VRDT a => Operation a -> [Operation a] -> ()
 lemmaAllCompatibleTail op [] = ()
 lemmaAllCompatibleTail op (_:ops) = lemmaAllCompatibleTail op ops
 
-
-{-@ lemmaAllCompatibleElem :: (Eq (Operation a), VRDT a) => op:Operation a -> op':Operation a -> {ops:[Operation a] | List.elem' op (cons op' ops) && allCompatible (cons op' ops)} -> {compatible op' op} @-}
-lemmaAllCompatibleElem :: (Eq (Operation a), VRDT a) => Operation a -> Operation a -> [Operation a] -> ()
-lemmaAllCompatibleElem = undefined
-
 lengthPred :: [a] -> Bool
 lengthPred l@[] = List.length l == List.length l
 lengthPred l@(h:t) = List.length l == List.length l && lengthPred t
 
+{-@ ple lemmaPermutationSymmetric @-}
+{-@ lemmaPermutationSymmetric :: Eq a => ops1:[a] -> {ops2:[a] | isPermutation ops1 ops2 } -> {isPermutation ops2 ops1} @-}
+lemmaPermutationSymmetric :: Eq a => [a] -> [a] -> ()
+lemmaPermutationSymmetric []    []    = ()
+lemmaPermutationSymmetric (_:_) []    = ()
+lemmaPermutationSymmetric []    (_:_) = ()
+lemmaPermutationSymmetric x@[_]    [y] = ()
+lemmaPermutationSymmetric x@[_]    (y:ys) = ()
+lemmaPermutationSymmetric _    [_] = ()
+lemmaPermutationSymmetric ops1@(op1:ops1'') ops2@(op2:ops2'') = ()
+--   | 
 
-{-@ lemmaRemoveFirstPermutation :: Eq (Operation a) => op2:Operation a -> ops2':[Operation a] -> {ops1:[Operation a] | isPermutation ops1 (cons op2 ops2')} -> {rs:[Operation a] | removeFirst op2 ops1 == Just rs} -> {isPermutation rs ops2'} @-}
-lemmaRemoveFirstPermutation :: Eq (Operation a) => Operation a -> [Operation a] -> [Operation a] -> [Operation a] -> ()
-lemmaRemoveFirstPermutation = undefined -- TODO
+
+{-@ ple lemmaRemoveFirstPermutation @-}
+{-@ lemmaRemoveFirstPermutation :: Eq a => op2:a -> ops2':[a] -> {ops1:[a] | isPermutation ops1 (cons op2 ops2')} -> {rs:[a] | removeFirst op2 ops1 == Just rs} -> {isPermutation rs ops2'} @-}
+lemmaRemoveFirstPermutation :: Eq a => a -> [a] -> [a] -> [a] -> ()
+lemmaRemoveFirstPermutation op2 ops2 (op1:ops1) rs =
+  lemmaPermutationSymmetric ops2 rs
+  ? lemmaPermutationSymmetric (op2:ops2) (op1:ops1)
+-- lemmaRemoveFirstPermutation op2 _ [] rs = () -- TODO
+-- lemmaRemoveFirstPermutation op2 [] _ rs = ()
+-- lemmaRemoveFirstPermutation op2 ops2@(op2':ops2') ops1@(op1:ops1') (r:rs)  =
+--   case removeFirst op2' rs of
+--     Nothing -> ()
+--     -- is permutation ops1'' ops2
+--     Just ops1'' -> lemmaRemoveFirstPermutation op2' ops2' rs ops1''
+-- lemmaRemoveFirstPermutation op2 _ _ [] = ()
+
+{-@ ple lemmaRemoveFirstAllCompatible' @-}
+{-@ lemmaRemoveFirstAllCompatible' :: (Eq (Operation a), VRDT a) => od:Operation a -> o:Operation a -> {os:[Operation a] | allCompatible' o os} -> {rs:[Operation a] | removeFirst od os == Just rs} -> {allCompatible' o rs} @-}
+lemmaRemoveFirstAllCompatible' :: (Eq (Operation a), VRDT a) => Operation a -> Operation a -> [Operation a] -> [Operation a] -> ()
+lemmaRemoveFirstAllCompatible' od o [] _ = ()
+lemmaRemoveFirstAllCompatible' od o (op:ops) rs
+  | od /= op
+  , a:as <- rs 
+  , Just rs' <- removeFirst od ops = lemmaRemoveFirstAllCompatible' od o ops rs'
+                                     ? lemmaRemoveFirstAllCompatible' od a ops rs'
+  | otherwise = ()
 
 
+  
+{-@ ple lemmaRemoveFirstAllCompatible @-}
 {-@ lemmaRemoveFirstAllCompatible :: (Eq (Operation a), VRDT a) => op:Operation a -> {os:[Operation a] | allCompatible os} -> {rs:[Operation a] | removeFirst op os == Just rs} -> {allCompatible rs} @-}
 lemmaRemoveFirstAllCompatible :: (Eq (Operation a), VRDT a) => Operation a -> [Operation a] -> [Operation a] -> ()
-lemmaRemoveFirstAllCompatible = undefined -- TODO
+lemmaRemoveFirstAllCompatible _ [] _ = () 
+lemmaRemoveFirstAllCompatible op (o:os) rs
+  | o == op =   assert (os == rs)
+              ? lemmaAllCompatibleTail o os
+  | otherwise = case removeFirst op os of
+      Just rs'  -> lemmaRemoveFirstAllCompatible' op o os rs'
+
+
 
 {-@ ple lemmaRemoveFirstApplyAll @-}
 {-@ lemmaRemoveFirstApplyAll :: (Eq (Operation a), VRDT a) => x:a -> op:Operation a -> {os:[Operation a] | allCompatible os} -> {rs:[Operation a] | removeFirst op os == Just rs} -> {applyAll x os = applyAll (apply x op) rs} @-}
@@ -159,7 +196,6 @@ lemmaRemoveFirstApplyAll x op ops@(op1:ops') rs
         &&& lemmaRemoveFirstApplyAll (apply x op1) op ops' ops''
       === applyAll (apply (apply x op1) op) ops''
         ?   lemmaRemoveFirstElem op ops rs
-        &&& lemmaAllCompatibleElem op op1 ops'
         &&& lawCompatibilityCommutativity op op1
         &&& lawCommutativity x op1 op
       === applyAll (apply (apply x op) op1) ops''
