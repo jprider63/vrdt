@@ -22,3 +22,8 @@ maybe _ f (Just v) = f v
 fromJust :: Maybe a -> a
 fromJust (Just a) = a
 
+{-@ reflect concat @-}
+concat :: Maybe [a] -> [a]
+concat Nothing = []
+concat (Just xs) = xs
+

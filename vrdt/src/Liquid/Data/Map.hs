@@ -15,6 +15,7 @@ data Map k v =
     , mapValue :: v 
     , mapTail :: Map k v
     }
+    deriving (Show)
 {-@ 
 data Map k v = Tip
   | Map {

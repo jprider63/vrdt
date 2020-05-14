@@ -6,19 +6,25 @@ module VRDT.CausalTree where
 #if NotLiquid
 import           Data.Aeson (ToJSON(..), FromJSON(..), (.:), (.=))
 import qualified Data.Aeson as Aeson
-#else
-import           Prelude (Bool(..), Maybe(..), Ord(..), String, Show, Int, Monad(..), ($), otherwise, Eq(..), Num(..), (++), (<$>), concat, (&&))
 #endif
 
 -- import           Liquid.Data.List (List(..))
 -- import qualified Liquid.Data.List as List
 import qualified Data.List as List
+#if NotLiquid
 import           Data.Map (Map)
 import qualified Data.Map as Map
+#else
+import           Liquid.Data.Maybe
+import           Liquid.Data.Map (Map)
+import qualified Liquid.Data.Map as Map
+import           Prelude hiding (Maybe(..), concat)
+#endif
 import           Data.Maybe (mapMaybe)
 import           Data.Time.Clock (UTCTime)
 
 import           VRDT.Types
+import           VRDT.Internal
 
 -- Identifier for `CausalTree` is abstract, but you probably want to use `UTCTimestamp`.
 data CausalTree id a = CausalTree {
@@ -44,6 +50,12 @@ data CausalTreeAtom id a = CausalTreeAtom {
   , causalTreeAtomLetter :: CausalTreeLetter a
   }
   deriving (Show)
+
+instance Eq id => Eq (CausalTreeAtom id a) where
+    (CausalTreeAtom id _) == (CausalTreeAtom id' _) = id == id'
+  
+instance Ord id => Ord (CausalTreeAtom id a) where
+    compare (CausalTreeAtom id _) (CausalTreeAtom id' _) = compare id id'
 
 data CausalTreeLetter a = 
     CausalTreeLetter a
@@ -110,7 +122,7 @@ applyAtom :: Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> CausalTre
 applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave parentId atom of
     Nothing -> 
         -- ParentId not seen yet, so mark as pending.
-        let pending' = Map.insertWith (++) parentId [atom] pending in
+        let pending' = insertPending parentId atom pending in
         CausalTree weave pending'
 
     Just weave' -> 
@@ -142,7 +154,12 @@ insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
     insertInWeaveChildren [] _ _ = Nothing
     insertInWeaveChildren (w:ws) parentId atom = case insertInWeave w parentId atom of
         Nothing ->
-            (w:) <$> insertInWeaveChildren ws parentId atom
+            -- (w:) <$> insertInWeaveChildren ws parentId atom
+            case insertInWeaveChildren ws parentId atom of
+              Nothing ->
+                Nothing
+              Just ws ->
+                Just (w:ws)
         Just w' ->
             Just $ w':ws
 

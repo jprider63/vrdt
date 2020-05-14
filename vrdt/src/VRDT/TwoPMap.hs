@@ -22,6 +22,7 @@ import qualified Data.Set as Set
 import           GHC.Generics
 
 import           VRDT.Class
+import           VRDT.Internal
 
 
 -- Keys are typically UniqueId (ClientId, NextId).
@@ -110,7 +111,7 @@ compatibleTwoPMap _                   _                               = True
 
 
 {-@ reflect applyTwoPMap @-}
-applyTwoPMap :: (VRDT v, Ord k) => TwoPMap k v -> TwoPMapOp k v -> TwoPMap k v
+applyTwoPMap :: (VRDT v, Ord k, Ord (Operation v)) => TwoPMap k v -> TwoPMapOp k v -> TwoPMap k v
 applyTwoPMap (TwoPMap m p t) (TwoPMapInsert k v) = 
     -- Check if deleted.
     if Set.member k t then
@@ -131,7 +132,7 @@ applyTwoPMap (TwoPMap m p t) (TwoPMapApply k op) =
         let (updatedM, m') = Map.updateLookupWithKey (\_ v -> Just $ apply v op) k m in
         
         -- Add to pending if not inserted.
-        let p' = if isJust updatedM then p else Map.insertWith (++) k [op] p in
+        let p' = if isJust updatedM then p else insertPending k op p in
 
         TwoPMap m' p' t
 applyTwoPMap (TwoPMap m p t) (TwoPMapDelete k) =
@@ -149,13 +150,13 @@ applyTwoPMap (TwoPMap m p t) (TwoPMapDelete k) =
     
 
 {-@ ple lawCommutativity @-}
-{-@ lawCommutativity :: (Ord k, VRDT v) => x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(compatibleTwoPMap op1 op2) => applyTwoPMap (applyTwoPMap x op1) op2 == applyTwoPMap (applyTwoPMap x op2) op1} @-}
-lawCommutativity :: (Ord k, VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
+{-@ lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(compatibleTwoPMap op1 op2) => applyTwoPMap (applyTwoPMap x op1) op2 == applyTwoPMap (applyTwoPMap x op2) op1} @-}
+lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
 lawCommutativity x op1 op2 = ()
 
 {-@ ple lawCompatibilityCommutativity' @-}
-{-@ lawCompatibilityCommutativity' :: (Eq k, VRDT v) => op1:TwoPMapOp k v -> op2:TwoPMapOp k v -> {compatibleTwoPMap op1 op2 = compatibleTwoPMap op2 op1} @-}
-lawCompatibilityCommutativity' :: (Eq k, VRDT v) => TwoPMapOp k v -> TwoPMapOp k v -> ()
+{-@ lawCompatibilityCommutativity' :: (Eq k, Ord (Operation v), VRDT v) => op1:TwoPMapOp k v -> op2:TwoPMapOp k v -> {compatibleTwoPMap op1 op2 = compatibleTwoPMap op2 op1} @-}
+lawCompatibilityCommutativity' :: (Eq k, Ord (Operation v), VRDT v) => TwoPMapOp k v -> TwoPMapOp k v -> ()
 lawCompatibilityCommutativity' (TwoPMapInsert k v) (TwoPMapInsert k' v') | k == k' = ()
 lawCompatibilityCommutativity' (TwoPMapApply k op) (TwoPMapApply k' op') | k == k' = lawCompatibilityCommutativity op op'
 lawCompatibilityCommutativity' _ _ = ()
