@@ -6,7 +6,9 @@ module Liquid.Data.Map where
 import Prelude hiding (Maybe(..), lookup)
 import Liquid.Data.Maybe 
 import Liquid.ProofCombinators
+import ProofCombinators
 import qualified Data.Set as S
+
 
 data Map k v = 
     Tip 
@@ -99,12 +101,12 @@ delete :: Ord k => k -> Map k v -> Map k v
 delete _ Tip  = Tip 
 delete kd (Map k v m)
   -- | kd == k   = delete kd m
-  | kd == k   = m `by` keyLeqLemma kd k v m
+  | kd == k   = keyLeqLemma kd k v m `cast` m
 
   | kd > k    = Map k v (delete kd m)
 
   -- kd < k
-  | otherwise = Map k v m `by` keyLeqLemma kd k v m
+  | otherwise =  keyLeqLemma kd k v m `cast` Map k v m
   
 
 

@@ -5,7 +5,7 @@
 
 module Liquid.Data.List where 
 
-import Prelude hiding (concat, reverse, length)
+import Prelude hiding (concat, reverse, length, foldr)
 
 -- type List a = [a]
 
@@ -47,3 +47,8 @@ head (h:l) = h
 {-@ reflect empty @-}
 empty :: [a]
 empty = []
+
+{-@ reflect foldr @-}
+foldr :: (a -> b -> b) -> b -> [a] -> b
+foldr f acc [] = acc
+foldr f acc (x:xs) = f x (foldr f acc xs)

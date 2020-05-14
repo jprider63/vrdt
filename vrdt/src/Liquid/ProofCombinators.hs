@@ -39,7 +39,6 @@ module Liquid.ProofCombinators (
   , assert
   , assume
 
-  , by
 
 ) where
 
@@ -212,8 +211,5 @@ assume _ = ()
 -- by :: a -> b -> a 
 -- by x _ = x 
 -- {-# INLINE by   #-} 
-{-@ reflect by @-}
-by :: a -> b -> a
-by x _ = x
 
 
