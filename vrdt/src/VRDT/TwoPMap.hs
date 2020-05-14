@@ -226,20 +226,28 @@ lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> TwoPMap
 --   , k == k'
 --   , not (compatible op op')
 --   = ()
-lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapApply k vop) op2@(TwoPMapApply k' vop')
-  | not (Set.member k t)
-  , not (Set.member k' t)
-  , k == k'
-  , compatibleTwoPMap op1 op2
-  , Just vv <- Map.lookup k m
-  = let vv_vop = apply vv vop
-        vv_vop' = apply vv vop' in
-      VRDT.Class.lawCommutativity vv vop vop' `cast`
-      lemmaInsertTwice k (apply vv_vop vop') vv_vop m `cast`
-      lemmaInsertTwice k (apply vv_vop' vop) vv_vop' m `cast`
-      lemmaLookupInsert m k vv_vop `cast`
-      lemmaLookupInsert m k vv_vop' `cast`
-      ()
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapApply k vop) op2@(TwoPMapApply k' vop')
+--   | not (Set.member k t)
+--   , not (Set.member k' t)
+--   , k == k'
+--   , compatibleTwoPMap op1 op2
+--   , Just vv <- Map.lookup k m
+--   = let vv_vop = apply vv vop
+--         vv_vop' = apply vv vop' in
+--       VRDT.Class.lawCommutativity vv vop vop' `cast`
+--       lemmaInsertTwice k (apply vv_vop vop') vv_vop m `cast`
+--       lemmaInsertTwice k (apply vv_vop' vop) vv_vop' m `cast`
+--       lemmaLookupInsert m k vv_vop `cast`
+--       lemmaLookupInsert m k vv_vop' `cast`
+--       ()
+
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapApply k vop) op2@(TwoPMapApply k' vop')
+--   | not (Set.member k t)
+--   , not (Set.member k' t)
+--   , k == k'
+--   , compatibleTwoPMap op1 op2
+--   , Nothing <- Map.lookup k m
+--   = lemmaInsertPendingTwice k vop vop' p
 
         
 lawCommutativity _ _ _
