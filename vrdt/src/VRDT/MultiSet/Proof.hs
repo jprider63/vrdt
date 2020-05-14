@@ -1,5 +1,5 @@
 {-@ LIQUID "--reflection" @-}
-{-@ LIQUID "--ple-local"  @-}
+{-@ LIQUID "--ple"  @-}
 {-# LANGUAGE RecordWildCards #-}
 
 module VRDT.MultiSet.Proof where
@@ -9,7 +9,7 @@ import           Liquid.Data.Maybe
 import           Liquid.Data.Map.Props
 -- import           Liquid.ProofCombinators
 import           Prelude hiding ((++), Maybe(..))
-import           VRDT.MultiSet (MultiSet(..), MultiSetOp(..), enabled, apply, multiSetOpOrder)
+import           VRDT.MultiSet.Internal (MultiSet(..), MultiSetOp(..), apply, multiSetOpOrder)
 -- import qualified VRDT.MultiSet as MS
 {-@ infix   ++ @-}
 
@@ -19,7 +19,7 @@ import Language.Haskell.Liquid.ProofCombinators
 type DMultiSet a = (a -> Integer)
 
 {-@ simulation :: x:MultiSet a 
-               -> op:{MultiSetOp a | enabled x op} 
+               -> op:MultiSetOp a
                -> t:a 
                -> { toDenotation (apply x op) t == dApply (toDenotation x) op t } 
                / [multiSetOpOrder op] @-}
@@ -72,7 +72,6 @@ simulation x@(MultiSet p n) op@(MultiSetOpAdd e c) t
 simulation x op@(MultiSetOpRemove e c) t 
   =   toDenotation (apply x (MultiSetOpRemove e c)) t 
   === toDenotation (apply x (MultiSetOpAdd e (-c))) t 
-       ? enabled x (MultiSetOpAdd e (-c))
        ? simulation x (MultiSetOpAdd e (-c)) t 
   === dApply (toDenotation x) (MultiSetOpAdd e (-c)) t
       ? lemmaDApply (toDenotation x) e c t
@@ -84,7 +83,7 @@ simulation x op@(MultiSetOpRemove e c) t
 
 
 {-@ reflect toDenotation @-}
-toDenotation :: Eq a => MultiSet a -> a -> Integer
+toDenotation :: Ord a => MultiSet a -> a -> Integer
 toDenotation (MultiSet p n) t 
   | Just v <-  Map.lookup t p 
   = v 
