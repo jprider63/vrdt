@@ -1,5 +1,5 @@
 {-@ LIQUID "--reflection" @-}
-{-@ LIQUID "--ple-local" @-}
+{-@ LIQUID "--ple" @-}
 
 module VRDT.Internal where
 
@@ -9,8 +9,11 @@ import qualified Data.Map as Map
 #else
 import           Liquid.Data.Maybe
 import           Liquid.Data.Map (Map)
+import           Liquid.ProofCombinators
 import qualified Liquid.Data.Map as Map
+import qualified Liquid.Data.Map.Props as Map
 import           Prelude hiding (Maybe(..))
+import qualified Data.Set as S
 #endif
 
 {-@ reflect insertPending @-}
@@ -23,11 +26,49 @@ insertPending k op p = case Map.lookup k p of
     Just ops -> Map.insert k (insertList op ops) p
 
 {-@ reflect insertList @-}
+{-@ insertList :: Ord a => x:a -> xs:[a] -> {vv:[a] | S.fromList vv == S.union (S.fromList xs) (S.singleton x)} @-}
 insertList :: Ord a => a -> [a] -> [a]
 insertList v [] = [v]
 insertList v (h:t)
   | v <= h    = v:h:t
   | otherwise = h:insertList v t
 
+{-@ lemmaInsertListTwice :: Ord a => x:a -> y:a -> xs:[a] -> {insertList y (insertList x xs) == insertList x (insertList y xs)} @-}
+lemmaInsertListTwice :: Ord a => a -> a -> [a] -> ()
+lemmaInsertListTwice x y [] = ()
+lemmaInsertListTwice x y (z:zs)
+  | x <= z, y <= z
+  =  ()
+  | x <= z, y > z
+  = ()
+  | x > z, y <= z
+  = ()
+  | otherwise
+  = lemmaInsertListTwice x y zs
+
+
+-- finish up
+{-@ lemmaInsertPendingTwice :: Ord a => k:k -> x:a -> y:a -> xs:Map k [a] -> {insertPending k y (insertPending k x xs) == insertPending k x (insertPending k y xs)} @-}
+lemmaInsertPendingTwice :: (Ord k, Ord a) => k -> a -> a -> Map k [a] -> ()
+lemmaInsertPendingTwice k x y m
+  | Nothing <- Map.lookup k m
+  = Map.lemmaLookupInsert m k [x]
+  ? lemmaInsertListTwice x y []
+  ? lemmaInsertListTwice y x []
+  ? Map.lemmaLookupInsert m k [y]
+  ? Map.lemmaInsertTwice k (insertList y [x]) [x] m
+  ? Map.lemmaInsertTwice k (insertList x [y]) [y] m
+  | Just zs <- Map.lookup k m
+  = Map.lemmaLookupInsert m k (insertList x zs)
+  ? Map.lemmaLookupInsert m k (insertList y zs)
+  ? lemmaInsertListTwice x y zs
+  ? lemmaInsertListTwice y x zs
+  ? Map.lemmaInsertTwice k (insertList y (insertList x zs)) (insertList x zs) m
+  ? Map.lemmaInsertTwice k (insertList x (insertList y zs)) (insertList y zs) m
+
+
+  
+
+  
 #endif
 
