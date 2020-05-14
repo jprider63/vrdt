@@ -59,11 +59,6 @@ apply (TwoPMap m p t) (TwoPMapInsert k v) = TwoPMap (Map.insert k v m) p t
 
 -- Good version.
 
-compatible :: TwoPMapOp k v -> TwoPMapOp k v -> Bool
-compatible (TwoPMapInsert k v) (TwoPMapInsert k' v') | k == k' = False
--- ... TwoPMapApply
-compatible _                   _                               = True
-
 
 apply (TwoPMap m p t) (TwoPMapInsert k v) 
   | Set.member k t = TwoPMap m p t
@@ -87,24 +82,31 @@ instance (Aeson.FromJSON k, Aeson.FromJSON v, Aeson.FromJSON (Operation v)) => A
 #endif
 
 
-{-@ reflect enabledTwoPMap @-}
-enabledTwoPMap :: (VRDT v, Ord k) => TwoPMap k v -> TwoPMapOp k v -> Bool
-enabledTwoPMap (TwoPMap m p t) (TwoPMapInsert k v) = 
-    let pendingEnabled = case Map.lookup k p of
-          Nothing ->
-            True
-          Just ops ->
-            -- Each pending op must be enabledTwoPMap.
-            snd $ foldr (\op (v, acc) -> (apply v op, acc && enabled v op)) (v, True) ops
-    in
-    not (Map.member k m) && pendingEnabled
-enabledTwoPMap (TwoPMap m _p t) (TwoPMapApply k op) = case Map.lookup k m of
-    Nothing ->
-        -- JP: What do we do here? Just return True and then require Insert to be enabledTwoPMap for all pending?
-        True
-    Just v ->
-        enabled v op
-enabledTwoPMap (TwoPMap m _p t) (TwoPMapDelete k) = True
+{-@ reflect compatibleTwoPMap @-}
+compatibleTwoPMap :: (Eq k, VRDT v) => TwoPMapOp k v -> TwoPMapOp k v -> Bool
+compatibleTwoPMap (TwoPMapInsert k v) (TwoPMapInsert k' v') | k == k' = False
+compatibleTwoPMap (TwoPMapApply k op) (TwoPMapApply k' op') | k == k' = compatible op op'
+compatibleTwoPMap _                   _                               = True
+
+
+-- {-@ reflect enabledTwoPMap @-}
+-- enabledTwoPMap :: (VRDT v, Ord k) => TwoPMap k v -> TwoPMapOp k v -> Bool
+-- enabledTwoPMap (TwoPMap m p t) (TwoPMapInsert k v) = 
+--     let pendingEnabled = case Map.lookup k p of
+--           Nothing ->
+--             True
+--           Just ops ->
+--             -- Each pending op must be enabledTwoPMap.
+--             snd $ foldr (\op (v, acc) -> (apply v op, acc && enabled v op)) (v, True) ops
+--     in
+--     not (Map.member k m) && pendingEnabled
+-- enabledTwoPMap (TwoPMap m _p t) (TwoPMapApply k op) = case Map.lookup k m of
+--     Nothing ->
+--         -- JP: What do we do here? Just return True and then require Insert to be enabledTwoPMap for all pending?
+--         True
+--     Just v ->
+--         enabled v op
+-- enabledTwoPMap (TwoPMap m _p t) (TwoPMapDelete k) = True
 
 
 {-@ reflect applyTwoPMap @-}
@@ -138,17 +140,23 @@ applyTwoPMap (TwoPMap m p t) (TwoPMapDelete k) =
     let t' = Set.insert k t in
     TwoPMap m' p' t'
 
-{-@ ple lawNonCausal @-}
-{-@ lawNonCausal :: (Ord k, VRDT v) => x : TwoPMap k v -> {op1 : TwoPMapOp k v | enabledTwoPMap x op1} -> {op2 : TwoPMapOp k v | enabledTwoPMap x op2} -> {enabledTwoPMap (applyTwoPMap x op1) op2 <=> enabledTwoPMap (applyTwoPMap x op2) op1} @-}
-lawNonCausal :: (Ord k, VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
-lawNonCausal x (TwoPMapDelete k) op2 = ()
-lawNonCausal x op1 op2 = ()
+-- {-@ ple lawNonCausal @-}
+-- {-@ lawNonCausal :: (Ord k, VRDT v) => x : TwoPMap k v -> {op1 : TwoPMapOp k v | enabledTwoPMap x op1} -> {op2 : TwoPMapOp k v | enabledTwoPMap x op2} -> {enabledTwoPMap (applyTwoPMap x op1) op2 <=> enabledTwoPMap (applyTwoPMap x op2) op1} @-}
+-- lawNonCausal :: (Ord k, VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
+-- lawNonCausal x (TwoPMapDelete k) op2 = ()
+-- lawNonCausal x op1 op2 = ()
 
     
 
 {-@ ple lawCommutativity @-}
-{-@ lawCommutativity :: (Ord k, VRDT v) => x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(enabledTwoPMap x op1 && enabledTwoPMap x op2  && enabledTwoPMap (applyTwoPMap x op1) op2 && enabledTwoPMap (applyTwoPMap x op2) op1) => applyTwoPMap (applyTwoPMap x op1) op2 == applyTwoPMap (applyTwoPMap x op2) op1} @-}
+{-@ lawCommutativity :: (Ord k, VRDT v) => x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(compatibleTwoPMap op1 op2) => applyTwoPMap (applyTwoPMap x op1) op2 == applyTwoPMap (applyTwoPMap x op2) op1} @-}
 lawCommutativity :: (Ord k, VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
 lawCommutativity x op1 op2 = ()
 
+{-@ ple lawCompatibilityCommutativity' @-}
+{-@ lawCompatibilityCommutativity' :: (Eq k, VRDT v) => op1:TwoPMapOp k v -> op2:TwoPMapOp k v -> {compatibleTwoPMap op1 op2 = compatibleTwoPMap op2 op1} @-}
+lawCompatibilityCommutativity' :: (Eq k, VRDT v) => TwoPMapOp k v -> TwoPMapOp k v -> ()
+lawCompatibilityCommutativity' (TwoPMapInsert k v) (TwoPMapInsert k' v') | k == k' = ()
+lawCompatibilityCommutativity' (TwoPMapApply k op) (TwoPMapApply k' op') | k == k' = lawCompatibilityCommutativity op op'
+lawCompatibilityCommutativity' _ _ = ()
 
