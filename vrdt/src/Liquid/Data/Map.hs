@@ -148,3 +148,11 @@ insertWith f k v m = case lookup k m of
   Nothing -> insert k v m
   Just v' -> insert k (f v v') m
 
+
+{-@ reflect toC'' @-}
+toC'' :: Ord a => Map a Integer -> Map a Integer -> a -> Integer -> Integer -> Integer
+toC'' posMultiSet negMultiSet v c1 c2 = case lookup v posMultiSet of
+  Nothing -> case lookup v negMultiSet of
+    Nothing -> c1 + c2
+    Just c -> c + c1 + c2
+  Just c -> c + c1 + c2
