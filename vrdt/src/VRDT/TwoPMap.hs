@@ -15,7 +15,7 @@ import           Liquid.Data.Maybe
 import           Liquid.Data.List
 import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
-import           Prelude hiding (Maybe(..), isJust, maybe, foldr, flip)
+import           Prelude hiding (Maybe(..), isJust, maybe, foldr, flip, const)
 #endif
 
 import           Data.Set (Set)
@@ -26,6 +26,7 @@ import           Liquid.Data.Map.Props
 import           VRDT.Class
 import           VRDT.Internal
 import           Liquid.ProofCombinators
+import           ProofCombinators
 
 -- Keys are typically UniqueId (ClientId, NextId).
 
@@ -48,6 +49,21 @@ data TwoPMapOp k v =
   | TwoPMapApply k (Operation v)
   | TwoPMapDelete k
   deriving (Generic)
+
+{-@ measure isInsert @-}
+isInsert :: TwoPMapOp k v -> Bool
+isInsert (TwoPMapInsert _ _) = True
+isInsert _ = False
+
+{-@ measure isDelete @-}
+isDelete :: TwoPMapOp k v -> Bool
+isDelete (TwoPMapDelete _) = True
+isDelete _ = False
+
+{-@ measure isDelete @-}
+isApply :: TwoPMapOp k v -> Bool
+isApply (TwoPMapApply _ _) = True
+isApply _ = False
 
 {-
 -- Bad version 1. 
@@ -132,9 +148,25 @@ flip f x y = f y x
 aupdate :: (t -> t1 -> a) -> t1 -> p -> t -> Maybe a
 aupdate apply op _ v = Just (apply v op)
 
+{-@ ple updateAupdateEqSize  @-}
+{-@ updateAupdateEqSize :: Ord k => apply: (a -> b -> a) -> op:b -> k:k -> m:Map k a ->
+  {Map.keys m == Map.keys (msnd (Map.updateLookupWithKey (aupdate apply op) k m))} @-}
+updateAupdateEqSize :: Ord k => (a -> b -> a) -> b -> k -> Map k a -> ()
+updateAupdateEqSize apply op k m
+  | Just x <- Map.lookup k m  = assert (isJust (aupdate apply op k x)) `cast`
+                                assert (isJust (Map.mfst (Map.updateLookupWithKey (aupdate apply op) k m)))
+  | Nothing <- Map.lookup k m = ()
+
+
+{-@ reflect const @-}
+const :: a -> b -> a
+const x _ = x
+
 {-@ reflect applyTwoPMap @-}
 {-@ applyTwoPMap :: (Ord k, Ord (Operation v), VRDT v) => x:TwoPMap k v ->
-   TwoPMapOp k v -> {vv:TwoPMap k v | Set.isSubsetOf (twoPMapTombstone x) (twoPMapTombstone vv) } @-}
+   op:TwoPMapOp k v -> {vv:TwoPMap k v |
+     Set.isSubsetOf (twoPMapTombstone x) (twoPMapTombstone vv)
+  && (not (isDelete op) => Set.isSubsetOf (Map.keys (twoPMap x)) (Map.keys (twoPMap vv)))} @-}
 applyTwoPMap :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMap k v
 applyTwoPMap (TwoPMap m p t) (TwoPMapInsert k v) = 
     -- Check if deleted.
@@ -153,7 +185,8 @@ applyTwoPMap (TwoPMap m p t) (TwoPMapApply k op) =
     if Set.member k t then
         TwoPMap m p t
     else
-        let (updatedM, m') = Map.updateLookupWithKey (aupdate apply op) k m in
+        let (updatedM, m') = updateAupdateEqSize apply op k m `cast`
+              Map.updateLookupWithKey (aupdate apply op) k m in
         
         -- Add to pending if not inserted.
         let p' = if isJust updatedM then p else insertPending k op p in
@@ -178,11 +211,17 @@ lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> TwoPMap
 --     lemmaDelete k k' m
 --   ? lemmaDelete k k' p
 --   ? (Set.insert k' (Set.insert k t) === Set.insert k (Set.insert k' t))
-lawCommutativity (TwoPMap m p t) (TwoPMapApply k op) op2
-  | Set.member k t
-  = assert (Set.member k (tombStone ))
-  
-lawCommutativity (TwoPMap m p t) _ _
+-- lawCommutativity x@(TwoPMap m p t) (TwoPMapApply k op) op2
+--   | Set.member k t
+--   = Set.member k (twoPMapTombstone (applyTwoPMap x op2)) `cast` ()
+-- lawCommutativity x@(TwoPMap m p t) op2 (TwoPMapApply k op)
+--   | Set.member k t
+--   = Set.member k (twoPMapTombstone (applyTwoPMap x op2)) `cast` ()
+lawCommutativity (TwoPMap m p t) (TwoPMapApply k op) (TwoPMapApply k' op')
+  | not (Set.member k t)
+  , not (Set.member k' t)
+  = ()
+lawCommutativity _ _ _
   = ()
 
 {-@ ple lawCompatibilityCommutativity' @-}

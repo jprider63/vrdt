@@ -2,13 +2,19 @@
 {-@ LIQUID "--ple-local" @-}
 
 module Liquid.Data.Map where 
-
-import Prelude hiding (Maybe(..), lookup)
+import Prelude hiding (Maybe(..), lookup, fst, snd)
 import Liquid.Data.Maybe 
 import Liquid.ProofCombinators
 import ProofCombinators
 import qualified Data.Set as S
 
+{-@ measure mfst @-}
+mfst :: (a,b) -> a
+mfst (x,_) = x
+
+{-@ measure msnd @-}
+msnd :: (a,b) -> b
+msnd (_,y) = y
 
 data Map k v = 
     Tip 
@@ -137,6 +143,10 @@ disjoint :: Ord k => Map k v -> Map k v -> Bool
 disjoint m1 m2 = S.null (S.intersection (keys m1) (keys m2))
 
 {-@ reflect updateLookupWithKey @-}
+{-@ updateLookupWithKey :: Ord k => f:(k -> a -> Maybe a) -> k:k -> m:Map k a ->
+  {p:({vv:Maybe a | isJust vv <=> S.member k (keys m)}
+  , Map k a) | isJust (mfst p) =>
+  (if (isJust (f k (fromJust (mfst p)))) then (keys m == (keys (msnd p))) else (keys (msnd p) == S.difference (keys m) (S.singleton k))) } @-}
 updateLookupWithKey :: Ord k => (k -> a -> Maybe a) -> k -> Map k a -> (Maybe a, Map k a)
 updateLookupWithKey f k m = case lookup k m of
   Nothing -> (Nothing, m)
