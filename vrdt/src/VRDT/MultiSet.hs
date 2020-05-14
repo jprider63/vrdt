@@ -1,5 +1,5 @@
 {-@ LIQUID "--reflection" @-}
-{-@ LIQUID "--ple-local" @-}
+{-@ LIQUID "--ple" @-}
 
 {-# LANGUAGE RecordWildCards #-}
 
