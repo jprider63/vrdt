@@ -34,12 +34,6 @@ instance (ToJSON t, ToJSON a) => ToJSON (LWW t a) where
         "time" .= t
       , "value" .= a
       ]
-
-instance Ord t => VRDT (LWW t a) where
-    type Operation (LWW t a) = LWW t a
-
-    enabled = enabledLWW
-    apply = applyLWW
 #endif
 
 instance Ord t => VRDT (LWW t a) where

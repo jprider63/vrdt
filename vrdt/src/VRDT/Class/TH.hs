@@ -33,12 +33,11 @@ deriveVRDT n = reify n >>= \case
         vrdtInstD <- mkVRDTInstance vrdtName opName tvars varMap
         
         -- Derive JSON instance for operation type.
-        -- aesonD <- Aeson.deriveJSON Aeson.defaultOptions opName
-        let toJSOND = InstanceD Nothing [] (AppT (ConT ''Aeson.ToJSON) (ConT opName)) []
-        let fromJSOND = InstanceD Nothing [] (AppT (ConT ''Aeson.FromJSON) (ConT opName)) []
+        -- let toJSOND = InstanceD Nothing [] (AppT (ConT ''Aeson.ToJSON) (ConT opName)) []
+        -- let fromJSOND = InstanceD Nothing [] (AppT (ConT ''Aeson.FromJSON) (ConT opName)) []
 
 
-        return $ [opD, vrdtInstD, toJSOND, fromJSOND] -- :aesonD
+        return $ [opD, vrdtInstD] -- , toJSOND, fromJSOND] -- :aesonD
     _ -> fail "deriveVRDT: Must be a type."
 
   where
@@ -109,13 +108,15 @@ deriveVRDT n = reify n >>= \case
         let operationD = TySynInstD ''Operation $ TySynEqn [ty] (ConT opName)
 
         applyD <- mkApply varMap
-        enabledD <- mkEnabled varMap
+        -- enabledD <- mkEnabled varMap
+        compatibleD <- mkCompatible varMap
         lawCommutativityD <- mkCommutativity varMap
-        lawNonCausalD <- mkNonCausal varMap
+        lawCommutativityD' <- mkCommutativity' varMap
+        -- lawNonCausalD <- mkNonCausal varMap
 
         -- fail $ show $ ppr lawNonCausalD
 
-        return $ InstanceD Nothing ctx (AppT (ConT ''VRDT) ty) [operationD, enabledD, applyD, lawCommutativityD, lawNonCausalD]
+        return $ InstanceD Nothing ctx (AppT (ConT ''VRDT) ty) [operationD, compatibleD, applyD, lawCommutativityD, lawCommutativityD'] -- enabledD, lawNonCausalD]
 
     mkApply :: Map Name Type -> Q Dec
     mkApply varMap = do
@@ -133,21 +134,21 @@ deriveVRDT n = reify n >>= \case
         ) $ Map.toList varMap
       return $ FunD 'apply clss
 
-    mkEnabled :: Map Name Type -> Q Dec
-    mkEnabled varMap = do
-      clss <- mapM (\(fName, ty) -> do
-          vName <- newName "v"
-          let fcName = fieldToOpConName fName
-          opName <- newName "op"
-          
-          let pats = [VarP vName, ConP fcName [VarP opName]]
+    -- mkEnabled :: Map Name Type -> Q Dec
+    -- mkEnabled varMap = do
+    --   clss <- mapM (\(fName, ty) -> do
+    --       vName <- newName "v"
+    --       let fcName = fieldToOpConName fName
+    --       opName <- newName "op"
+    --       
+    --       let pats = [VarP vName, ConP fcName [VarP opName]]
 
-          let e = NormalB $ AppE (AppE (VarE 'enabled) (AppE (VarE fName) (VarE vName))) (VarE opName)
+    --       let e = NormalB $ AppE (AppE (VarE 'enabled) (AppE (VarE fName) (VarE vName))) (VarE opName)
 
-          return $ Clause pats e []
-        ) $ Map.toList varMap
-        
-      return $ FunD 'enabled clss
+    --       return $ Clause pats e []
+    --     ) $ Map.toList varMap
+    --     
+    --   return $ FunD 'enabled clss
 
     mkCommutativity :: Map Name Type -> Q Dec
     mkCommutativity varMap = do
@@ -167,22 +168,55 @@ deriveVRDT n = reify n >>= \case
 
       return $ FunD 'lawCommutativity clss
 
-    mkNonCausal :: Map Name Type -> Q Dec
-    mkNonCausal varMap = do
+    mkCompatible :: Map Name Type -> Q Dec
+    mkCompatible varMap = do
       clss' <- mapM (\(fName, ty) -> do
-          vName <- newName "v"
           let fcName = fieldToOpConName fName
           op1Name <- newName "op1"
           op2Name <- newName "op2"
         
-          let pats = [VarP vName, ConP fcName [VarP op1Name], ConP fcName [VarP op2Name]]
+          let pats = [ConP fcName [VarP op1Name], ConP fcName [VarP op2Name]]
 
-          let e = NormalB $ AppE (AppE (AppE (VarE 'lawNonCausal) (AppE (VarE fName) (VarE vName))) (VarE op1Name)) (VarE op2Name)
+          let e = NormalB $ AppE (AppE (VarE 'compatible) (VarE op1Name)) (VarE op2Name)
 
           return $ Clause pats e []
         ) $ Map.toList varMap
-      let clss = clss' ++ [Clause [WildP, WildP, WildP] (NormalB $ TupE []) []]
+      let clss = clss' ++ [Clause [WildP, WildP] (NormalB $ ConE 'True) []]
 
-      return $ FunD 'lawNonCausal clss
+      return $ FunD 'compatible clss
+
+    mkCommutativity' :: Map Name Type -> Q Dec
+    mkCommutativity' varMap = do
+      clss' <- mapM (\(fName, ty) -> do
+          let fcName = fieldToOpConName fName
+          op1Name <- newName "op1"
+          op2Name <- newName "op2"
+
+          let pats = [ConP fcName [VarP op1Name], ConP fcName [VarP op2Name]]
+
+          let e = NormalB $ AppE (AppE (VarE 'lawCompatibilityCommutativity) (VarE op1Name)) (VarE op2Name)
+
+          return $ Clause pats e []
+        ) $ Map.toList varMap
+      let clss = clss' ++ [Clause [WildP, WildP] (NormalB $ TupE []) []]
+      return $ FunD 'lawCompatibilityCommutativity clss
+
+    -- mkNonCausal :: Map Name Type -> Q Dec
+    -- mkNonCausal varMap = do
+    --   clss' <- mapM (\(fName, ty) -> do
+    --       vName <- newName "v"
+    --       let fcName = fieldToOpConName fName
+    --       op1Name <- newName "op1"
+    --       op2Name <- newName "op2"
+    --     
+    --       let pats = [VarP vName, ConP fcName [VarP op1Name], ConP fcName [VarP op2Name]]
+
+    --       let e = NormalB $ AppE (AppE (AppE (VarE 'lawNonCausal) (AppE (VarE fName) (VarE vName))) (VarE op1Name)) (VarE op2Name)
+
+    --       return $ Clause pats e []
+    --     ) $ Map.toList varMap
+    --   let clss = clss' ++ [Clause [WildP, WildP, WildP] (NormalB $ TupE []) []]
+
+    --   return $ FunD 'lawNonCausal clss
 
 

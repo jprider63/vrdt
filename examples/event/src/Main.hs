@@ -59,8 +59,10 @@ data Event = Event {
 
 $(deriveVRDT ''Event)
 
--- instance Aeson.ToJSON EventOp
--- instance Aeson.FromJSON EventOp
+instance Eq EventOp
+instance Ord EventOp
+instance Aeson.ToJSON EventOp
+instance Aeson.FromJSON EventOp
 instance Aeson.ToJSON Event
 instance Aeson.FromJSON Event
 
@@ -72,17 +74,15 @@ instance Aeson.FromJSON Event
 --   | EventLocationOp (Operation (LWWU Text))
 --   deriving (Generic)
 -- 
--- instance Aeson.ToJSON EventOp
--- instance Aeson.FromJSON EventOp
-
 -- instance VRDT Event where
 --     type Operation Event = EventOp
 -- 
---     enabled e (EventTitleOp op)       = enabled (eventTitle e) op
---     enabled e (EventDescriptionOp op) = enabled (eventDescription e) op
---     enabled e (EventStartTimeOp op)     = enabled (eventStartTime e) op
---     enabled e (EventEndTimeOp op)       = enabled (eventEndTime e) op
---     enabled e (EventLocationOp op)      = enabled (eventLocation e) op
+--     compatible (EventTitleOp op1) (EventTitleOp op2)             = compatible op1 op2
+--     compatible (EventDescriptionOp op1) (EventDescriptionOp op2) = compatible op1 op2
+--     compatible (EventStartTimeOp op1) (EventStartTimeOp op2)     = compatible op1 op2
+--     compatible (EventEndTimeOp op1) (EventEndTimeOp op2)         = compatible op1 op2
+--     compatible (EventLocationOp op1) (EventLocationOp op2)       = compatible op1 op2
+--     compatible _ _                                               = True
 -- 
 --     apply e (EventTitleOp op)       = e {eventTitle = apply (eventTitle e) op}
 --     apply e (EventDescriptionOp op) = e {eventDescription = apply (eventDescription e) op}
@@ -92,17 +92,17 @@ instance Aeson.FromJSON Event
 -- 
 --     lawCommutativity e (EventTitleOp op1) (EventTitleOp op2)             = lawCommutativity (eventTitle e) op1 op2
 --     lawCommutativity e (EventDescriptionOp op1) (EventDescriptionOp op2) = lawCommutativity (eventDescription e) op1 op2
---     lawCommutativity e (EventStartTimeOp op1) (EventStartTimeOp op2)         = lawCommutativity (eventStartTime e) op1 op2
---     lawCommutativity e (EventEndTimeOp op1) (EventEndTimeOp op2)             = lawCommutativity (eventEndTime e) op1 op2
---     lawCommutativity e (EventLocationOp op1) (EventLocationOp op2)           = lawCommutativity (eventLocation e) op1 op2
+--     lawCommutativity e (EventStartTimeOp op1) (EventStartTimeOp op2)     = lawCommutativity (eventStartTime e) op1 op2
+--     lawCommutativity e (EventEndTimeOp op1) (EventEndTimeOp op2)         = lawCommutativity (eventEndTime e) op1 op2
+--     lawCommutativity e (EventLocationOp op1) (EventLocationOp op2)       = lawCommutativity (eventLocation e) op1 op2
 --     lawCommutativity _ _ _                                               = ()
 -- 
---     lawNonCausal e (EventTitleOp op1) (EventTitleOp op2)             = lawNonCausal (eventTitle e) op1 op2
---     lawNonCausal e (EventDescriptionOp op1) (EventDescriptionOp op2) = lawNonCausal (eventDescription e) op1 op2
---     lawNonCausal e (EventStartTimeOp op1) (EventStartTimeOp op2)         = lawNonCausal (eventStartTime e) op1 op2
---     lawNonCausal e (EventEndTimeOp op1) (EventEndTimeOp op2)             = lawNonCausal (eventEndTime e) op1 op2
---     lawNonCausal e (EventLocationOp op1) (EventLocationOp op2)           = lawNonCausal (eventLocation e) op1 op2
---     lawNonCausal _ _ _                                               = ()
+--     lawCompatibilityCommutativity (EventTitleOp op1) (EventTitleOp op2)             = lawCompatibilityCommutativity op1 op2
+--     lawCompatibilityCommutativity (EventDescriptionOp op1) (EventDescriptionOp op2) = lawCompatibilityCommutativity op1 op2
+--     lawCompatibilityCommutativity (EventStartTimeOp op1) (EventStartTimeOp op2)     = lawCompatibilityCommutativity op1 op2
+--     lawCompatibilityCommutativity (EventEndTimeOp op1) (EventEndTimeOp op2)         = lawCompatibilityCommutativity op1 op2
+--     lawCompatibilityCommutativity (EventLocationOp op1) (EventLocationOp op2)       = lawCompatibilityCommutativity op1 op2
+--     lawCompatibilityCommutativity _ _                                               = ()
 
 -- TODO: 
 --  Make JSON instance. 

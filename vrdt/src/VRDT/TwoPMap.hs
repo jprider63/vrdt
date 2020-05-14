@@ -68,14 +68,14 @@ apply (TwoPMap m p t) (TwoPMapInsert k v)
 
 
 #if NotLiquid
-instance (VRDT v, Ord k) => VRDT (TwoPMap k v) where
+instance (VRDT v, Ord k, Ord (Operation v)) => VRDT (TwoPMap k v) where
     type Operation (TwoPMap k v) = TwoPMapOp k v
 
-    enabled = enabledTwoPMap
+    compatible = error "TODO"
     apply = applyTwoPMap
 --     lawCommutativity _ _ _ = ()
 
-instance (Ord k, VRDT v) => VRDTInitial (TwoPMap k v) where
+instance (Ord k, VRDT v, Ord (Operation v)) => VRDTInitial (TwoPMap k v) where
     initVRDT = TwoPMap mempty mempty mempty
     
 instance (Aeson.ToJSON k, Aeson.ToJSON v, Aeson.ToJSON (Operation v)) => Aeson.ToJSON (TwoPMapOp k v)

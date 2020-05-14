@@ -19,9 +19,9 @@ data Sum a = Sum {
 instance Num a => VRDT (Sum a) where
   type Operation (Sum a) = Sum a
 
-  enabled x op = True
+  compatible op1 op2 = True
 
   apply (Sum a) (Sum b) = Sum (a + b)
 
   lawCommutativity x op1 op2 = ()
-  lawNonCausal x op1 op2 = ()
+  lawCompatibilityCommutativity op1 op2 = ()

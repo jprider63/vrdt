@@ -65,7 +65,7 @@ data MultiSet a = MultiSet {
 instance Ord a => VRDT (MultiSet a) where
     type Operation (MultiSet a) = MultiSetOp a
 
-    enabled _ _ = error "TODO"
+    compatible _ _ = error "TODO"
     apply _ _ = error "TODO"
 
 instance Ord a => VRDTInitial (MultiSet a) where
@@ -139,6 +139,7 @@ multiSetOpOrder (MultiSetOpRemove _ _) = 1
 -- 
 --     lawCommutativity MultiSet{..} op1 op2 = ()
 
+-- TODO: Delete this.
 {-@ reflect enabled @-}
 enabled :: MultiSet k -> MultiSetOp k -> Bool 
 enabled _ _ = True 
