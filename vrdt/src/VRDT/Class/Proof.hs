@@ -25,32 +25,35 @@ strongConvergence s0 ops1@(op1:ops1') ops2@(op2:ops2')
         lemmaAllCompatibleTail op1 ops1'
     &&& lemmaAllCompatibleStateTail s0 op1 ops1'
     &&& strongConvergence (apply s0 op1) ops1' ops2'
-  | otherwise = undefined
-  -- | otherwise = case removeFirst op2 ops1 of
-  --   Nothing ->
-  --         assert (isPermutation ops1 ops2)
-  --     &&& lemmaPermutationContainsElem op2 ops2' ops1
-  --     &&& assert (List.elem' op2 ops1)
-  --     -- &&& lemmaRemoveElemIsJust op2 ops1
-  --   Just ops1'' ->
-  --         -- lemmaPermutationSymmetric (op2:ops1) ops1''
-  --         lemmaRemoveFirstAllCompatible op2 ops1 ops1''
-  --     &&& (
-  --         applyAll s0 ops1 ? lemmaRemoveFirstApplyAll s0 op2 ops1 ops1''
-  --     ==. applyAll (apply s0 op2) ops1''
-  --     *** QED
-  --     ) &&& (
-  --         applyAll s0 ops2
-  --     ==. applyAll (apply s0 op2) ops2'
-  --     *** QED
-  --     )
-  --     &&& lemmaRemoveFirstPermutation op2 ops2' ops1 ops1''
-  --     &&& strongConvergence (apply s0 op2) ops1'' ops2'
+  | otherwise = case removeFirst op2 ops1 of
+    Nothing ->
+          assert (isPermutation ops1 ops2)
+      &&& lemmaPermutationContainsElem op2 ops2' ops1
+      &&& assert (List.elem' op2 ops1)
+      -- &&& lemmaRemoveElemIsJust op2 ops1
+    Just ops1'' ->
+          -- lemmaPermutationSymmetric (op2:ops1) ops1''
+          lemmaRemoveFirstAllCompatible op2 ops1 ops1''
+      &&& (
+          applyAll s0 ops1 ? lemmaRemoveFirstApplyAll s0 op2 ops1 ops1''
+      === applyAll (apply s0 op2) ops1''
+      *** QED
+      ) &&& (
+          applyAll s0 ops2
+      === applyAll (apply s0 op2) ops2'
+      *** QED
+      )
+      &&& lemmaRemoveFirstPermutation op2 ops2' ops1 ops1''
+      &&& lemmaRemoveFirstAllCompatibleState s0 op2 ops1 ops1''
+      -- &&& assert (allCompatibleState (apply s0 op2) ops1'')
+      &&& strongConvergence (apply s0 op2) ops1'' ops2'
 
 -- {-@ reflect elems @-}
 -- elems :: 
 
 {-@ reflect allCompatibleState @-}
+{-@ ple allCompatibleState @-}
+{-@ allCompatibleState :: VRDT a => x:a -> ops:[Operation a] -> {vv:Bool | (vv && len ops > 0) => allCompatibleState x (List.tail ops)} @-}
 allCompatibleState :: VRDT a => a -> [Operation a] -> Bool
 allCompatibleState _ [] = True
 allCompatibleState x (h:t) = compatibleState x h && allCompatibleState x t
@@ -202,6 +205,50 @@ lemmaRemoveFirstAllCompatible op (o:os) rs
   | otherwise = case removeFirst op os of
       Just rs'  -> lemmaRemoveFirstAllCompatible' op o os rs'
 
+{-@ ple lemmaRemoveFirstAllCompatibleState @-}
+{-@ lemmaRemoveFirstAllCompatibleState :: (Eq (Operation a), VRDT a) => 
+    x:a -> 
+    op:Operation a -> 
+    {os:[Operation a] | allCompatibleState x os && allCompatible os} -> 
+    {rs:[Operation a] | removeFirst op os == Just rs} -> 
+    {allCompatibleState (apply x op) rs} 
+@-}
+lemmaRemoveFirstAllCompatibleState :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> [Operation a] -> ()
+lemmaRemoveFirstAllCompatibleState x op1 ops [] = ()
+lemmaRemoveFirstAllCompatibleState x op1 (op2:ops) rs
+  | op1 == op2 = 
+        assert (allCompatibleState x ops)
+    &&& lemmaAllCompatibleTail op2 ops
+    &&& assert (allCompatible ops)
+    &&& lemmaAllCompatibleStateTail x op1 ops
+  | otherwise  = case removeFirst op1 ops of
+      Nothing -> ()
+      Just rs' -> 
+            assert (allCompatibleState x (op2:ops))
+        &&& assert (allCompatible (op2:ops))
+
+        &&& assert (allCompatibleState x ops)
+        &&& assert (allCompatible ops)
+
+        &&& lemmaRemoveFirstAllCompatibleState x op1 ops rs'
+        &&& assert (allCompatibleState (apply x op1) rs')
+        &&& assert (rs == (op2:rs'))
+
+        &&& lemmaRemoveFirstElem op1 (op2:ops) rs
+        &&& lemmaAllCompatibleElem op1 op2 ops
+
+        &&& assert (compatibleState x op2)
+
+        &&& lawCompatibilityCommutativity op1 op2
+        &&& assert (compatible op1 op2)
+        &&& lemmaAllCompatibleStateElem x op1 (op2:ops)
+        &&& assert (compatibleState x op1)
+
+        &&& lawCommutativity x op1 op2
+        &&& assert (compatibleState (apply x op1) op2)
+
+
+        &&& assert (allCompatibleState (apply x op1) rs) -- Goal
 
 
 {-@ ple lemmaRemoveFirstApplyAll @-}
@@ -236,6 +283,15 @@ lemmaAllCompatibleElem op op' [] =  ()
 lemmaAllCompatibleElem op op' (op'':ops)
   | op == op'' = ()
   | otherwise = lemmaAllCompatibleElem op op' ops
+
+{-@ ple lemmaAllCompatibleStateElem @-}
+{-@ lemmaAllCompatibleStateElem :: (Eq (Operation a), VRDT a) => x:a -> op:Operation a -> {ops:[Operation a] | List.elem' op ops && allCompatibleState x ops} -> {compatibleState x op} @-}
+lemmaAllCompatibleStateElem :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> ()
+lemmaAllCompatibleStateElem _ _ [] = ()
+lemmaAllCompatibleStateElem x op1 (op2:ops) 
+  | op1 == op2 = ()
+  | otherwise  = lemmaAllCompatibleStateElem x op1 ops
+
 
 {-@ ple lemmaRemoveFirstElem @-}
 {-@
