@@ -252,7 +252,7 @@ lemmaRemoveFirstAllCompatibleState x op1 (op2:ops) rs
 
 
 {-@ ple lemmaRemoveFirstApplyAll @-}
-{-@ lemmaRemoveFirstApplyAll :: (Eq (Operation a), VRDT a) => x:a -> op:Operation a -> {os:[Operation a] | allCompatible os} -> {rs:[Operation a] | removeFirst op os == Just rs} -> {applyAll x os = applyAll (apply x op) rs} @-}
+{-@ lemmaRemoveFirstApplyAll :: (Eq (Operation a), VRDT a) => x:a -> op:Operation a -> {os:[Operation a] | allCompatible os && allCompatibleState x os} -> {rs:[Operation a] | removeFirst op os == Just rs} -> {applyAll x os = applyAll (apply x op) rs} @-}
 lemmaRemoveFirstApplyAll :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> [Operation a] -> ()
 lemmaRemoveFirstApplyAll x op [] [] = ()
 lemmaRemoveFirstApplyAll x op _  [] = ()
@@ -271,6 +271,8 @@ lemmaRemoveFirstApplyAll x op ops@(op1:ops') rs
         ?   lemmaRemoveFirstElem op ops rs
         &&& lawCompatibilityCommutativity op op1
         &&& lemmaAllCompatibleElem op op1 ops'
+        &&& assert (compatibleState x op)
+        &&& assert (compatibleState x op1)
         &&& lawCommutativity x op1 op
       ==. applyAll (apply (apply x op) op1) ops''
       ==. applyAll (apply x op) rs
