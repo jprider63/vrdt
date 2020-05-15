@@ -104,8 +104,9 @@ instance (Ord k, Ord (Operation v), VRDT v) => VRDT (TwoPMap k v) where
   type Operation (TwoPMap k v) = TwoPMapOp k v
   apply x op = applyTwoPMap x op
   compatible x y = compatibleTwoPMap x y
+  compatibleState x y = compatibleStateTwoPMap x y
   lawCommutativity x op1 op2 = VRDT.TwoPMap.lawCommutativity x op1 op2
-  lawCompatibilityCommutativity op1 op2 = lawCompatibilityCommutativity op1 op2
+  lawCompatibilityCommutativity op1 op2 = ()
 
 {-@ reflect compatibleTwoPMap @-}
 compatibleTwoPMap :: (Eq k, VRDT v) => TwoPMapOp k v -> TwoPMapOp k v -> Bool
@@ -114,6 +115,15 @@ compatibleTwoPMap (TwoPMapApply k op) (TwoPMapApply k' op') | k == k' = compatib
 compatibleTwoPMap _                   _                               = True
 
 
+{-@ reflect compatibleStateTwoPMap @-}
+compatibleStateTwoPMap :: (Ord k, VRDT v) => TwoPMap k v -> TwoPMapOp k v -> Bool
+compatibleStateTwoPMap (TwoPMap m t p) (TwoPMapInsert k' v) = not (Map.member k' m)
+compatibleStateTwoPMap (TwoPMap m t p) (TwoPMapApply k vo)
+  | Just v <- Map.lookup k m
+  = compatibleState v vo
+  | otherwise
+  = True
+compatibleStateTwoPMap  _ _ = True
 -- {-@ reflect enabledTwoPMap @-}
 -- enabledTwoPMap :: (VRDT v, Ord k) => TwoPMap k v -> TwoPMapOp k v -> Bool
 -- enabledTwoPMap (TwoPMap m p t) (TwoPMapInsert k v) = 
@@ -218,7 +228,7 @@ applyTwoPMap (TwoPMap m p t) (TwoPMapDelete k) =
 -- lawNonCausal x op1 op2 = ()
 
 {-@ ple lawCommutativity @-}
-{-@ lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(compatibleTwoPMap op1 op2) => applyTwoPMap (applyTwoPMap x op1) op2 == applyTwoPMap (applyTwoPMap x op2) op1} @-}
+{-@ lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(compatibleTwoPMap op1 op2 && compatibleStateTwoPMap x op1 && compatibleStateTwoPMap x op2)  => applyTwoPMap (applyTwoPMap x op1) op2 == applyTwoPMap (applyTwoPMap x op2) op1} @-}
 lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
 -- lawCommutativity (TwoPMap m p t) (TwoPMapDelete k) (TwoPMapDelete k') =
 --     lemmaDelete k k' m
