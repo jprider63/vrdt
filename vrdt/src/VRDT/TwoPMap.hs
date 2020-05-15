@@ -157,10 +157,19 @@ updateAupdateEqSize apply op k m
                                 assert (isJust (Map.mfst (Map.updateLookupWithKey (aupdate apply op) k m)))
   | Nothing <- Map.lookup k m = ()
 
+{-@ lemmaUpdateNothing :: Ord k => k:k -> m:Map k v ->
+   {(mfst (Map.updateLookupWithKey doubleConstNothing k m) == Map.lookup k m) &&
+    (msnd (Map.updateLookupWithKey doubleConstNothing k m) == Map.delete k m)} @-}
+lemmaUpdateNothing :: Ord k => k -> Map k v -> ()
+lemmaUpdateNothing _ _ = undefined
 
 {-@ reflect const @-}
 const :: a -> b -> a
 const x _ = x
+
+{-@ reflect doubleConstNothing @-}
+doubleConstNothing :: a -> b -> Maybe c
+doubleConstNothing _ _ = Nothing
 
 {-@ reflect applyTwoPMap @-}
 {-@ applyTwoPMap :: (Ord k, Ord (Operation v), VRDT v) => x:TwoPMap k v ->
@@ -174,7 +183,7 @@ applyTwoPMap (TwoPMap m p t) (TwoPMapInsert k v) =
         TwoPMap m p t
     else
         -- Apply pending operations.
-        let (opsM, p') = Map.updateLookupWithKey (const $ const Nothing) k p in
+        let (opsM, p') = Map.updateLookupWithKey (const (const Nothing)) k p in
         let v' = maybe v (foldr (flip apply) v) opsM in -- $ Map.lookup k p in
         -- let p' = Map.delete k p in
 
@@ -343,6 +352,37 @@ lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> TwoPMap
 --   = lemmaDeleteInsert k (apply v1 vop) m
 --   ? assert (Set.member k (Set.insert k' t))
 
+-- remember to flip 
+
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapInsert k v) op2
+--   | Set.member k t
+--   = Set.member k (twoPMapTombstone (applyTwoPMap x op2)) `cast` ()
+
+-- lawCommutativity x@(TwoPMap m p t) op2 op1@(TwoPMapInsert k v)
+--   | Set.member k t
+--   = Set.member k (twoPMapTombstone (applyTwoPMap x op2)) `cast` ()
+
+-- insert/delete k==k'
+
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapInsert k v) op2@(TwoPMapDelete k')
+--   | not (Set.member k t)
+--   , k == k'
+--   , Nothing <- Map.lookup k p
+--   = lemmaDeleteInsert k v' m
+--   ? lemmaDeleteTwice k p
+--   ? assert (Set.member k (Set.insert k' t))
+--   ? lemmaUpdateNothing k p
+--   where v' = maybe v (foldr (flip apply) v) Nothing
+
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapInsert k v) op2@(TwoPMapDelete k')
+--   | not (Set.member k t)
+--   , k == k'
+--   , Just xx <- Map.lookup k p
+--   = ()
+--   ? lemmaDeleteInsert k (maybe v (foldr (flip apply) v) (Just xx))   m
+--   ? lemmaDeleteTwice k p
+--   ? assert (Set.member k (Set.insert k' t))
+--   ? lemmaUpdateNothing k p
 
 
 lawCommutativity _ _ _
