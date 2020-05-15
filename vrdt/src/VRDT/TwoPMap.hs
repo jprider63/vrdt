@@ -407,6 +407,67 @@ lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> TwoPMap
 --   &&& lemmaDelete k k' p
 --   &&& assert (not (Set.member k (Set.insert k' t)))
 
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapInsert k v) op2@(TwoPMapInsert k' v')
+--   | not (Set.member k t)
+--   , not (Set.member k' t)
+--   , compatibleTwoPMap op1 op2
+--   , Nothing <- Map.lookup k p
+--   , Nothing <- Map.lookup k' p
+--   =   let v1 = maybe v (foldr (flip apply) v) Nothing
+--           v2 = maybe v' (foldr (flip apply) v') Nothing in
+--         lemmaDelete k k' p
+--     &&& lemmaLookupInsert2 m k k' v2
+--     &&& lemmaLookupInsert2 m k' k v1
+--     &&& lemmaInsert k v1 k' v2 m
+--     &&& lemmaLookupDelete2 p k k'
+--     &&& lemmaLookupDelete2 p k' k
+
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapInsert k v) op2@(TwoPMapInsert k' v')
+--   | not (Set.member k t)
+--   , not (Set.member k' t)
+--   , compatibleTwoPMap op1 op2
+--   , Just vv1 <- Map.lookup k p
+--   , Just vv2 <- Map.lookup k' p
+--   =   let v1 = maybe v (foldr (flip apply) v) (Just vv1)
+--           v2 = maybe v' (foldr (flip apply) v') (Just vv2) in
+--         lemmaDelete k k' p
+--     &&& lemmaLookupInsert2 m k k' v2
+--     &&& lemmaLookupInsert2 m k' k v1
+--     &&& lemmaInsert k v1 k' v2 m
+--     &&& lemmaLookupDelete2 p k k'
+--     &&& lemmaLookupDelete2 p k' k
+
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapInsert k v) op2@(TwoPMapInsert k' v')
+--   | not (Set.member k t)
+--   , not (Set.member k' t)
+--   , compatibleTwoPMap op1 op2
+--   , Just vv1 <- Map.lookup k p
+--   , Nothing <- Map.lookup k' p
+--   =   let v1 = maybe v (foldr (flip apply) v) (Just vv1)
+--           v2 = maybe v' (foldr (flip apply) v') Nothing in
+--         lemmaDelete k k' p
+--     &&& lemmaLookupInsert2 m k k' v2
+--     &&& lemmaLookupInsert2 m k' k v1
+--     &&& lemmaInsert k v1 k' v2 m
+--     &&& lemmaLookupDelete2 p k k'
+--     &&& lemmaLookupDelete2 p k' k
+
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapInsert k v) op2@(TwoPMapInsert k' v')
+--   | not (Set.member k t)
+--   , not (Set.member k' t)
+--   , compatibleTwoPMap op1 op2
+--   , Nothing <- Map.lookup k p
+--   , Just vv2 <- Map.lookup k' p
+--   =   let v1 = maybe v (foldr (flip apply) v) Nothing
+--           v2 = maybe v' (foldr (flip apply) v') (Just vv2) in
+--         lemmaDelete k k' p
+--     &&& lemmaLookupInsert2 m k k' v2
+--     &&& lemmaLookupInsert2 m k' k v1
+--     &&& lemmaInsert k v1 k' v2 m
+--     &&& lemmaLookupDelete2 p k k'
+--     &&& lemmaLookupDelete2 p k' k
+
+
 lawCommutativity _ _ _
   = ()
 
