@@ -26,6 +26,7 @@ instance Ord a => VRDT (Max a) where
     type Operation (Max a) = Max a
 
     compatible op1 op2 = True
+    compatibleState op1 op2 = True
 
     apply (Max a) (Max b) | a > b = Max a
     apply (Max a) (Max b)         = Max b

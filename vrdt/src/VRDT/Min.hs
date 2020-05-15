@@ -30,6 +30,7 @@ instance Ord a => VRDT (Min a) where
     apply (Min a) (Min b)         = Min b
 
     compatible _ _ = True
+    compatibleState _ _ = True
 
     lawCommutativity min op1 op2 = ()
     lawCompatibilityCommutativity _ _ = ()

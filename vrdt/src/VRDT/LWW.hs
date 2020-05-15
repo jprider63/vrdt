@@ -42,5 +42,6 @@ instance Ord t => VRDT (LWW t a) where
     | lwwTime l1 > lwwTime l2 = l1
     | otherwise = l2
   compatible l1 l2 = lwwTime l1 /= lwwTime l2
+  compatibleState l1 l2 = lwwTime l1 /= lwwTime l2
   lawCommutativity x y z = ()
   lawCompatibilityCommutativity _ _ = ()
