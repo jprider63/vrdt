@@ -30,7 +30,6 @@ import           Kyowon.Reflex.Time (sampleMonotonicTimeWith)
 import qualified Kyowon.Reflex.VRDT.LWW as Reflex
 import           Kyowon.Reflex.Vty.Widget
 import           VRDT.Class
-import           VRDT.Class.TH
 import           VRDT.LWW (LWW(..))
 import qualified VRDT.LWW as LWW
 import           VRDT.MultiSet (MultiSet(..))
@@ -40,7 +39,6 @@ import qualified VRDT.Types as VRDT
 
 import           Event.Types
 
-type LWWU a = LWW UTCTimestamp a
 type Widget t m a = (Reflex t, MonadHold t m, MonadFix m, Adjustable t m, NotReady t m, PostBuild t m, MonadNodeId m, TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), PostBuild t m, MonadIO m, KyowonMonad m, KyowonMonad (Performable m)) => VtyWidget t m a
 type State = TwoPMap UniqueId Event
 type StateOp = TwoPMapOp UniqueId Event

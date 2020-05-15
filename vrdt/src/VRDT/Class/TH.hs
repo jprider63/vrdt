@@ -1,9 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE LambdaCase #-}
 
 module VRDT.Class.TH where
 
 import           Control.Monad (foldM)
-import qualified Data.Aeson as Aeson
+-- import qualified Data.Aeson as Aeson
 import qualified Data.Char as Char
 import qualified Data.List as List
 import           Data.Map (Map)
@@ -105,7 +106,11 @@ deriveVRDT n = reify n >>= \case
         let ty = List.foldl' (\acc tvar -> AppT acc $ tyVarBndrToType tvar) (ConT vrdtName) tvars
 
         -- Assign `Operation` type family.
+#if MIN_VERSION_template_haskell(2,15,0)
+        let operationD = TySynInstD $ TySynEqn Nothing (AppT (ConT ''Operation) ty) (ConT opName)
+#else
         let operationD = TySynInstD ''Operation $ TySynEqn [ty] (ConT opName)
+#endif
 
         applyD <- mkApply varMap
         -- enabledD <- mkEnabled varMap
