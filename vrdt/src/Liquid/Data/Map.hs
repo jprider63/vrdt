@@ -118,7 +118,7 @@ delete kd (Map k v m)
 
 {-@ reflect lookup @-}
 lookup :: Ord k => k -> Map k v -> Maybe v 
-{-@ lookup :: Ord k => k:k -> m:Map k v -> {v:Maybe {vv:v | S.member k (keys m)} | isJust v <=> S.member k (keys m)} @-}
+{-@ lookup :: Ord k => k:k -> m:Map k v -> {v:Maybe {vv:v | S.member k (keys m)} | isJust v <=> (S.member k (keys m) && member k m)} @-}
 lookup _ Tip  = Nothing 
 lookup k' (Map k v m)
   | k == k'   = Just v 
