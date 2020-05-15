@@ -20,6 +20,7 @@ instance Num a => VRDT (Sum a) where
   type Operation (Sum a) = Sum a
 
   compatible op1 op2 = True
+  compatibleState op1 op2 = True
 
   apply (Sum a) (Sum b) = Sum (a + b)
 

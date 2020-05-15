@@ -30,6 +30,7 @@ instance Ord a => VRDT (Internal.MultiSet a) where
     apply = apply'
 
     compatible _ _ = True
+    compatibleState _ _ = True
     
     lawCommutativity m op1 op2 = Internal.lawCommutativity m op1 op2
 

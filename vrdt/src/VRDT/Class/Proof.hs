@@ -12,7 +12,7 @@ import           Prelude hiding (Maybe(..), length, fromJust, tail)
 import qualified Data.Set as S
 
 {-@ ple strongConvergence @-}
-{-@ strongConvergence :: (Eq (Operation a), VRDT a) => s0:a -> ops1:[Operation a] -> ops2:[Operation a] -> {(isPermutation ops1 ops2 && allCompatible ops1) => (applyAll s0 ops1 = applyAll s0 ops2)} @-}
+{-@ strongConvergence :: (Eq (Operation a), VRDT a) => s0:a -> ops1:[Operation a] -> ops2:[Operation a] -> {(isPermutation ops1 ops2 && allCompatibleState s0 ops1 && allCompatible ops1) => (applyAll s0 ops1 = applyAll s0 ops2)} @-}
 strongConvergence :: (Eq (Operation a), VRDT a) => a -> [Operation a] -> [Operation a] -> ()
 strongConvergence s0 [] [] = ()
 strongConvergence s0 [] _ = ()
@@ -46,6 +46,11 @@ strongConvergence s0 ops1@(op1:ops1') ops2@(op2:ops2')
 
 -- {-@ reflect elems @-}
 -- elems :: 
+
+{-@ reflect allCompatibleState @-}
+allCompatibleState :: VRDT a => a -> [Operation a] -> Bool
+allCompatibleState _ [] = True
+allCompatibleState x (h:t) = compatibleState x h && allCompatibleState x t
 
 {-@ reflect allCompatible @-}
 {-@ ple allCompatible @-}
