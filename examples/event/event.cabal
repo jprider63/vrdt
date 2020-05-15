@@ -48,6 +48,7 @@ executable event
     , vrdt
     , vty
   extensions: 
+    CPP
     DeriveGeneric
     FlexibleContexts
     LambdaCase
@@ -58,6 +59,7 @@ executable event
     TemplateHaskell
     TypeFamilies
   default-language: Haskell2010
+  cpp-options: -DNotLiquid
 
 test-suite event-test
   type: exitcode-stdio-1.0
