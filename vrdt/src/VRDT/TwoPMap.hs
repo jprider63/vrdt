@@ -217,7 +217,7 @@ applyTwoPMap (TwoPMap m p t) (TwoPMapDelete k) =
 -- lawNonCausal x (TwoPMapDelete k) op2 = ()
 -- lawNonCausal x op1 op2 = ()
 
---{-@ ple lawCommutativity @-}
+{-@ ple lawCommutativity @-}
 {-@ lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(compatibleTwoPMap op1 op2) => applyTwoPMap (applyTwoPMap x op1) op2 == applyTwoPMap (applyTwoPMap x op2) op1} @-}
 lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
 -- lawCommutativity (TwoPMap m p t) (TwoPMapDelete k) (TwoPMapDelete k') =
@@ -483,47 +483,23 @@ lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapInsert k v) op2@(TwoPMapApply k' 
                  Just ops -> insertList vop' ops 
           Nothing = Map.lookup k (Map.insert k' l2 p)
           Nothing = Map.lookup k' (Map.insert k v1 m) in
-        -- (applyTwoPMap )
         (   applyTwoPMap (TwoPMap m p t) (TwoPMapInsert k v)
         *** QED
         )
         &&& lemmaDelete k k' p
-    -- &&& lemmaLookupInsert2 m k k' v2
         &&& lemmaLookupInsert2 m k' k v1
         &&& lemmaLookupInsert2 p k k' l2
-    -- &&& lemmaLookupInsert2 p k k' l2
         &&& lemmaLookupDelete2 p k' k
         &&& lemmaInsertDelete k' l2 k p
-        -- &&& (applyTwoPMap (applyTwoPMap x op1)  op2
-        -- ===  applyTwoPMap (TwoPMap m1 p1 t1) op2
-        -- ===  applyTwoPMap (TwoPMap m (Map.insert k' l2 p) t0') op2
-        -- *** QED
-        -- )
-
-        -- &&& assert (not (Set.member k t1))
-        -- &&& assert (not (Set.member k' t0))
-    -- &&& lemmaInsert k v1 k' v2 m
-    -- &&& lemmaLookupDelete2 p k k'
-    -- &&& lemmaLookupDelete2 p k' k
-        -- ? (m1 === m) --  apply
-        -- ? (p1 === Map.insert k' l2 p) --  apply
-        -- ? (m0 === Map.insert k v1 m) -- insert
-        -- ? (m0' === m0) -- insert/apply
-        -- ? (m1' === Map.insert k v1 m1) -- apply/insert
-        -- ? (p0 === Map.delete k p) --insert
-        -- ? (t1' === t0')
-
-        -- ? (p0' === Map.insert k' l2 (Map.delete k p))
-        -- ? (p1' === Map.delete k (Map.insert k' l2 p))
---    ? ()
-    -- ?  (m0' === m1')
---    ?  (p0' ==! p1')
-    -- ? (m1' === )
-  -- ?  (t0' === t1')
-  where TwoPMap m0 p0 t0 = applyTwoPMap x op1
-        TwoPMap m1 p1 t1 = applyTwoPMap x op2
-        TwoPMap m0' p0' t0' = applyTwoPMap (applyTwoPMap x op1) op2
-        TwoPMap m1' p1' t1' = applyTwoPMap (applyTwoPMap x op2) op1
+        &&& (applyTwoPMap (applyTwoPMap (TwoPMap m p t) op1) op2
+        ==.  applyTwoPMap (applyTwoPMap (TwoPMap m p t) (TwoPMapInsert k v)) op2
+        ==.  applyTwoPMap (TwoPMap (Map.insert k v1 m) p t) op2
+        ==.  applyTwoPMap (TwoPMap (Map.insert k v1 m) p t) (TwoPMapApply k' vop')
+        ==.  TwoPMap (Map.insert k v1 m) (Map.insert k' l2 p) t
+        ==.  applyTwoPMap (TwoPMap m (Map.insert k' l2 p) t) op1
+        ==.  applyTwoPMap (applyTwoPMap (TwoPMap m p t) op2) op1
+        *** QED
+        )
 
 lawCommutativity _ _ _
   = ()
