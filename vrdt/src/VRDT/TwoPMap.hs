@@ -384,6 +384,27 @@ lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> TwoPMap
 --   ? assert (Set.member k (Set.insert k' t))
 --   ? lemmaUpdateNothing k p
 
+-- insert/delete k/=k'
+
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapInsert k v) op2@(TwoPMapDelete k')
+--   | not (Set.member k t)
+--   , k /= k'
+--   , Nothing <- Map.lookup k p
+--   =   lemmaLookupDelete2 m k k'
+--   &&& lemmaLookupDelete2 p k k'
+--   &&& lemmaInsertDelete k (maybe v (foldr (flip apply) v) Nothing) k' m
+--   &&& lemmaDelete k k' p
+--   &&& assert (not (Set.member k (Set.insert k' t)))
+
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapInsert k v) op2@(TwoPMapDelete k')
+--   | not (Set.member k t)
+--   , k /= k'
+--   , Just xx <- Map.lookup k p
+--   =   lemmaLookupDelete2 m k k'
+--   &&& lemmaLookupDelete2 p k k'
+--   &&& lemmaInsertDelete k (maybe v (foldr (flip apply) v) (Just xx)) k' m
+--   &&& lemmaDelete k k' p
+--   &&& assert (not (Set.member k (Set.insert k' t)))
 
 lawCommutativity _ _ _
   = ()
