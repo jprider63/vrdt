@@ -296,10 +296,45 @@ lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> TwoPMap
 --   , Just v2 <- Map.lookup k' m
 --   = lemmaLookupInsert2 m k k' (apply v2 vop')
 
+-- apply/delete k/=k'
+
+
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapApply k vop) op2@(TwoPMapDelete k')
+--   | not (Set.member k t)
+--   , k /= k'
+--   , compatibleTwoPMap op1 op2
+--   , Just v1 <- Map.lookup k m
+--   = lemmaInsertDelete k (apply v1 vop) k' m
+--   ? lemmaLookupDelete2 m k k'
+--   ?  assert (not (Set.member k (Set.insert k' t)))
+
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapApply k vop) op2@(TwoPMapDelete k')
+--   | not (Set.member k t)
+--   , k /= k'
+--   , compatibleTwoPMap op1 op2
+--   , Nothing <- Map.lookup k m
+--   =  lemmaLookupDelete2 p k k'
+--   ?  lemmaLookupDelete2 m k k'
+--   ?  lemmaInsertDelete k l k' p
+--   ?  assert (not (isJust (Map.lookup k (Map.delete k' m))))
+--   ?  assert (not (Set.member k (Set.insert k' t)))
+--   where l = case Map.lookup k p of
+--                Nothing -> [vop]
+--                Just ops -> insertList vop ops
+
+-- apply/delete k==k'
 
 lawCommutativity _ _ _
   = ()
 
+-- upgraded version
+  -- ?  (m0' === m1')
+  -- ?  (p0' === p1')
+  -- ?  (t0' === t1')
+  -- where TwoPMap m0 p0 t0 = applyTwoPMap x op1
+  --       TwoPMap m1 p1 t1 = applyTwoPMap x op2
+  --       TwoPMap m0' p0' t0' = applyTwoPMap (applyTwoPMap x op1) op2
+  --       TwoPMap m1' p1' t1' = applyTwoPMap (applyTwoPMap x op2) op1
 
 -- copy paste the following when needed
         -- TwoPMap m0 p0 t0 = applyTwoPMap x op1
