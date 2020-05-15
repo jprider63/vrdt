@@ -35,6 +35,7 @@ library
       VRDT.LWW
       VRDT.Max
       VRDT.MultiSet
+      VRDT.MultiSet.Internal
       -- VRDT.MultiSet.Proof
       VRDT.Sum
       VRDT.Types

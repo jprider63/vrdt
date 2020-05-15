@@ -38,6 +38,8 @@ import           VRDT.TwoPMap (TwoPMap(..), TwoPMapOp(..))
 import qualified VRDT.TwoPMap
 import qualified VRDT.Types as VRDT
 
+import           Event.Types
+
 type LWWU a = LWW UTCTimestamp a
 type Widget t m a = (Reflex t, MonadHold t m, MonadFix m, Adjustable t m, NotReady t m, PostBuild t m, MonadNodeId m, TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), PostBuild t m, MonadIO m, KyowonMonad m, KyowonMonad (Performable m)) => VtyWidget t m a
 type State = TwoPMap UniqueId Event
@@ -45,19 +47,6 @@ type StateOp = TwoPMapOp UniqueId Event
 
 
 -- State is TwoPMap of EventState
-
-data Event = Event {
-    eventTitle :: LWWU Text
-  , eventDescription :: LWWU Text
-  , eventStartTime :: LWWU UTCTime
-  , eventEndTime :: LWWU UTCTime
-  , eventLocation :: LWWU Text
-  , eventRSVPs :: MultiSet Text
-  -- Messages?
-  }
-  deriving (Generic)
-
-$(deriveVRDT ''Event)
 
 instance Eq EventOp
 instance Ord EventOp
