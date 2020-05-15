@@ -324,6 +324,27 @@ lawCommutativity :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> TwoPMap
 
 -- apply/delete k==k'
 
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapApply k vop) op2@(TwoPMapDelete k')
+--   | not (Set.member k t)
+--   , k == k'
+--   , compatibleTwoPMap op1 op2
+--   , Nothing <- Map.lookup k m
+--   = lemmaDeleteInsert k l p
+--   ? assert (Set.member k (Set.insert k' t))
+--   where l = case Map.lookup k p of
+--                Nothing -> [vop]
+--                Just ops -> insertList vop ops  
+
+-- lawCommutativity x@(TwoPMap m p t) op1@(TwoPMapApply k vop) op2@(TwoPMapDelete k')
+--   | not (Set.member k t)
+--   , k == k'
+--   , compatibleTwoPMap op1 op2
+--   , Just v1 <- Map.lookup k m
+--   = lemmaDeleteInsert k (apply v1 vop) m
+--   ? assert (Set.member k (Set.insert k' t))
+
+
+
 lawCommutativity _ _ _
   = ()
 
