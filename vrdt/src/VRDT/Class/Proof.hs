@@ -19,30 +19,33 @@ strongConvergence s0 [] _ = ()
 strongConvergence s0 _ [] = ()
 strongConvergence s0 ops1 ops2 | not (isPermutation ops1 ops2) = ()
 strongConvergence s0 ops1 ops2 | not (allCompatible ops1) = ()
+strongConvergence s0 ops1 ops2 | not (allCompatibleState s0 ops1) = ()
 strongConvergence s0 ops1@(op1:ops1') ops2@(op2:ops2') 
   | op1 == op2 = 
         lemmaAllCompatibleTail op1 ops1'
+    &&& lemmaAllCompatibleStateTail s0 op1 ops1'
     &&& strongConvergence (apply s0 op1) ops1' ops2'
-  | otherwise = case removeFirst op2 ops1 of
-    Nothing ->
-          assert (isPermutation ops1 ops2)
-      &&& lemmaPermutationContainsElem op2 ops2' ops1
-      &&& assert (List.elem' op2 ops1)
-      -- &&& lemmaRemoveElemIsJust op2 ops1
-    Just ops1'' ->
-          -- lemmaPermutationSymmetric (op2:ops1) ops1''
-          lemmaRemoveFirstAllCompatible op2 ops1 ops1''
-      &&& (
-          applyAll s0 ops1 ? lemmaRemoveFirstApplyAll s0 op2 ops1 ops1''
-      ==. applyAll (apply s0 op2) ops1''
-      *** QED
-      ) &&& (
-          applyAll s0 ops2
-      ==. applyAll (apply s0 op2) ops2'
-      *** QED
-      )
-      &&& lemmaRemoveFirstPermutation op2 ops2' ops1 ops1''
-      &&& strongConvergence (apply s0 op2) ops1'' ops2'
+  | otherwise = undefined
+  -- | otherwise = case removeFirst op2 ops1 of
+  --   Nothing ->
+  --         assert (isPermutation ops1 ops2)
+  --     &&& lemmaPermutationContainsElem op2 ops2' ops1
+  --     &&& assert (List.elem' op2 ops1)
+  --     -- &&& lemmaRemoveElemIsJust op2 ops1
+  --   Just ops1'' ->
+  --         -- lemmaPermutationSymmetric (op2:ops1) ops1''
+  --         lemmaRemoveFirstAllCompatible op2 ops1 ops1''
+  --     &&& (
+  --         applyAll s0 ops1 ? lemmaRemoveFirstApplyAll s0 op2 ops1 ops1''
+  --     ==. applyAll (apply s0 op2) ops1''
+  --     *** QED
+  --     ) &&& (
+  --         applyAll s0 ops2
+  --     ==. applyAll (apply s0 op2) ops2'
+  --     *** QED
+  --     )
+  --     &&& lemmaRemoveFirstPermutation op2 ops2' ops1 ops1''
+  --     &&& strongConvergence (apply s0 op2) ops1'' ops2'
 
 -- {-@ reflect elems @-}
 -- elems :: 
@@ -127,6 +130,23 @@ lemmaPermutationContainsElem op2 (op2':ops2) ops1@(op1:ops1')
 lemmaAllCompatibleTail :: VRDT a => Operation a -> [Operation a] -> ()
 lemmaAllCompatibleTail op [] = ()
 lemmaAllCompatibleTail op (_:ops) = lemmaAllCompatibleTail op ops
+
+{-@ ple lemmaAllCompatibleStateTail @-}
+{-@ lemmaAllCompatibleStateTail :: VRDT a => x:a -> op:Operation a -> {ops:[Operation a] | allCompatibleState x (cons op ops) && allCompatible (cons op ops)} -> {allCompatibleState (apply x op) ops} @-}
+lemmaAllCompatibleStateTail :: VRDT a => a -> Operation a -> [Operation a] -> ()
+lemmaAllCompatibleStateTail _ _ [] = ()
+lemmaAllCompatibleStateTail x op1 (op2:ops) = 
+      allCompatibleState x (op1:op2:ops)
+  ==. (compatibleState x op1 && allCompatibleState x (op2:ops))
+  ==. (compatibleState x op1 && compatibleState x op2 && allCompatibleState x ops) ?
+            lemmaAllCompatibleStateTail x op1 ops
+        &&& assert (compatibleState x op1)
+        &&& assert (compatibleState x op2)
+        &&& assert (compatible op1 op2)
+        &&& lawCommutativity x op1 op2
+  ==. (compatibleState (apply x op1) op2 && allCompatibleState (apply x op1) (op2:ops))
+  ==. allCompatibleState (apply x op1) (op2:ops)
+  *** QED
 
 
 
