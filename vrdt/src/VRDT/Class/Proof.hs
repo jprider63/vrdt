@@ -266,11 +266,16 @@ lemmaRemoveFirstApplyAll x op ops@(op1:ops') rs
           applyAll x ops
       ==. applyAll (apply x op1) ops'
         ?   lemmaAllCompatibleTail op1 ops'
+        &&& assert (allCompatibleState x ops)
+        &&& assert (allCompatibleState x ops')
+        &&& lemmaAllCompatibleStateTail x op1 ops'
+        &&& assert (allCompatibleState (apply x op1) ops')
         &&& lemmaRemoveFirstApplyAll (apply x op1) op ops' ops''
       ==. applyAll (apply (apply x op1) op) ops''
         ?   lemmaRemoveFirstElem op ops rs
         &&& lawCompatibilityCommutativity op op1
         &&& lemmaAllCompatibleElem op op1 ops'
+        &&& lemmaAllCompatibleStateElem x op ops
         &&& assert (compatibleState x op)
         &&& assert (compatibleState x op1)
         &&& lawCommutativity x op1 op
