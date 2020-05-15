@@ -28,6 +28,7 @@ source-repository head
 executable event
   main-is: Main.hs
   other-modules:
+      Event.Types
       Paths_event
   hs-source-dirs:
       src

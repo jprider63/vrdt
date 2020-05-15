@@ -62,16 +62,6 @@ data MultiSet a = MultiSet {
   }
 #ifdef NotLiquid
   deriving (Generic)
-#endif  
-#if NotLiquid
-instance Ord a => VRDT (MultiSet a) where
-    type Operation (MultiSet a) = MultiSetOp a
-
-    compatible _ _ = error "TODO"
-    apply _ _ = error "TODO"
-
-instance Ord a => VRDTInitial (MultiSet a) where
-    initVRDT = MultiSet mempty mempty
 
 instance (Aeson.ToJSONKey a) => Aeson.ToJSON (MultiSet a)
 instance (Ord a, Aeson.FromJSONKey a) => Aeson.FromJSON (MultiSet a)

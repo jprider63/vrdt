@@ -35,3 +35,8 @@ instance Ord a => VRDT (Internal.MultiSet a) where
 
     lawCompatibilityCommutativity _ _ = ()
 
+#if NotLiquid
+instance Ord a => VRDTInitial (MultiSet a) where
+    initVRDT = MultiSet mempty mempty
+#endif
+

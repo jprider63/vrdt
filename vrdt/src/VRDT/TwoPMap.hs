@@ -92,13 +92,6 @@ apply (TwoPMap m p t) (TwoPMapInsert k v)
 
 
 #if NotLiquid
-instance (VRDT v, Ord k, Ord (Operation v)) => VRDT (TwoPMap k v) where
-    type Operation (TwoPMap k v) = TwoPMapOp k v
-
-    compatible = error "TODO"
-    apply = applyTwoPMap
---     lawCommutativity _ _ _ = ()
-
 instance (Ord k, VRDT v, Ord (Operation v)) => VRDTInitial (TwoPMap k v) where
     initVRDT = TwoPMap mempty mempty mempty
     
@@ -140,9 +133,11 @@ compatibleTwoPMap _                   _                               = True
 --         enabled v op
 -- enabledTwoPMap (TwoPMap m _p t) (TwoPMapDelete k) = True
 
+#ifndef NotLiquid
 {-@ reflect flip @-}
 flip :: (a -> b -> c) -> b -> a -> c
 flip f x y = f y x
+#endif
 
 {-@ reflect aupdate @-}
 aupdate :: (t -> t1 -> a) -> t1 -> p -> t -> Maybe a
@@ -152,10 +147,14 @@ aupdate apply op _ v = Just (apply v op)
 {-@ updateAupdateEqSize :: Ord k => apply: (a -> b -> a) -> op:b -> k:k -> m:Map k a ->
   {Map.keys m == Map.keys (msnd (Map.updateLookupWithKey (aupdate apply op) k m))} @-}
 updateAupdateEqSize :: Ord k => (a -> b -> a) -> b -> k -> Map k a -> ()
+#if NotLiquid
+updateAupdateEqSize apply op k m = ()
+#else
 updateAupdateEqSize apply op k m
   | Just x <- Map.lookup k m  = assert (isJust (aupdate apply op k x)) `cast`
                                 assert (isJust (Map.mfst (Map.updateLookupWithKey (aupdate apply op) k m)))
   | Nothing <- Map.lookup k m = ()
+#endif
 
 {-@ lemmaUpdateNothing :: Ord k => k:k -> m:Map k v ->
    {(mfst (Map.updateLookupWithKey doubleConstNothing k m) == Map.lookup k m) &&
@@ -163,9 +162,11 @@ updateAupdateEqSize apply op k m
 lemmaUpdateNothing :: Ord k => k -> Map k v -> ()
 lemmaUpdateNothing _ _ = undefined
 
+#ifndef NotLiquid
 {-@ reflect const @-}
 const :: a -> b -> a
 const x _ = x
+#endif
 
 {-@ reflect doubleConstNothing @-}
 doubleConstNothing :: a -> b -> Maybe c
