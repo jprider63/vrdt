@@ -1388,14 +1388,63 @@ lawCommutativityIA x@(TwoPMap m p t) k v k' vop'
   | otherwise = lawCommutativityIANeq x k v k' vop'
 
 
--- {-@ ple lawCommutativityID @-}
+{-@ assume assertEq :: x:a -> y:{a | x == y } -> {x == y } @-}
+assertEq :: a -> a -> () 
+assertEq _ _ = () 
+
+{-@ assume assumeEq :: x:a -> y:a -> {x == y } @-}
+assumeEq :: a -> a -> () 
+assumeEq _ _ = () 
+
+{-@ ple lawCommutativityID1 @-}
 {-@ lawCommutativityID1 :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> v1:v 
    -> k2:{ k | (compatibleTwoPMap (TwoPMapInsert k1 v1) (TwoPMapDelete k2) && compatibleStateTwoPMap x (TwoPMapInsert k1 v1) && compatibleStateTwoPMap x (TwoPMapDelete k2))} 
    -> { (applyTwoPMap (applyTwoPMap x (TwoPMapInsert k1 v1)) (TwoPMapDelete k2) == applyTwoPMap (applyTwoPMap x (TwoPMapDelete k2)) (TwoPMapInsert k1 v1))  } @-}
 lawCommutativityID1 :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> v -> k -> ()
-lawCommutativityID1 _ _ _ _ = ()
+lawCommutativityID1 x@(TwoPMap m p t) k1 v1 k2
+  |  Set.member k1 t
+  =   applyTwoPMap (applyTwoPMap x (TwoPMapInsert k1 v1)) (TwoPMapDelete k2) 
+  === applyTwoPMap (applyTwoPMap x (TwoPMapDelete k2)) (TwoPMapInsert k1 v1)
+  *** QED 
+  |  Set.member k1 (Set.insert k2 t) 
+  =   applyTwoPMap (applyTwoPMap (TwoPMap m p t) (TwoPMapInsert k1 v1)) (TwoPMapDelete k2) 
+  === applyTwoPMap (TwoPMap m' p' t) (TwoPMapDelete k2) 
+  === TwoPMap m1' p1' t1'
+      ? assumeEq m1' m2'
+      ? assumeEq p1' p2'
+  === TwoPMap m2' p2' t2'
+  === applyTwoPMap (TwoPMap m2' p2' t2') (TwoPMapInsert k1 v1)
+  === applyTwoPMap (applyTwoPMap (TwoPMap m p t) (TwoPMapDelete k2)) (TwoPMapInsert k1 v1)
+  *** QED  
+  |  otherwise 
+  =   let (opsM3, p3') = Map.updateLookupWithKey doubleConstNothing k1 p2' in
+      let v3' = maybe v1 (foldr (flip apply) v1) opsM3 in
+      let m3' = Map.insert k1 v3' m2' in
+      applyTwoPMap (applyTwoPMap (TwoPMap m p t) (TwoPMapInsert k1 v1)) (TwoPMapDelete k2) 
+  === applyTwoPMap (TwoPMap m' p' t) (TwoPMapDelete k2) 
+  === TwoPMap m1' p1' t1'
+      ? assumeEq m1' m3'
+      ? assumeEq p1' p3'
+  === TwoPMap m3' p3' t2' 
+  === applyTwoPMap (TwoPMap m2' p2' t2') (TwoPMapInsert k1 v1)
+  === applyTwoPMap (applyTwoPMap (TwoPMap m p t) (TwoPMapDelete k2)) (TwoPMapInsert k1 v1)
+  *** QED 
+  where 
+    (opsM, p') = Map.updateLookupWithKey doubleConstNothing k1 p
+    v'  = maybe v1 (foldr (flip apply) v1) opsM 
+    m'  = Map.insert k1 v' m
+    m1' = Map.delete k2 m'
+    p1' = Map.delete k2 p'
+    t1' = Set.insert k2 t
+    m2' = Map.delete k2 m
+    p2' = Map.delete k2 p
+    t2' = Set.insert k2 t
 
 
+lawCommutativityID1 _ _ _ _ = () 
+
+
+{-@ ple lawCommutativityID2 @-}
 {-@ lawCommutativityID2 :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> v1:v 
    -> k2:{ k | (compatibleTwoPMap (TwoPMapInsert k1 v1) (TwoPMapDelete k2) && compatibleStateTwoPMap x (TwoPMapInsert k1 v1) && compatibleStateTwoPMap x (TwoPMapDelete k2))} 
    -> { compatibleStateTwoPMap (applyTwoPMap x (TwoPMapInsert k1 v1)) (TwoPMapDelete k2) } @-}
