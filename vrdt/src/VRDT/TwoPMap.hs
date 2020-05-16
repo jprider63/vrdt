@@ -1362,16 +1362,16 @@ lawCommutativityIAEq' x@(TwoPMap m p t) k v  vop'
   ==. (TwoPMap (Map.insert k v1 m) p t) *** QED)
   &&& (m1 === Map.insert k v1 m *** QED)
   &&& lemmaLookupInsert m k v1
-  | Just ops <- Map.lookup k p
+  | Just [] <- Map.lookup k p
   = (applyTwoPMap x op1
   === (TwoPMap (Map.insert k v1 m) (Map.delete k p) t) *** QED)
   &&& lemmaLookupInsert m k v1
   &&& (Map.lookup k m1 === Just v1 *** QED)
-  ? (v1 === foldr (flip apply) v ops *** QED)
-  ? assert (allCompatible (vop':ops))
-  ? assert (allCompatibleState v ops)
+  ? (v1 === foldr (flip apply) v [] === v *** QED)
+  ? assert (allCompatible (vop':[]))
+  ? assert (allCompatibleState v [])
   ? assert (compatibleState v vop')
-  ? assert (compatibleState (foldr (flip apply) v ops) vop') -- TODO
+--  ? assume (compatibleState (foldr (flip apply) v ops) vop') -- TODO
   where op1 = TwoPMapInsert k v
         op2 = TwoPMapApply k vop'
         v1 = maybe v (foldr (flip apply) v) (Map.lookup k p)
