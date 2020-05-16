@@ -1873,12 +1873,26 @@ lemmaApplyAll :: VRDT a => a -> [Operation a] -> ()
 lemmaApplyAll v1 ops = undefined -- TODO
 
 
+{-@ ple insertRemoveFirst @-}
+{-@ insertRemoveFirst :: Ord a => x:a -> xs:[a] -> {removeFirst x (insertList x xs) == Just xs} @-}
+insertRemoveFirst :: Ord a => a -> [a] -> ()
+insertRemoveFirst x [] = ()
+insertRemoveFirst x (y:ys)
+  | x < y = ()
+  | x == y = ()
+  | x > y = insertRemoveFirst x ys
+
+{-@ ple permutationId @-}
+{-@ permutationId :: (Eq a) => x:[a] -> {isPermutation x x} @-}
+permutationId :: Eq a => [a] -> ()
+permutationId [] = ()
+permutationId (x:xs) = permutationId xs
+
 {-@ ple lemmaPermutation @-}
 {-@ lemmaPermutation :: Ord a => vop2:a -> ops:[a] -> {ops2:[a] | insertList vop2 ops = ops2} -> {isPermutation (cons vop2 ops) ops2} @-}
 lemmaPermutation :: Ord a => a -> [a] -> [a] -> ()
 lemmaPermutation _ [] [] = ()
 lemmaPermutation _ [] _ = ()
--- lemmaPermutation vop2 (h:ops') [] = ()
 lemmaPermutation vop2 ops@(h:ops') ops2 
   | vop2 <= h = 
         -- insertList vop2 (h:ops')
@@ -1893,7 +1907,10 @@ lemmaPermutation vop2 ops@(h:ops') ops2
   | otherwise =
         isPermutation (vop2:ops) ops2
     === isPermutation (vop2:ops) (insertList vop2 (h:ops')) -- ? lemmaPermutation vop2 ops'
+        ? insertRemoveFirst vop2 ops'
     === isPermutation (vop2:ops) (h:insertList vop2 ops')
+    === isPermutation ops (h: ops')
+        ? permutationId ops
     *** QED
 
 {-@ ple lemmaPermutation' @-}
