@@ -1453,7 +1453,7 @@ lawCommutativityIAEq x@(TwoPMap m p t) k v1 vop2
     ==! TwoPMap (Map.insert k v1'' m) (Map.delete k p) t -- OK
         ?   assume (isPermutation (vop2:ops) ops2) -- TODO
         &&& assert (allCompatibleState v1 ops) -- OK
-        &&& assume (compatibleState v1 vop2) -- TODO
+        &&& assert (compatibleState v1 vop2) -- OK
         &&& assert (allCompatibleState v1 (vop2:ops)) -- OK
         &&& assert (allCompatible ops) -- OK
         &&& assert (allCompatible (vop2:ops)) -- OK
@@ -1863,7 +1863,8 @@ lawCompatibilityCommutativity' _ _ = ()
 
 {-@ lemmaApplyAll :: VRDT a => v1:a -> ops:[Operation a] -> {applyAll v1 ops == Liquid.Data.List.foldr (flip apply) v1 ops} @-}
 lemmaApplyAll :: VRDT a => a -> [Operation a] -> ()
-lemmaApplyAll v1 ops = undefined
+lemmaApplyAll v1 ops = undefined -- TODO
+
 
 
 
