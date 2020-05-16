@@ -1390,10 +1390,29 @@ lawCommutativityID :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> 
 lawCommutativityID _ _ _ = undefined
 
 
--- {-@ ple lawCommutativityDI @-}
+{-@ ple lawCommutativityDIE @-}
+{-@ lawCommutativityDIE :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> k2:k -> v2:v -> {(compatibleTwoPMap (TwoPMapDelete k1) (TwoPMapInsert k2 v2) && compatibleStateTwoPMap x (TwoPMapDelete k1) && compatibleStateTwoPMap x (TwoPMapInsert k2 v2))  => ((applyTwoPMap (applyTwoPMap x (TwoPMapDelete k1)) (TwoPMapInsert k2 v2) == applyTwoPMap (applyTwoPMap x (TwoPMapInsert k2 v2)) (TwoPMapDelete k1)) )} @-}
+lawCommutativityDIE :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> k -> v -> ()
+lawCommutativityDIE x k k' v' = lawCommutativityID x k' v' k
+
+{-@ ple lawCommutativityDIC @-}
+{-@ lawCommutativityDIC :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> k2:k -> v2:v -> {(compatibleTwoPMap (TwoPMapDelete k1) (TwoPMapInsert k2 v2) && compatibleStateTwoPMap x (TwoPMapDelete k1) && compatibleStateTwoPMap x (TwoPMapInsert k2 v2))  => (compatibleStateTwoPMap (applyTwoPMap x (TwoPMapDelete k1)) (TwoPMapInsert k2 v2))} @-}
+lawCommutativityDIC :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> k -> v -> ()
+lawCommutativityDIC x@(TwoPMap m p t) k' k v
+    | k == k' = (applyTwoPMap x (TwoPMapDelete k')
+                 === TwoPMap (Map.delete k' m) (Map.delete k' p) (Set.insert k' t)
+                 *** QED)
+                &&& lemmaLookupDelete m k'
+    | k /= k' = lemmaLookupDelete2 m k k' 
+                &&& ((applyTwoPMap x (TwoPMapDelete k')
+                === TwoPMap (Map.delete k' m) (Map.delete k' p) (Set.insert k' t)
+                *** QED))
+
+
+{-@ ple lawCommutativityDI @-}
 {-@ lawCommutativityDI :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> k2:k -> v2:v -> {(compatibleTwoPMap (TwoPMapDelete k1) (TwoPMapInsert k2 v2) && compatibleStateTwoPMap x (TwoPMapDelete k1) && compatibleStateTwoPMap x (TwoPMapInsert k2 v2))  => ((applyTwoPMap (applyTwoPMap x (TwoPMapDelete k1)) (TwoPMapInsert k2 v2) == applyTwoPMap (applyTwoPMap x (TwoPMapInsert k2 v2)) (TwoPMapDelete k1)) && compatibleStateTwoPMap (applyTwoPMap x (TwoPMapDelete k1)) (TwoPMapInsert k2 v2))} @-}
 lawCommutativityDI :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> k -> v -> ()
-lawCommutativityDI _ _ _ = undefined
+lawCommutativityDI a b c d = lawCommutativityDIC a b c d &&& lawCommutativityDIE a b c d
 
 
 {-@ ple lawCommutativityDAE @-}
