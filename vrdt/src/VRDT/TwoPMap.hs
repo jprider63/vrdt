@@ -243,7 +243,7 @@ lawCommutativity x (TwoPMapInsert k1 v1) d =
   case d of 
     (TwoPMapInsert k2 v2) -> lawCommutativityII x k1 v1 k2 v2
     (TwoPMapApply k2 v2)  -> lawCommutativityIA x k1 v1 k2 v2
-    (TwoPMapDelete k2)    -> lawCommutativityID x k1 v1 k2
+    (TwoPMapDelete k2)    -> lawCommutativityID1 x k1 v1 k2 ? lawCommutativityID2 x k1 v1 k2
 lawCommutativity x (TwoPMapApply k1 v1)  d = 
   case d of 
     TwoPMapInsert k2 v2 -> lawCommutativityAI x k1 v1 k2 v2
@@ -1389,11 +1389,19 @@ lawCommutativityIA x@(TwoPMap m p t) k v k' vop'
 
 
 -- {-@ ple lawCommutativityID @-}
-{-@ lawCommutativityID :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> v1:v 
+{-@ lawCommutativityID1 :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> v1:v 
    -> k2:{ k | (compatibleTwoPMap (TwoPMapInsert k1 v1) (TwoPMapDelete k2) && compatibleStateTwoPMap x (TwoPMapInsert k1 v1) && compatibleStateTwoPMap x (TwoPMapDelete k2))} 
-   -> { (applyTwoPMap (applyTwoPMap x (TwoPMapInsert k1 v1)) (TwoPMapDelete k2) == applyTwoPMap (applyTwoPMap x (TwoPMapDelete k2)) (TwoPMapInsert k1 v1)) && compatibleStateTwoPMap (applyTwoPMap x (TwoPMapInsert k1 v1)) (TwoPMapDelete k2) } @-}
-lawCommutativityID :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> v -> k -> ()
-lawCommutativityID _ _ _ _ = undefined
+   -> { (applyTwoPMap (applyTwoPMap x (TwoPMapInsert k1 v1)) (TwoPMapDelete k2) == applyTwoPMap (applyTwoPMap x (TwoPMapDelete k2)) (TwoPMapInsert k1 v1))  } @-}
+lawCommutativityID1 :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> v -> k -> ()
+lawCommutativityID1 _ _ _ _ = ()
+
+
+{-@ lawCommutativityID2 :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> v1:v 
+   -> k2:{ k | (compatibleTwoPMap (TwoPMapInsert k1 v1) (TwoPMapDelete k2) && compatibleStateTwoPMap x (TwoPMapInsert k1 v1) && compatibleStateTwoPMap x (TwoPMapDelete k2))} 
+   -> { compatibleStateTwoPMap (applyTwoPMap x (TwoPMapInsert k1 v1)) (TwoPMapDelete k2) } @-}
+lawCommutativityID2 :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> v -> k -> ()
+lawCommutativityID2 _ _ _ _ = ()
+
 
 
 -- {-@ ple lawCommutativityDI @-}
