@@ -87,6 +87,8 @@ class VRDT t where
 class VRDT a => VRDTInitial a where
     initVRDT :: a
 
+    -- lawReachable :: op:Operation a -> {ops:[Operation a] | allCompatible (op:ops)} -> {compatibleState (applyAll initVRDT ops) op}
+
 -- class VRDT a => VRDTIdentifier a where
 --     vrdtIdentifier :: Proxy a -> VRDTId
 -- 

@@ -1,5 +1,6 @@
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple-local" @-}
+{-@ LIQUID "--noadt" @-}
 
 module VRDT.CausalTree where
 
