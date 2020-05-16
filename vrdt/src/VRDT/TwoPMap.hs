@@ -1462,6 +1462,20 @@ lawCommutativityAI x@(TwoPMap m p t) k' vop' k v = ()
 {-@ lawCommutativityAA :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> vop1:Operation v -> k2:k -> vop2:Operation v -> {(compatibleTwoPMap (TwoPMapApply k1 vop1) (TwoPMapApply k2 vop2) && compatibleStateTwoPMap x (TwoPMapApply k1 vop1) && compatibleStateTwoPMap x (TwoPMapApply k2 vop2))  => ((applyTwoPMap (applyTwoPMap x (TwoPMapApply k1 vop1)) (TwoPMapApply k2 vop2) == applyTwoPMap (applyTwoPMap x (TwoPMapApply k2 vop2)) (TwoPMapApply k1 vop1)) && compatibleStateTwoPMap (applyTwoPMap x (TwoPMapApply k1 vop1)) (TwoPMapApply k2 vop2))} @-}
 lawCommutativityAA :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> Operation v -> k -> Operation v -> ()
 lawCommutativityAA x@(TwoPMap m p t) k vop k' vop' = undefined
+  -- | Set.member k t
+  -- = ()
+  -- | Set.member k' t
+  -- , k == k'
+  -- = ()
+  -- | Set.member k' t
+  -- , k /= k'
+  -- , Nothing <- Map.lookup k m
+  -- = ()
+  -- | Set.member k' t
+  -- , k /= k'
+  -- , Just vv <- Map.lookup k m
+  -- = (m1 === Map.insert k (apply vv vop) m *** QED)
+  -- ? lemmaLookupInsert2 m k' k (apply vv vop)
   -- | not (Set.member k t)
   -- , not (Set.member k' t)
   -- , k /= k'
@@ -1494,16 +1508,15 @@ lawCommutativityAA x@(TwoPMap m p t) k vop k' vop' = undefined
   -- , Nothing <- Map.lookup k m
   -- , Just v2 <- Map.lookup k' m
   -- = lemmaLookupInsert2 m k k' (apply v2 vop')
-  -- | Set.member k t || Set.member k' t
-  -- = undefined
-  -- where l0 = case Map.lookup k p of
-  --              Nothing -> [vop]
-  --              Just ops -> insertList vop ops
-  --       l1 = case Map.lookup k' p of
-  --              Nothing -> [vop']
-  --              Just ops -> insertList vop' ops
-  --       op1 = TwoPMapApply k vop
-  --       op2 = TwoPMapApply k' vop'
+  where l0 = case Map.lookup k p of
+               Nothing -> [vop]
+               Just ops -> insertList vop ops
+        l1 = case Map.lookup k' p of
+               Nothing -> [vop']
+               Just ops -> insertList vop' ops
+        op1 = TwoPMapApply k vop
+        op2 = TwoPMapApply k' vop'
+        TwoPMap m1 p1 t1 = applyTwoPMap x op1
 
 
 
