@@ -1873,9 +1873,34 @@ lemmaApplyAll :: VRDT a => a -> [Operation a] -> ()
 lemmaApplyAll v1 ops = undefined -- TODO
 
 
+{-@ ple lemmaPermutation @-}
 {-@ lemmaPermutation :: Ord a => vop2:a -> ops:[a] -> {ops2:[a] | insertList vop2 ops = ops2} -> {isPermutation (cons vop2 ops) ops2} @-}
 lemmaPermutation :: Ord a => a -> [a] -> [a] -> ()
-lemmaPermutation _ _ _ = undefined
+lemmaPermutation _ [] [] = ()
+lemmaPermutation _ [] _ = ()
+-- lemmaPermutation vop2 (h:ops') [] = ()
+lemmaPermutation vop2 ops@(h:ops') ops2 
+  | vop2 <= h = 
+        -- insertList vop2 (h:ops')
+        isPermutation (vop2:ops) ops2
+    === isPermutation (vop2:ops) (insertList vop2 (h:ops'))
+    === isPermutation (vop2:ops) (vop2:h:ops')
+        -- ? assert (ops =)
+    === isPermutation (ops) (h:ops')
+        ? lemmaPermutation' ops
+    === isPermutation (ops) (ops)
+    *** QED
+  | otherwise =
+        isPermutation (vop2:ops) ops2
+    === isPermutation (vop2:ops) (insertList vop2 (h:ops')) -- ? lemmaPermutation vop2 ops'
+    === isPermutation (vop2:ops) (h:insertList vop2 ops')
+    *** QED
+
+{-@ ple lemmaPermutation' @-}
+{-@ lemmaPermutation' :: Eq a => ops:[a] -> {isPermutation ops ops} @-}
+lemmaPermutation' :: Eq a => [a] -> ()
+lemmaPermutation' []    = ()
+lemmaPermutation' (h:t) = lemmaPermutation' t
 
 {-@ reflect cons @-}
 cons :: a -> [a] -> [a]
