@@ -1455,7 +1455,8 @@ lawCommutativityIAEq x@(TwoPMap m p t) k v1 vop2
     ==! TwoPMap (Map.insert k v1'' (Map.insert k v1' m)) (Map.delete k p) t -- OK
         ?   lemmaInsertTwice k v1'' v1' m
     ==! TwoPMap (Map.insert k v1'' m) (Map.delete k p) t -- OK
-        ?   assume (isPermutation (vop2:ops) ops2) -- TODO
+        ?   lemmaPermutation vop2 ops ops2
+        &&& assert (isPermutation (vop2:ops) ops2) -- OK
         &&& assert (allCompatibleState v1 ops) -- OK
         &&& assert (compatibleState v1 vop2) -- OK
         &&& assert (allCompatibleState v1 (vop2:ops)) -- OK
@@ -1869,6 +1870,14 @@ lawCompatibilityCommutativity' _ _ = ()
 lemmaApplyAll :: VRDT a => a -> [Operation a] -> ()
 lemmaApplyAll v1 ops = undefined -- TODO
 
+
+{-@ lemmaPermutation :: Ord a => vop2:a -> ops:[a] -> {ops2:[a] | insertList vop2 ops = ops2} -> {isPermutation (cons vop2 ops) ops2} @-}
+lemmaPermutation :: Ord a => a -> [a] -> [a] -> ()
+lemmaPermutation _ _ _ = undefined
+
+{-@ reflect cons @-}
+cons :: a -> [a] -> [a]
+cons a as = a:as
 
 
 
