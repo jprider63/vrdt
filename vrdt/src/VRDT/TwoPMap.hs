@@ -13,6 +13,7 @@ import qualified Data.Map as Map
 #else
 import           Liquid.Data.Maybe
 import           Liquid.Data.List
+import qualified Liquid.Data.List as List
 import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
 import           Prelude hiding (Maybe(..), isJust, maybe, foldr, flip, const)
@@ -1627,4 +1628,78 @@ lawCompatibilityCommutativity' :: (Eq k, Ord (Operation v), VRDT v) => TwoPMapOp
 lawCompatibilityCommutativity' (TwoPMapInsert k v) (TwoPMapInsert k' v') | k == k' = ()
 lawCompatibilityCommutativity' (TwoPMapApply k op) (TwoPMapApply k' op') | k == k' = lawCompatibilityCommutativity op op'
 lawCompatibilityCommutativity' _ _ = ()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{-@ strongConvergence :: (Eq (Operation a), VRDT a) => s0:a -> ops1:[Operation a] -> ops2:[Operation a] -> {(isPermutation ops1 ops2 && allCompatibleState s0 ops1 && allCompatible ops1) => (applyAll s0 ops1 = applyAll s0 ops2)} @-}
+strongConvergence :: (Eq (Operation a), VRDT a) => a -> [Operation a] -> [Operation a] -> ()
+strongConvergence _ _ _ = undefined -- Proven in VRDT.Class.Proof
+
+
+{-@ reflect allCompatibleState @-}
+{-@ ple allCompatibleState @-}
+{-@ allCompatibleState :: VRDT a => x:a -> ops:[Operation a] -> {vv:Bool | (vv && len ops > 0) => allCompatibleState x (List.tail ops)} @-}
+allCompatibleState :: VRDT a => a -> [Operation a] -> Bool
+allCompatibleState _ [] = True
+allCompatibleState x (h:t) = compatibleState x h && allCompatibleState x t
+
+{-@ reflect allCompatible @-}
+{-@ ple allCompatible @-}
+{-@ allCompatible :: VRDT a => xs:[Operation a] ->
+  {vv:Bool | (vv && len xs > 0) => allCompatible (List.tail xs)} @-}
+allCompatible :: VRDT a => [Operation a] -> Bool
+allCompatible [] = True
+allCompatible (op1:ops) = allCompatible' op1 ops
+
+{-@ reflect allCompatible' @-}
+allCompatible' :: VRDT a => Operation a -> [Operation a] -> Bool
+allCompatible' _  []        = True
+-- allCompatible' op (op':ops) = compatible op op' && allCompatible' op ops
+-- allCompatible' op (op':ops) = compatible op op' && compatible op' op && allCompatible' op ops && allCompatible' op' ops
+allCompatible' op (op':ops) = compatible op op' && allCompatible' op ops && allCompatible' op' ops
+
+{-@ reflect applyAll @-}
+applyAll :: VRDT a => a -> [Operation a] -> a
+applyAll s []       = s
+applyAll s (op:ops) = applyAll (apply s op) ops
+
+{-@ reflect isPermutation @-}
+{-@ ple isPermutation @-}
+{-@ isPermutation :: Eq o => xs:[o] -> ys:[o] -> {v:Bool | v => len xs == len ys} @-}
+isPermutation :: Eq o => [o] -> [o] -> Bool
+isPermutation []    []    = True
+isPermutation (_:_) []    = False
+isPermutation []    (_:_) = False
+isPermutation (op1:ops1') ops2 = case removeFirst op1 ops2 of
+    Nothing -> False
+    Just ops2' -> isPermutation ops1' ops2'
+
+{-@ reflect removeFirst @-}
+{-@ ple removeFirst @-}
+{-@ removeFirst :: Eq o => x:o -> xs:[o] ->
+   {vv:Maybe [o] | (isJust vv => 1 + len (fromJust vv) == len xs) &&
+                   (List.elem' x xs => isJust vv)} @-}
+removeFirst :: Eq o => o -> [o] -> Maybe [o]
+removeFirst o [] = Nothing
+removeFirst o (h:t) = 
+  if h == o then 
+    Just t 
+  else 
+    -- (h:) <$> removeFirst o t
+    case removeFirst o t of
+        Nothing -> Nothing
+        Just t' -> Just (h:t')
+
+
 
