@@ -120,14 +120,18 @@ compatibleTwoPMap _                   _                               = True
 
 {-@ reflect compatibleStateTwoPMap @-}
 compatibleStateTwoPMap :: (Ord k, VRDT v) => TwoPMap k v -> TwoPMapOp k v -> Bool
-compatibleStateTwoPMap (TwoPMap m t p) (TwoPMapInsert k' v)
+compatibleStateTwoPMap (TwoPMap m p t) (TwoPMapInsert k' v)
   | Nothing <- Map.lookup k' m
-  = True
+  = case Map.lookup k' p of
+    Nothing -> True
+    Just ps -> allCompatibleState v ps
   | otherwise
   = False
-compatibleStateTwoPMap (TwoPMap m t p) (TwoPMapApply k vo)
+compatibleStateTwoPMap (TwoPMap m p t) (TwoPMapApply k vo)
   | Just v <- Map.lookup k m
   = compatibleState v vo
+  | Just ops <- Map.lookup k p
+  = allCompatible (vo:ops)
   | otherwise
   = True
 compatibleStateTwoPMap  _ _ = True
@@ -1436,10 +1440,11 @@ lawCommutativityIAEq x@(TwoPMap m p t) k v1 vop2
         ?   lemmaInsertTwice k v1'' v1' m
     ==! TwoPMap (Map.insert k v1'' m) (Map.delete k p) t -- OK
         ?   assume (isPermutation (vop2:ops) ops2) -- TODO
-        &&& assume (allCompatibleState v1 (vop2:ops)) -- TODO
-        &&& assume (allCompatibleState v1 ops2) -- TODO
-        &&& assume (allCompatible ops2) -- TODO
-        &&& assume (allCompatible (vop2:ops)) -- TODO
+        &&& assert (allCompatibleState v1 ops) -- OK
+        &&& assume (compatibleState v1 vop2) -- TODO
+        &&& assert (allCompatibleState v1 (vop2:ops)) -- OK
+        &&& assert (allCompatible ops) -- OK
+        &&& assert (allCompatible (vop2:ops)) -- OK
         &&& strongConvergence v1 (vop2:ops) ops2
         &&& (applyAll v1 (vop2:ops) === applyAll v1 ops2 *** QED)
         &&& lemmaApplyAll v1 (vop2:ops) -- TODO
