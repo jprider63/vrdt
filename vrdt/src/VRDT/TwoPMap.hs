@@ -1321,10 +1321,13 @@ lawCommutativityIAEq x@(TwoPMap m p t) k v1 vop2
   | isJust (Map.lookup k m)
   = undefined -- () -- TODO OK
 
+  | (Set.member k t) 
+  = undefined -- () -- TODO OK
+
   | not (Set.member k t)
   , Nothing <- Map.lookup k p
-  = undefined
-   -- -- This is safe w/ ple. Takes 4.5 minues...
+  = undefined -- TODO
+   -- -- OK. Takes 4.5 minues...
    -- ( Map.lookup k m === Nothing *** QED) 
    -- &&&( let v1 = maybe v (foldr (flip apply) v) Nothing
    --        -- Just vv = Map.lookup k (Map.insert k v1 m)
@@ -1370,15 +1373,39 @@ lawCommutativityIAEq x@(TwoPMap m p t) k v1 vop2
    --      ) -- &&&
    --      -- ( applyTwoPMap (applyTwoPMap (TwoPMap m p t) op1) op2 === applyTwoPMap (applyTwoPMap (TwoPMap m p t) op2) op1 *** QED)
    --    )
-  | otherwise = undefined
+  | not (Set.member k t)
+  , Just ops <- Map.lookup k p
+  = 
+    let v1' = foldr (flip apply) v1 ops in
+    let v1'' = apply v1' vop2 in
+
+    let ops2 = insertList vop2 ops in
+    let v2' = foldr (flip apply) v1 ops2 in
+
+    (   applyTwoPMap (applyTwoPMap x (TwoPMapInsert k v1)) (TwoPMapApply k vop2) 
+    ==! applyTwoPMap (TwoPMap (Map.insert k v1' m) (Map.delete k p) t) (TwoPMapApply k vop2)  -- OK
+        ?   lemmaLookupInsert m k v1'
+        &&& (Map.lookup k (Map.insert k v1' m) === Just v1' *** QED)
+        &&& assert (isJust (Map.lookup k (Map.insert k v1' m)))
+    ==! TwoPMap (Map.insert k v1'' m) (Map.delete k p) t -- TODO
+        ?   (v1'' ==! v2' *** QED) -- TODO
+        &&& (Map.delete k p ==! Map.delete k (Map.insert k ops2 p) *** QED) -- TODO
+    === TwoPMap (Map.insert k v2' m) (Map.delete k (Map.insert k ops2 p)) t -- OK
+        ?   lemmaLookupInsert p k ops2
+    ==! applyTwoPMap (TwoPMap m (Map.insert k ops2 p) t) (TwoPMapInsert k v1) -- OK
+    ==! applyTwoPMap (applyTwoPMap x (TwoPMapApply k vop2)) (TwoPMapInsert k v1) -- OK
+    *** QED)
 
   where op1 = TwoPMapInsert k v1
         op2 = TwoPMapApply k vop2
 
-        -- TODO drop these
+
         vop' = vop2
         v = v1
 
+        -- l1 = case Map.lookup k p of
+        --        Nothing -> [vop']
+        --        Just ops -> insertList vop' ops
 
 {-@ ple lawCommutativityIANeq @-}
 {-@ lawCommutativityIANeq :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> v1:v -> {k2:k | k1 /= k2} -> {vop2:Operation v | (compatibleTwoPMap (TwoPMapInsert k1 v1) (TwoPMapApply k2 vop2) && compatibleStateTwoPMap x (TwoPMapInsert k1 v1) && compatibleStateTwoPMap x (TwoPMapApply k2 vop2))} -> {  ((applyTwoPMap (applyTwoPMap x (TwoPMapInsert k1 v1)) (TwoPMapApply k2 vop2) == applyTwoPMap (applyTwoPMap x (TwoPMapApply k2 vop2)) (TwoPMapInsert k1 v1)) && compatibleStateTwoPMap (applyTwoPMap x (TwoPMapInsert k1 v1)) (TwoPMapApply k2 vop2))} @-}
