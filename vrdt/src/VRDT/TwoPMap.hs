@@ -1427,10 +1427,21 @@ lawCommutativityIAEq x@(TwoPMap m p t) k v1 vop2
         ?   lemmaLookupInsert m k v1'
         &&& (Map.lookup k (Map.insert k v1' m) === Just v1' *** QED)
         &&& assert (isJust (Map.lookup k (Map.insert k v1' m)))
-    ==! TwoPMap (Map.insert k v1'' m) (Map.delete k p) t -- TODO
-        ?   (v1'' ==! v2' *** QED) -- TODO
-        &&& (Map.delete k p ==! Map.delete k (Map.insert k ops2 p) *** QED) -- TODO
-    === TwoPMap (Map.insert k v2' m) (Map.delete k (Map.insert k ops2 p)) t -- OK
+    ==! TwoPMap (Map.insert k v1'' (Map.insert k v1' m)) (Map.delete k p) t -- OK
+        ?   lemmaInsertTwice k v1'' v1' m
+    ==! TwoPMap (Map.insert k v1'' m) (Map.delete k p) t -- OK
+        ?   assume (isPermutation (vop2:ops) ops2) -- TODO
+        &&& assume (allCompatibleState v1 (vop2:ops)) -- TODO
+        &&& assume (allCompatibleState v1 ops2) -- TODO
+        &&& assume (allCompatible ops2) -- TODO
+        &&& assume (allCompatible (vop2:ops)) -- TODO
+        &&& strongConvergence v1 (vop2:ops) ops2
+        &&& (applyAll v1 (vop2:ops) === applyAll v1 ops2 *** QED)
+        &&& lemmaApplyAll v1 (vop2:ops) -- TODO
+        &&& lemmaApplyAll v1 ops2 -- TODO
+        &&& (v1'' === v2' *** QED) -- OK
+        &&& lemmaDeleteInsert k ops2 p
+    ==! TwoPMap (Map.insert k v2' m) (Map.delete k (Map.insert k ops2 p)) t -- OK
         ?   lemmaLookupInsert p k ops2
     ==! applyTwoPMap (TwoPMap m (Map.insert k ops2 p) t) (TwoPMapInsert k v1) -- OK
     ==! applyTwoPMap (applyTwoPMap x (TwoPMapApply k vop2)) (TwoPMapInsert k v1) -- OK
@@ -1792,9 +1803,15 @@ lawCompatibilityCommutativity' _ _ = ()
 
 
 
+{-@ lemmaApplyAll :: VRDT a => v1:a -> ops:[Operation a] -> {applyAll v1 ops == Liquid.Data.List.foldr (flip apply) v1 ops} @-}
+lemmaApplyAll :: VRDT a => a -> [Operation a] -> ()
+lemmaApplyAll v1 ops = undefined
 
 
 
+-- applyAll v1 (vop2:ops) == apply (foldr (flip apply) v1 ops) vop2
+-- 
+-- applyAll v1 ops2 == foldr (flip apply
 
 
 
