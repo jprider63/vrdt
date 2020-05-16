@@ -1347,22 +1347,25 @@ lawCommutativityII x@(TwoPMap m p t) k v k' v' = undefined
         v1 = maybe v (foldr (flip apply) v) (Map.lookup k p)
         v2 = maybe v' (foldr (flip apply) v') (Map.lookup k' p) 
 {-@ ple lawCommutativityIAEq' @-}
-{-@ lawCommutativityIAEq' :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k:k -> v1:v -> {vop2:Operation v | True} -> {  (compatibleTwoPMap (TwoPMapInsert k v1) (TwoPMapApply k vop2) && compatibleStateTwoPMap x (TwoPMapInsert k v1) && compatibleStateTwoPMap x (TwoPMapApply k vop2)) => compatibleStateTwoPMap (applyTwoPMap x (TwoPMapInsert k v1)) (TwoPMapApply k vop2)} @-}
+{-@ lawCommutativityIAEq' :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k:k -> v1:v -> vop2:Operation v -> {  (compatibleTwoPMap (TwoPMapInsert k v1) (TwoPMapApply k vop2) && compatibleStateTwoPMap x (TwoPMapInsert k v1) && compatibleStateTwoPMap x (TwoPMapApply k vop2)) => compatibleStateTwoPMap (applyTwoPMap x (TwoPMapInsert k v1)) (TwoPMapApply k vop2)} @-}
 lawCommutativityIAEq' :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> v -> Operation v -> ()
 lawCommutativityIAEq' x@(TwoPMap m p t) k v  vop'
   | not ( (compatibleTwoPMap op1 op2 && compatibleStateTwoPMap x op1 && compatibleStateTwoPMap x op2))
   = ()
   | isJust (Map.lookup k m)
   = ()
+  | Set.member k t
+  = ()
   | Nothing <- Map.lookup k p
-  , Nothing <- Map.lookup k m
   = (applyTwoPMap x op1
-  === (TwoPMap (Map.insert k (maybe v (foldr (flip apply) v) Nothing) m) p t)
-  === (TwoPMap (Map.insert k v1 m) p t) *** QED)
+  ==. (TwoPMap (Map.insert k (maybe v (foldr (flip apply) v) Nothing) m) p t)
+  ==. (TwoPMap (Map.insert k v1 m) p t) *** QED)
   &&& (m1 === Map.insert k v1 m *** QED)
   &&& lemmaLookupInsert m k v1
-  | otherwise
-  = ()
+  | Just _ <- Map.lookup k p
+  = (applyTwoPMap x op1
+  ==. (TwoPMap (Map.insert k (maybe v (foldr (flip apply) v) Nothing) m) p t)
+  ==. (TwoPMap (Map.insert k v1 m) p t) *** QED)
   where op1 = TwoPMapInsert k v
         op2 = TwoPMapApply k vop'
         v1 = maybe v (foldr (flip apply) v) (Map.lookup k p)
