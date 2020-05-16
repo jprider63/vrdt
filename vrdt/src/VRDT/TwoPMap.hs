@@ -1367,9 +1367,11 @@ lawCommutativityIAEq' x@(TwoPMap m p t) k v  vop'
   === (TwoPMap (Map.insert k v1 m) (Map.delete k p) t) *** QED)
   &&& lemmaLookupInsert m k v1
   &&& (Map.lookup k m1 === Just v1 *** QED)
+  ? (v1 === foldr (flip apply) v ops *** QED)
   ? assert (allCompatible (vop':ops))
   ? assert (allCompatibleState v ops)
-  ? assume (compatibleState v1 vop') -- TODO
+  ? assert (compatibleState v vop')
+  ? assert (compatibleState (foldr (flip apply) v ops) vop') -- TODO
   where op1 = TwoPMapInsert k v
         op2 = TwoPMapApply k vop'
         v1 = maybe v (foldr (flip apply) v) (Map.lookup k p)
@@ -1894,6 +1896,15 @@ cons a as = a:as
 strongConvergence :: (Eq (Operation a), VRDT a) => a -> [Operation a] -> [Operation a] -> ()
 strongConvergence _ _ _ = undefined -- Proven in VRDT.Class.Proof
 
+{-@ lemmaRemoveFirstAllCompatibleState :: (Eq (Operation a), VRDT a) => 
+    x:a -> 
+    op:Operation a -> 
+    {os:[Operation a] | allCompatibleState x os && allCompatible os} -> 
+    {rs:[Operation a] | removeFirst op os == Just rs} -> 
+    {allCompatibleState (apply x op) rs} 
+@-}
+lemmaRemoveFirstAllCompatibleState :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> [Operation a] -> () 
+lemmaRemoveFirstAllCompatibleState _ = undefined -- Proven in VRDT.Class.Proof
 
 {-@ reflect allCompatibleState @-}
 {-@ ple allCompatibleState @-}
