@@ -114,6 +114,7 @@ instance (Ord k, Ord (Operation v), VRDT v) => VRDT (TwoPMap k v) where
 {-@ reflect compatibleTwoPMap @-}
 compatibleTwoPMap :: (Eq k, VRDT v) => TwoPMapOp k v -> TwoPMapOp k v -> Bool
 compatibleTwoPMap (TwoPMapInsert k v) (TwoPMapInsert k' v') | k == k' = False
+compatibleTwoPMap (TwoPMapInsert k v) (TwoPMapApply k' vop') | k == k' = compatibleState v vop'
 compatibleTwoPMap (TwoPMapApply k op) (TwoPMapApply k' op') | k == k' = compatible op op'
 compatibleTwoPMap _                   _                               = True
 
@@ -1349,12 +1350,19 @@ lawCommutativityIAEq' x@(TwoPMap m p t) k v  vop'
   = ()
   | isJust (Map.lookup k m)
   = ()
-  | Just ops <- Map.lookup k p
-  = ()
+  | Nothing <- Map.lookup k p
+  , Nothing <- Map.lookup k m
+  = (applyTwoPMap x op1
+  === (TwoPMap (Map.insert k (maybe v (foldr (flip apply) v) Nothing) m) p t)
+  === (TwoPMap (Map.insert k v1 m) p t) *** QED)
+  &&& (m1 === Map.insert k v1 m *** QED)
+  &&& lemmaLookupInsert m k v1
   | otherwise
   = ()
   where op1 = TwoPMapInsert k v
         op2 = TwoPMapApply k vop'
+        v1 = maybe v (foldr (flip apply) v) (Map.lookup k p)
+        TwoPMap m1 p1 t1 = applyTwoPMap x op1
 
 {-@ ple lawCommutativityIAEq @-}
 {-@ lawCommutativityIAEq :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k:k -> v1:v -> vop2:Operation v -> { (compatibleTwoPMap (TwoPMapInsert k v1) (TwoPMapApply k vop2) && compatibleStateTwoPMap x (TwoPMapInsert k v1) && compatibleStateTwoPMap x (TwoPMapApply k vop2)) => (applyTwoPMap (applyTwoPMap x (TwoPMapInsert k v1)) (TwoPMapApply k vop2) == applyTwoPMap (applyTwoPMap x (TwoPMapApply k vop2)) (TwoPMapInsert k v1))} @-}
