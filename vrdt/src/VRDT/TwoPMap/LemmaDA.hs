@@ -30,8 +30,10 @@ lawCommutativityDAC x@(TwoPMap m p t) k' k vop
            === TwoPMap (Map.delete k' m) (Map.delete k' p) (Set.insert k' t)
            *** QED)
            &&& lemmaLookupDelete m k
-  | k /= k' = lemmaLookupDelete2 m k k' 
-              &&& ((applyTwoPMap x (TwoPMapDelete k')
+           &&& lemmaLookupDelete p k
+  | k /= k' = lemmaLookupDelete2 m k k'
+           &&& lemmaLookupDelete2 p k k'
+           &&& ((applyTwoPMap x (TwoPMapDelete k')
            === TwoPMap (Map.delete k' m) (Map.delete k' p) (Set.insert k' t)
            *** QED))
 

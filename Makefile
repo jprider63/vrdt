@@ -9,6 +9,13 @@ verify:
 	$(LIQUID) vrdt/src/VRDT/Class.hs
 	$(LIQUID) vrdt/src/VRDT/Class/Proof.hs
 	$(LIQUID) vrdt/src/VRDT/LWW.hs
+
+	$(LIQUID) vrdt/src/VRDT/TwoPMap/LemmaID.hs
+	$(LIQUID) vrdt/src/VRDT/TwoPMap/LemmaDD.hs
+	$(LIQUID) vrdt/src/VRDT/TwoPMap/LemmaAD.hs
+	$(LIQUID) vrdt/src/VRDT/TwoPMap/LemmaDA.hs
+	$(LIQUID) vrdt/src/VRDT/TwoPMap/LemmaDI.hs
+
 	$(LIQUID) vrdt/src/VRDT/MultiSet/Internal.hs
 	$(LIQUID) vrdt/src/VRDT/MultiSet.hs
 	$(LIQUID) vrdt/src/VRDT/MultiSet/Proof.hs

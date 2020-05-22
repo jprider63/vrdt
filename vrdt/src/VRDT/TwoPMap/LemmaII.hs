@@ -33,7 +33,8 @@ lawCommutativityII x@(TwoPMap m p t) k v k' v'
   = lemmaLookupInsert2 m k' k v1
   | Set.member k' t
   , Just _ <- Map.lookup k p
-  = lemmaLookupInsert2 m k' k v1
+  =   lemmaLookupInsert2 m k' k v1
+  &&& lemmaLookupDelete2 p k' k
   | not (Set.member k t)
   , not (Set.member k' t)
   , Nothing <- Map.lookup k p
@@ -65,7 +66,6 @@ lawCommutativityII x@(TwoPMap m p t) k v k' v'
      ==. TwoPMap (Map.insert k v1 (Map.insert k' v2 m) ) (Map.delete k (Map.delete k' p)) t *** QED)
     ? (not (Map.member k' m))
     ?  (not (Map.member k' (Map.insert k v1 m)))
-
   | not (Set.member k t)
   , not (Set.member k' t)
   , compatibleTwoPMap op1 op2
@@ -100,7 +100,6 @@ lawCommutativityII x@(TwoPMap m p t) k v k' v'
      ==. TwoPMap (Map.insert k v1 (Map.insert k' v2 m) ) (Map.delete k (Map.delete k' p)) t *** QED)
     ? (not (Map.member k' m))
     ?  (not (Map.member k' (Map.insert k v1 m)))
-
   where op1 = TwoPMapInsert k v
         op2 = TwoPMapInsert k' v'
 
