@@ -35,9 +35,7 @@ lawCommutativityII x@(TwoPMap m p t) k v k' v'
   , Just _ <- Map.lookup k p
   =   lemmaLookupInsert2 m k' k v1
   &&& lemmaLookupDelete2 p k' k
-  | not (Set.member k t)
-  , not (Set.member k' t)
-  , Nothing <- Map.lookup k p
+  | Nothing <- Map.lookup k p
   , Nothing <- Map.lookup k' p
   =
         lemmaDelete k k' p
@@ -66,10 +64,7 @@ lawCommutativityII x@(TwoPMap m p t) k v k' v'
      ==. TwoPMap (Map.insert k v1 (Map.insert k' v2 m) ) (Map.delete k (Map.delete k' p)) t *** QED)
     ? (not (Map.member k' m))
     ?  (not (Map.member k' (Map.insert k v1 m)))
-  | not (Set.member k t)
-  , not (Set.member k' t)
-  , compatibleTwoPMap op1 op2
-  , Just vv1 <- Map.lookup k p
+  | Just vv1 <- Map.lookup k p
   , Nothing <- Map.lookup k' p
   =   let v1 = maybe v (foldr (flip apply) v) (Just vv1)
           v2 = maybe v' (foldr (flip apply) v') Nothing in
@@ -83,10 +78,7 @@ lawCommutativityII x@(TwoPMap m p t) k v k' v'
      ==. TwoPMap (Map.insert k v1 (Map.insert k' v2 m) ) (Map.delete k (Map.delete k' p)) t *** QED)
     ? (not (Map.member k' m))
     ?  (not (Map.member k' (Map.insert k v1 m)))
-  | not (Set.member k t)
-  , not (Set.member k' t)
-  , compatibleTwoPMap op1 op2
-  , Nothing <- Map.lookup k p
+  | Nothing <- Map.lookup k p
   , Just vv2 <- Map.lookup k' p
   =   let v1 = maybe v (foldr (flip apply) v) Nothing
           v2 = maybe v' (foldr (flip apply) v') (Just vv2) in
