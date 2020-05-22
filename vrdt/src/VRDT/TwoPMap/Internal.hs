@@ -109,6 +109,7 @@ instance (Aeson.FromJSON k, Aeson.FromJSON v, Aeson.FromJSON (Operation v)) => A
 compatibleTwoPMap :: (Eq k, VRDT v) => TwoPMapOp k v -> TwoPMapOp k v -> Bool
 compatibleTwoPMap (TwoPMapInsert k v) (TwoPMapInsert k' v') | k == k' = False
 compatibleTwoPMap (TwoPMapInsert k v) (TwoPMapApply k' vop') | k == k' = compatibleState v vop'
+compatibleTwoPMap (TwoPMapApply k' vop') (TwoPMapInsert k v) | k == k' = compatibleState v vop'
 compatibleTwoPMap (TwoPMapApply k op) (TwoPMapApply k' op') | k == k' = compatible op op'
 compatibleTwoPMap _                   _                               = True
 

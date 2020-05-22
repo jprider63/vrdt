@@ -34,12 +34,26 @@ lawCommutativityAIC x@(TwoPMap m p t) k' vop' k v
   | k == k'
   , not (Set.member k' t)
   , Nothing <- Map.lookup k m
-  =  ()
+  , Nothing <- Map.lookup k p
+  =   compatibleStateTwoPMap (applyTwoPMap x (TwoPMapApply k vop')) op2
+  === compatibleStateTwoPMap (TwoPMap m1 p1 t1) (TwoPMapInsert k v)
+    ? lemmaLookupInsert p k l1
+  === allCompatibleState v l1
+  === allCompatibleState v [vop']
+  === compatibleState v vop'
+  === True
+  *** QED
+  | k == k'
+  , not (Set.member k' t)
+  , Nothing <- Map.lookup k m
+  , Just ops <- Map.lookup k p
+  =  ()  
   | k /= k'
   , Just vv <- Map.lookup k' m
   = lemmaLookupInsert2 m k k' (apply vv vop')
+  &&& lemmaLookupInsert2 p k k' l1
   | otherwise
-  = ()
+  = lemmaLookupInsert2 p k k' l1
   where op2 = TwoPMapInsert k v
         op1 = TwoPMapApply k' vop'
         TwoPMap m1 p1 t1 = applyTwoPMap x op1
