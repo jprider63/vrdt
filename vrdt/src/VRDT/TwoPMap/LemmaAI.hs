@@ -47,7 +47,10 @@ lawCommutativityAIC x@(TwoPMap m p t) k' vop' k v
   , not (Set.member k' t)
   , Nothing <- Map.lookup k m
   , Just ops <- Map.lookup k p
-  =  ()  
+  =   compatibleStateTwoPMap (applyTwoPMap x (TwoPMapApply k' vop')) (TwoPMapInsert k v) -- TODO
+        ? lemmaLookupInsert p k (insertList vop' ops)
+  === allCompatibleState v (insertList vop' ops)
+  *** QED
   | k /= k'
   , Just vv <- Map.lookup k' m
   = lemmaLookupInsert2 m k k' (apply vv vop')
