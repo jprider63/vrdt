@@ -192,6 +192,7 @@ lawCommutativityIANeq x@(TwoPMap m p t) k v k' vop'
 
 
 
+{-@ ple lawCommutativityIAEq @-}
 {-@ lawCommutativityIAEq :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k:k -> v1:v -> vop2:Operation v -> { (compatibleTwoPMap (TwoPMapInsert k v1) (TwoPMapApply k vop2) && compatibleStateTwoPMap x (TwoPMapInsert k v1) && compatibleStateTwoPMap x (TwoPMapApply k vop2)) => (applyTwoPMap (applyTwoPMap x (TwoPMapInsert k v1)) (TwoPMapApply k vop2) == applyTwoPMap (applyTwoPMap x (TwoPMapApply k vop2)) (TwoPMapInsert k v1))} @-}
 lawCommutativityIAEq :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> v -> Operation v -> ()
 lawCommutativityIAEq x@(TwoPMap m p t) k v1 vop2
@@ -281,6 +282,8 @@ lawCommutativityIAEq x@(TwoPMap m p t) k v1 vop2
         &&& strongConvergence v1 (vop2:ops) ops2
         &&& (applyAll v1 (vop2:ops) === applyAll v1 ops2 *** QED)
         &&& lemmaApplyAll v1 (vop2:ops) -- TODO
+        &&& assume (allCompatibleState v1 ops2) -- TODO
+        &&& assume (allCompatible ops2) -- TODO
         &&& lemmaApplyAll v1 ops2 -- TODO
         &&& (v1'' === v2' *** QED) -- OK
         &&& lemmaDeleteInsert k ops2 p
