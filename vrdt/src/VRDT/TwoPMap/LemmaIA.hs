@@ -1,5 +1,5 @@
 {-@ LIQUID "--reflection" @-}
-{-@ LIQUID "--ple" @-}
+{-@ LIQUID "--ple-local" @-}
 
 module VRDT.TwoPMap.LemmaIA where
 
@@ -23,6 +23,7 @@ import           Liquid.Data.Maybe
 
 
 {-@ lawCommutativityIA :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> v1:v -> k2:k -> {vop2:Operation v | (compatibleTwoPMap (TwoPMapInsert k1 v1) (TwoPMapApply k2 vop2) && compatibleStateTwoPMap x (TwoPMapInsert k1 v1) && compatibleStateTwoPMap x (TwoPMapApply k2 vop2))} -> {  ((applyTwoPMap (applyTwoPMap x (TwoPMapInsert k1 v1)) (TwoPMapApply k2 vop2) == applyTwoPMap (applyTwoPMap x (TwoPMapApply k2 vop2)) (TwoPMapInsert k1 v1)) && compatibleStateTwoPMap (applyTwoPMap x (TwoPMapInsert k1 v1)) (TwoPMapApply k2 vop2))} @-}
+lawCommutativityIA :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> v -> k -> Operation v -> ()
 lawCommutativityIA x@(TwoPMap m p t) k v k' vop'
   | not ((compatibleTwoPMap (TwoPMapInsert k1 v1) (TwoPMapApply k2 vop2) && compatibleStateTwoPMap x (TwoPMapInsert k1 v1) && compatibleStateTwoPMap x (TwoPMapApply k2 vop2))) = ()
   | k == k' = lawCommutativityIAEq x k v vop' &&& lawCommutativityIAEq' x k v vop'
@@ -289,25 +290,39 @@ lawCommutativityIAEq x@(TwoPMap m p t) k v1 vop2
 
 
 
-{-@ lemmaApplyAll :: VRDT a => v1:a -> ops:[Operation a] -> {applyAll v1 ops == Liquid.Data.List.foldr (flip apply) v1 ops} @-}
-lemmaApplyAll :: VRDT a => a -> [Operation a] -> ()
-lemmaApplyAll v1 ops = undefined -- TODO
+{-@ lemmaApplyAll :: (Eq (Operation a), VRDT a) => v1:a -> ops:[Operation a] -> {(allCompatibleState v1 ops && allCompatible ops) => applyAll v1 ops == Liquid.Data.List.foldr (flip apply) v1 ops} @-}
+lemmaApplyAll :: (Eq (Operation a), VRDT a) => a -> [Operation a] -> ()
+lemmaApplyAll v1 ops | not (allCompatible ops) = ()
+lemmaApplyAll v1 ops | not (allCompatibleState v1 ops) = ()
+lemmaApplyAll v1 ops = 
+        foldr (flip apply) v1 ops 
+          ? lemmaApplyAllFoldr v1 ops
+    ==. applyAll v1 (List.reverse ops)
+          ?   lemmaPermutationReverse ops
+          &&& assert (allCompatibleState v1 ops)
+          &&& assert (allCompatible ops)
+          &&& strongConvergence v1 ops (List.reverse ops)
+    ==. applyAll v1 ops
+    *** QED
 
+{-@ lemmaApplyAllFoldr :: VRDT a => v1:a -> ops:[Operation a] -> {applyAll v1 (List.reverse ops) == Liquid.Data.List.foldr (flip apply) v1 ops} @-}
+lemmaApplyAllFoldr :: VRDT a => a -> [Operation a] -> ()
+lemmaApplyAllFoldr = undefined
 
-{-@ ple insertRemoveFirst @-}
-{-@ insertRemoveFirst :: Ord a => x:a -> xs:[a] -> {removeFirst x (insertList x xs) == Just xs} @-}
-insertRemoveFirst :: Ord a => a -> [a] -> ()
-insertRemoveFirst x [] = ()
-insertRemoveFirst x (y:ys)
+{-@ ple lemmaInsertRemoveFirst @-}
+{-@ lemmaInsertRemoveFirst :: Ord a => x:a -> xs:[a] -> {removeFirst x (insertList x xs) == Just xs} @-}
+lemmaInsertRemoveFirst :: Ord a => a -> [a] -> ()
+lemmaInsertRemoveFirst x [] = ()
+lemmaInsertRemoveFirst x (y:ys)
   | x < y = ()
   | x == y = ()
-  | x > y = insertRemoveFirst x ys
+  | x > y = lemmaInsertRemoveFirst x ys
 
-{-@ ple permutationId @-}
-{-@ permutationId :: (Eq a) => x:[a] -> {isPermutation x x} @-}
-permutationId :: Eq a => [a] -> ()
-permutationId [] = ()
-permutationId (x:xs) = permutationId xs
+{-@ ple lemmaPermutationId @-}
+{-@ lemmaPermutationId :: (Eq a) => x:[a] -> {isPermutation x x} @-}
+lemmaPermutationId :: Eq a => [a] -> ()
+lemmaPermutationId [] = ()
+lemmaPermutationId (x:xs) = lemmaPermutationId xs
 
 {-@ ple lemmaPermutation @-}
 {-@ lemmaPermutation :: Ord a => vop2:a -> ops:[a] -> {ops2:[a] | insertList vop2 ops = ops2} -> {isPermutation (cons vop2 ops) ops2} @-}
@@ -318,24 +333,43 @@ lemmaPermutation vop2 ops@(h:ops') ops2
   | vop2 <= h = 
         -- insertList vop2 (h:ops')
         isPermutation (vop2:ops) ops2
-    === isPermutation (vop2:ops) (insertList vop2 (h:ops'))
-    === isPermutation (vop2:ops) (vop2:h:ops')
+    ==. isPermutation (vop2:ops) (insertList vop2 (h:ops'))
+    ==. isPermutation (vop2:ops) (vop2:h:ops')
         -- ? assert (ops =)
-    === isPermutation (ops) (h:ops')
-        ? lemmaPermutation' ops
-    === isPermutation (ops) (ops)
+    ==. isPermutation (ops) (h:ops')
+        ? lemmaPermutationId ops
+    ==. isPermutation (ops) (ops)
     *** QED
   | otherwise =
         isPermutation (vop2:ops) ops2
-    === isPermutation (vop2:ops) (insertList vop2 (h:ops')) -- ? lemmaPermutation vop2 ops'
-        ? insertRemoveFirst vop2 ops'
-    === isPermutation (vop2:ops) (h:insertList vop2 ops')
-    === isPermutation ops (h: ops')
-        ? permutationId ops
+    ==. isPermutation (vop2:ops) (insertList vop2 (h:ops'))
+        ? lemmaInsertRemoveFirst vop2 ops'
+    ==. isPermutation (vop2:ops) (h:insertList vop2 ops')
+    ==. isPermutation ops (h: ops')
+        ? lemmaPermutationId ops
     *** QED
 
-{-@ ple lemmaPermutation' @-}
-{-@ lemmaPermutation' :: Eq a => ops:[a] -> {isPermutation ops ops} @-}
-lemmaPermutation' :: Eq a => [a] -> ()
-lemmaPermutation' []    = ()
-lemmaPermutation' (h:t) = lemmaPermutation' t
+{-@ lemmaPermutationReverse :: Eq a => ops:[a] -> {isPermutation ops (List.reverse ops)} @-}
+lemmaPermutationReverse :: Eq a => [a] -> ()
+lemmaPermutationReverse [] = ()
+lemmaPermutationReverse (h:t) = case removeFirst h (List.concat (List.reverse t) [h]) of
+  Nothing -> 
+        assume (List.elem' h (List.concat (List.reverse t) [h])) -- TODO
+  Just ops' ->
+        isPermutation (h:t) (List.reverse (h:t))
+    === isPermutation (h:t) (List.concat (List.reverse t) [h])
+    === isPermutation t ops'
+        ?   lemmaPermutationReverse t
+        &&& assert (isPermutation t (List.reverse t))
+        &&& assume (isPermutation (List.reverse t) ops') -- TODO
+        &&& lemmaPermutationTransitive t (List.reverse t) ops'
+    === isPermutation (List.reverse t) ops'
+    === True
+    *** QED
+
+{-@ lemmaPermutationTransitive :: Eq a => ops1:[a] -> {ops2:[a] | isPermutation ops1 ops2} -> {ops3:[a] | isPermutation ops2 ops3} -> {isPermutation ops1 ops3} @-}
+lemmaPermutationTransitive :: Eq a => [a] -> [a] -> [a] -> ()
+lemmaPermutationTransitive _ _ _ = undefined -- TODO
+
+
+
