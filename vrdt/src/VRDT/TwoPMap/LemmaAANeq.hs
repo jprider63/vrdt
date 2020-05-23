@@ -27,45 +27,31 @@ lawCommutativityAANeq x@(TwoPMap m p t) k vop k' vop'
   = ()
   | Set.member k t
   = ()
-  -- | Set.member k' t
-  -- , k == k'
-  -- = ()
   | Set.member k' t
-  -- , k /= k'
   , Nothing <- Map.lookup k m
   = lemmaLookupInsert2 p k' k l0
   | Set.member k' t
-  -- , k /= k'
   , Just vv <- Map.lookup k m
   = (m1 === Map.insert k (apply vv vop) m *** QED)
   ? lemmaLookupInsert2 m k' k (apply vv vop)
-  | -- k /= k'
-  -- , 
-    Nothing <- Map.lookup k m
+  | Nothing <- Map.lookup k m
   , Nothing <- Map.lookup k' m
   = lemmaInsert k l0 k' l1 p
   ? lemmaLookupInsert2 p k k' l1
   ? lemmaLookupInsert2 p k' k l0
-  | -- k /= k'
-  -- , 
-    Just v1 <- Map.lookup k m
+  | Just v1 <- Map.lookup k m
   , Just v2 <- Map.lookup k' m
   = lemmaInsert k (apply v1 vop) k' (apply v2 vop') m
   &&& lemmaLookupDelete2 p k' k
   ? lemmaLookupInsert2 m k k' (apply v2 vop')
   ? lemmaLookupInsert2 m k' k (apply v1 vop)
-  | -- k /= k'
-  -- , 
-    Just v1 <- Map.lookup k m
+  | Just v1 <- Map.lookup k m
   , Nothing <- Map.lookup k' m
   = lemmaLookupInsert2 m k' k (apply v1 vop)
   &&& lemmaLookupDelete2 p k' k
-  | -- k /= k'
-  -- , 
-    Nothing <- Map.lookup k m
+  | Nothing <- Map.lookup k m
   , Just v2 <- Map.lookup k' m
   = lemmaLookupInsert2 m k k' (apply v2 vop')
-  -- | otherwise = undefined
   where l0 = case Map.lookup k p of
                Nothing -> [vop]
                Just ops -> insertList vop ops

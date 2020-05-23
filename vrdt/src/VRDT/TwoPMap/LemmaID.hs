@@ -44,7 +44,6 @@ lawCommutativityID x@(TwoPMap m p t) k v k'
   = lemmaDeleteInsert k v' m
   ? lemmaDeleteTwice k p
   ? assert (Set.member k (Set.insert k' t))
-  ? lemmaUpdateNothing k p
   | not (Set.member k t)
   , k == k'
   , Just xx <- Map.lookup k p
@@ -52,7 +51,6 @@ lawCommutativityID x@(TwoPMap m p t) k v k'
   ? lemmaDeleteInsert k (maybe v (foldr (flip apply) v) (Just xx))   m
   ? lemmaDeleteTwice k p
   ? assert (Set.member k (Set.insert k' t))
-  ? lemmaUpdateNothing k p
   | Set.member k t
   = Set.member k (Set.insert k' t)
   *** QED

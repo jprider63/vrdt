@@ -173,12 +173,6 @@ updateAupdateEqSize apply op k m
   | Nothing <- Map.lookup k m = ()
 #endif
 
-{-@ lemmaUpdateNothing :: Ord k => k:k -> m:Map k v ->
-   {(mfst (Map.updateLookupWithKey doubleConstNothing k m) == Map.lookup k m) &&
-    (msnd (Map.updateLookupWithKey doubleConstNothing k m) == Map.delete k m)} @-}
-lemmaUpdateNothing :: Ord k => k -> Map k v -> ()
-lemmaUpdateNothing _ _ = undefined
-
 #ifndef NotLiquid
 {-@ reflect const @-}
 const :: a -> b -> a

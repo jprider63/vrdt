@@ -15,7 +15,10 @@ verify:
 	$(LIQUID) vrdt/src/VRDT/TwoPMap/LemmaAD.hs
 	$(LIQUID) vrdt/src/VRDT/TwoPMap/LemmaDA.hs
 	$(LIQUID) vrdt/src/VRDT/TwoPMap/LemmaDI.hs
-
+	$(LIQUID) vrdt/src/VRDT/TwoPMap/LemmaII.hs
+	$(LIQUID) vrdt/src/VRDT/TwoPMap/LemmaAA.hs
+	$(LIQUID) vrdt/src/VRDT/TwoPMap/LemmaIA.hs
+	$(LIQUID) vrdt/src/VRDT/TwoPMap/LemmaAI.hs
 	$(LIQUID) vrdt/src/VRDT/MultiSet/Internal.hs
 	$(LIQUID) vrdt/src/VRDT/MultiSet.hs
 	$(LIQUID) vrdt/src/VRDT/MultiSet/Proof.hs
