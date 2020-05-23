@@ -111,6 +111,7 @@ instance (Aeson.FromJSON k, Aeson.FromJSON v, Aeson.FromJSON (Operation v)) => A
 #endif
 
 
+{-@ ple lemmaAllCompatibleInsert @-}
 {-@ lemmaAllCompatibleInsert :: (Ord (Operation a), VRDT a) => ops:[Operation a] -> v0:Operation a -> v1:Operation a -> {(allCompatible' v0 ops && allCompatible' v1 ops && compatible v0 v1) => allCompatible' v0 (insertList v1 ops)} @-}
 lemmaAllCompatibleInsert :: (Ord (Operation a), VRDT a) => [Operation a] -> Operation a -> Operation a -> ()
 lemmaAllCompatibleInsert ops v0 v1
@@ -125,6 +126,7 @@ lemmaAllCompatibleInsert (op:ops) v0 v1
     ? lawCompatibilityCommutativity op v1
 
 
+{-@ ple lemma1 @-}
 {-@ lemma1 :: (Ord (Operation v), VRDT v) => op:Operation v -> ops:[Operation v] ->
   {v:v | allCompatibleState v ops && compatibleState v op} -> 
   {allCompatibleState v (insertList op ops)} @-}
