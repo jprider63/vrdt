@@ -19,16 +19,6 @@ import           Prelude hiding (Maybe(..), isJust, maybe, foldr, flip, const)
 import           Liquid.Data.Maybe
 import           VRDT.TwoPMap.LemmaIA
 
-{-@ lemma1 :: (Ord (Operation v), VRDT v) => op:Operation v -> ops:[Operation v] ->
-  {v:v | allCompatibleState v ops && compatibleState v op} -> 
-  {allCompatibleState v (insertList op ops)} @-}
-lemma1 :: (Ord (Operation v), VRDT v) => Operation v -> [Operation v] -> v -> ()
-lemma1 op [] v = ()
-lemma1 op (op':ops) v
-  | op <= op'
-  = ()
-  | otherwise
-  = lemma1 op ops v
 
 {-@ lawCommutativityAIC :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> vop1:Operation v -> k2:k -> v2:v -> {(compatibleTwoPMap (TwoPMapApply k1 vop1) (TwoPMapInsert k2 v2) && compatibleStateTwoPMap x (TwoPMapApply k1 vop1) && compatibleStateTwoPMap x (TwoPMapInsert k2 v2))  =>  compatibleStateTwoPMap (applyTwoPMap x (TwoPMapApply k1 vop1)) (TwoPMapInsert k2 v2)} @-}
 lawCommutativityAIC :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> Operation v -> k -> v -> ()

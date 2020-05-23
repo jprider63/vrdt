@@ -111,6 +111,31 @@ instance (Aeson.FromJSON k, Aeson.FromJSON v, Aeson.FromJSON (Operation v)) => A
 #endif
 
 
+{-@ lemmaAllCompatibleInsert :: (Ord (Operation a), VRDT a) => ops:[Operation a] -> v0:Operation a -> v1:Operation a -> {(allCompatible' v0 ops && allCompatible' v1 ops && compatible v0 v1) => allCompatible' v0 (insertList v1 ops)} @-}
+lemmaAllCompatibleInsert :: (Ord (Operation a), VRDT a) => [Operation a] -> Operation a -> Operation a -> ()
+lemmaAllCompatibleInsert ops v0 v1
+  | not (allCompatible' v0 ops && allCompatible' v1 ops && compatible v0 v1) = ()
+lemmaAllCompatibleInsert [] v0 v1 = ()
+lemmaAllCompatibleInsert (op:ops) v0 v1
+  | v1 <= op
+  = ()
+  | otherwise
+  =   lemmaAllCompatibleInsert ops v0 v1
+    ? lemmaAllCompatibleInsert ops op v1
+    ? lawCompatibilityCommutativity op v1
+
+
+{-@ lemma1 :: (Ord (Operation v), VRDT v) => op:Operation v -> ops:[Operation v] ->
+  {v:v | allCompatibleState v ops && compatibleState v op} -> 
+  {allCompatibleState v (insertList op ops)} @-}
+lemma1 :: (Ord (Operation v), VRDT v) => Operation v -> [Operation v] -> v -> ()
+lemma1 op [] v = ()
+lemma1 op (op':ops) v
+  | op <= op'
+  = ()
+  | otherwise
+  = lemma1 op ops v
+
 {-@ reflect compatibleTwoPMap @-}
 compatibleTwoPMap :: (Eq k, VRDT v) => TwoPMapOp k v -> TwoPMapOp k v -> Bool
 compatibleTwoPMap (TwoPMapInsert k v) (TwoPMapInsert k' v') | k == k' = False
