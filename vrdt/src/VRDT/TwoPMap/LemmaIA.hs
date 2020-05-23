@@ -126,10 +126,10 @@ lawCommutativityIAEq x@(TwoPMap m p t) k v1 vop2
         &&& assert (allCompatible (vop2:ops)) -- OK
         &&& strongConvergence v1 (vop2:ops) ops2
         &&& (applyAll v1 (vop2:ops) === applyAll v1 ops2 *** QED)
-        &&& lemmaApplyAll v1 (vop2:ops) -- TODO
+        &&& lemmaApplyAll v1 (vop2:ops) -- OK
         &&& lemma1 vop2 ops v1 -- OK
         &&& lemma2 ops vop2 -- OK
-        &&& lemmaApplyAll v1 ops2 -- TODO
+        &&& lemmaApplyAll v1 ops2 -- OK
         &&& (v1'' === v2' *** QED) -- OK
         &&& lemmaDeleteInsert k ops2 p
     === TwoPMap (Map.insert k v2' m) (Map.delete k (Map.insert k ops2 p)) t -- OK
@@ -165,7 +165,7 @@ lemmaApplyAll v1 ops | not (allCompatible ops) = ()
 lemmaApplyAll v1 ops | not (allCompatibleState v1 ops) = ()
 lemmaApplyAll v1 ops = 
         foldr (flip apply) v1 ops 
-          ? lemmaApplyAllFoldr v1 ops
+          ? lemmaApplyAllFoldr ops v1
     ==. applyAll v1 (List.reverse ops)
           ?   lemmaPermutationReverse ops
           &&& assert (allCompatibleState v1 ops)
@@ -174,9 +174,28 @@ lemmaApplyAll v1 ops =
     ==. applyAll v1 ops
     *** QED
 
-{-@ lemmaApplyAllFoldr :: VRDT a => v1:a -> ops:[Operation a] -> {applyAll v1 (List.reverse ops) == Liquid.Data.List.foldr (flip apply) v1 ops} @-}
-lemmaApplyAllFoldr :: VRDT a => a -> [Operation a] -> ()
-lemmaApplyAllFoldr = undefined
+{-@ ple lemmaApplyAll' @-}
+{-@ lemmaApplyAll' :: VRDT a => ops:[Operation a] -> ops':[Operation a] -> v:a ->
+  {applyAll v (List.concat ops ops') == applyAll (applyAll v ops) ops'} @-}
+lemmaApplyAll' :: VRDT a => [Operation a] -> [Operation a] -> a -> ()
+lemmaApplyAll' [] _ _ = ()
+lemmaApplyAll' (op':ops) ops'  v = lemmaApplyAll' ops ops' (apply v op')
+
+{-@ ple lemmaApplyAllFoldr @-}
+{-@ lemmaApplyAllFoldr :: VRDT a =>ops:[Operation a] -> v1:a ->  {applyAll v1 (List.reverse ops) == Liquid.Data.List.foldr (flip apply) v1 ops} @-}
+lemmaApplyAllFoldr :: VRDT a => [Operation a] -> a -> ()
+lemmaApplyAllFoldr [] _ = ()
+lemmaApplyAllFoldr (op:ops) v =
+      applyAll v (List.reverse (op:ops))
+      ? lemmaApplyAllFoldr ops v
+      ? lemmaApplyAll' (List.reverse ops) [op] v
+  ==. applyAll v (List.concat (List.reverse ops) [op])
+  ==. apply (applyAll v (List.reverse ops)) op
+  ==. apply (List.foldr (flip apply) v ops) op
+  ==. flip apply op (List.foldr (flip apply) v ops) 
+  ==. List.foldr (flip apply) v (op:ops)
+  *** QED
+  
 
 {-@ ple lemmaInsertRemoveFirst @-}
 {-@ lemmaInsertRemoveFirst :: Ord a => x:a -> xs:[a] -> {removeFirst x (insertList x xs) == Just xs} @-}
