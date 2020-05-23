@@ -302,13 +302,13 @@ lemmaAllCompatibleStateElem x op1 (op2:ops)
 
 {-@ ple lemmaRemoveFirstElem @-}
 {-@
-lemmaRemoveFirstElem :: (Eq (Operation a), VRDT a)
- => op:Operation a 
- -> os:[Operation a]
- -> {rs:[Operation a] | removeFirst op os == Just rs}
+lemmaRemoveFirstElem :: (Eq a)
+ => op:a 
+ -> os:[a]
+ -> {rs:[a] | removeFirst op os == Just rs}
  -> {List.elem' op os}
 @-}
-lemmaRemoveFirstElem :: (Eq (Operation a)) => Operation a -> [Operation a] -> [Operation a] -> ()
+lemmaRemoveFirstElem :: (Eq a) => a -> [a] -> [a] -> ()
 lemmaRemoveFirstElem op [] _ = ()
 lemmaRemoveFirstElem op _ [] = ()
 lemmaRemoveFirstElem op os@(_:t) rs@(r:rs')

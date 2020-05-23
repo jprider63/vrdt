@@ -309,9 +309,52 @@ lemmaPermutationReverse (h:t) = case removeFirst h (List.concat (List.reverse t)
         &&& lemmaPReverse0 h (List.reverse t) ops'
         &&& lemmaPermutationTransitive t (List.reverse t) ops'
 
-{-@ lemmaPermutationTransitive :: Eq a => ops1:[a] -> {ops2:[a] | isPermutation ops1 ops2} -> {ops3:[a] | isPermutation ops2 ops3} -> {isPermutation ops1 ops3} @-}
+{-@ ple lemmaPermutationTransitive @-}
+{-@ lemmaPermutationTransitive :: Eq a => ops1:[a] -> ops2:[a] -> ops3:[a] -> {(isPermutation ops1 ops2 && isPermutation ops2 ops3) => isPermutation ops1 ops3} @-}
 lemmaPermutationTransitive :: Eq a => [a] -> [a] -> [a] -> ()
-lemmaPermutationTransitive _ _ _ = undefined -- TODO
+lemmaPermutationTransitive [] [] [] = ()
+lemmaPermutationTransitive [] _  _  = ()
+lemmaPermutationTransitive _  [] _  = ()
+lemmaPermutationTransitive _  _  [] = ()
+lemmaPermutationTransitive ops1 ops2 ops3 | not (isPermutation ops1 ops2) = ()
+lemmaPermutationTransitive ops1 ops2 ops3 | not (isPermutation ops2 ops3) = ()
+-- lemmaPermutationTransitive ops1@(h1:t1) ops2@(h2:t2) ops3 = case removeFirst h2 ops3 of
+--   Nothing -> ()
+--   Just ops3' -> case removeFirst h2 ops1 of
+--     Nothing -> lemmaPermutationCommutative ops1 ops2
+--     Just ops1' -> 
+--             isPermutation ops1 ops3
+--         ==! isPermutation ops1' ops3'
+--         *** QED
+      
+
+lemmaPermutationTransitive ops1@(h1:t1) ops2@(h2:t2) ops3 = case removeFirst h1 ops2 of
+  Nothing -> ()
+  Just ops2' -> case removeFirst h1 ops3 of
+    Nothing ->
+          assert (List.elem' h1 ops2) ? lemmaRemoveFirstElem h1 ops2 ops2'
+      &&& assert (isPermutation ops2 ops3)
+      &&& assert (List.elem' h1 ops3)
+    Just ops3' -> 
+          lemmaPermutationCommutative ops1 ops2
+      &&& lemmaRemoveFirstPermutation h1 t1 ops2 ops2'
+      &&& assert (isPermutation t1 ops2')
+      &&& lemmaRemoveFirstPermutation' h1 ops2 ops2' ops3 ops3'
+      &&& assert (isPermutation ops2' ops3')
+      &&& lemmaPermutationTransitive t1 ops2' ops3'
+      &&& assert (isPermutation t1 ops3')
+      &&& assert (isPermutation ops1 ops3)
+
+{-@ lemmaRemoveFirstPermutation' :: Eq a => v:a -> ops1:[a] -> {ops1':[a] | removeFirst v ops1 == Just ops1'} -> ops2:[a] -> {ops2':[a] | removeFirst v ops2 == Just ops2'} -> {isPermutation ops1 ops2 => isPermutation ops1' ops2'} @-}
+lemmaRemoveFirstPermutation' :: Eq a => a -> [a] -> [a] -> [a] -> [a] -> ()
+lemmaRemoveFirstPermutation' _ _ _ _ _ = undefined
+
+
+
+{-@ lemmaPermutationCommutative :: Eq a => ops1:[a] -> ops2:[a] -> {isPermutation ops1 ops2 => isPermutation ops2 ops1} @-}
+lemmaPermutationCommutative :: Eq a => [a] -> [a] -> ()
+lemmaPermutationCommutative _ _ = undefined -- TODO
+
 
 
 
