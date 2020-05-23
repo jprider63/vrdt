@@ -19,7 +19,16 @@ import           Prelude hiding (Maybe(..), isJust, maybe, foldr, flip, const)
 import           Liquid.Data.Maybe
 import           VRDT.TwoPMap.LemmaIA
 
-
+{-@ lemma1 :: (Ord (Operation v), VRDT v) => op:Operation v -> ops:[Operation v] ->
+  {v:v | allCompatibleState v ops && compatibleState v op} -> 
+  {allCompatibleState v (insertList op ops)} @-}
+lemma1 :: (Ord (Operation v), VRDT v) => Operation v -> [Operation v] -> v -> ()
+lemma1 op [] v = ()
+lemma1 op (op':ops) v
+  | op <= op'
+  = ()
+  | otherwise
+  = lemma1 op ops v
 
 {-@ lawCommutativityAIC :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> vop1:Operation v -> k2:k -> v2:v -> {(compatibleTwoPMap (TwoPMapApply k1 vop1) (TwoPMapInsert k2 v2) && compatibleStateTwoPMap x (TwoPMapApply k1 vop1) && compatibleStateTwoPMap x (TwoPMapInsert k2 v2))  =>  compatibleStateTwoPMap (applyTwoPMap x (TwoPMapApply k1 vop1)) (TwoPMapInsert k2 v2)} @-}
 lawCommutativityAIC :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> Operation v -> k -> v -> ()
@@ -32,25 +41,20 @@ lawCommutativityAIC x@(TwoPMap m p t) k' vop' k v
   , Just _ <- Map.lookup k m
   = ()
   | k == k'
-  , not (Set.member k' t)
   , Nothing <- Map.lookup k m
   , Nothing <- Map.lookup k p
   =   compatibleStateTwoPMap (applyTwoPMap x (TwoPMapApply k vop')) op2
-  === compatibleStateTwoPMap (TwoPMap m1 p1 t1) (TwoPMapInsert k v)
-    ? lemmaLookupInsert p k l1
-  === allCompatibleState v l1
-  === allCompatibleState v [vop']
-  === compatibleState v vop'
-  === True
+  ==. compatibleStateTwoPMap (TwoPMap m1 p1 t1) (TwoPMapInsert k v)
+    ?   lemmaLookupInsert p k l1
+  ==. allCompatibleState v l1
+  ==. allCompatibleState v [vop']
+  ==. compatibleState v vop'
   *** QED
   | k == k'
-  , not (Set.member k' t)
   , Nothing <- Map.lookup k m
   , Just ops <- Map.lookup k p
-  =   compatibleStateTwoPMap (applyTwoPMap x (TwoPMapApply k' vop')) (TwoPMapInsert k v) -- TODO
-        ? lemmaLookupInsert p k (insertList vop' ops)
-  === allCompatibleState v (insertList vop' ops)
-  *** QED
+  =   lemmaLookupInsert p k (insertList vop' ops)
+    ? lemma1 vop' ops v
   | k /= k'
   , Just vv <- Map.lookup k' m
   = lemmaLookupInsert2 m k k' (apply vv vop')
