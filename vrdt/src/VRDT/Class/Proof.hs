@@ -93,7 +93,7 @@ isPermutation (op1:ops1') ops2 = case removeFirst op1 ops2 of
 {-@ ple removeFirst @-}
 {-@ removeFirst :: Eq o => x:o -> xs:[o] ->
    {vv:Maybe [o] | (isJust vv => 1 + len (fromJust vv) == len xs) &&
-                   (List.elem' x xs => isJust vv)} @-}
+                   (List.elem' x xs <=> isJust vv)} @-}
 removeFirst :: Eq o => o -> [o] -> Maybe [o]
 removeFirst o [] = Nothing
 removeFirst o (h:t) = 

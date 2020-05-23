@@ -218,23 +218,77 @@ lemmaPermutation vop2 ops@(h:ops') ops2
         ? lemmaPermutationId ops
     *** QED
 
+{-@ ple lemmaElemConcat @-}
+{-@ lemmaElemConcat :: Eq a => x:a -> xs:[a] -> ys:[a] ->
+  {((List.elem' x (List.concat xs ys)) <=> not (not (List.elem' x xs) && not (List.elem' x ys)))} @-}
+lemmaElemConcat :: Eq a => a -> [a] -> [a] -> ()
+lemmaElemConcat x [] _ = ()
+lemmaElemConcat x (y:ys) zs
+  | x /= y
+  = lemmaElemConcat x ys zs
+  | otherwise
+  = ()
+
+{-@ ple lemmaReverseElem @-}
+{-@ lemmaReverseElem :: Eq a => x:a -> xs:[a] -> {List.elem' x xs == List.elem' x (List.reverse xs)}@-}
+lemmaReverseElem  :: Eq a => a -> [a] -> ()
+lemmaReverseElem x [] = ()
+lemmaReverseElem x (y:ys)
+  | x /= y = lemmaReverseElem x ys
+           ? lemmaElemConcat x (List.reverse ys) [y]
+  | otherwise = lemmaElemConcat x (List.reverse ys) [y]
+
+{-@ ple lemmaPermutationHeadTailNotElem @-}
+{-@ lemmaPermutationHeadTailNotElem :: Eq a => h:a -> {ops:[a] | not (List.elem' h ops)} ->
+  {isPermutation (cons h ops) (List.concat ops (cons h List.empty)) } @-}
+lemmaPermutationHeadTailNotElem :: Eq a => a -> [a] -> ()
+lemmaPermutationHeadTailNotElem _ [] = ()
+lemmaPermutationHeadTailNotElem h (x:xs) = lemmaPermutationHeadTailNotElem h xs
+
+
+{-@ ple lemmaPermutationHeadTailElem @-}
+{-@ lemmaPermutationHeadTailElem :: Eq a => h:a -> {ops:[a] | List.elem' h ops} ->
+  {isPermutation (cons h ops) (List.concat ops (cons h List.empty)) } @-}
+lemmaPermutationHeadTailElem :: Eq a => a -> [a] -> ()
+lemmaPermutationHeadTailElem _ [] = ()
+lemmaPermutationHeadTailElem h (op:ops)
+  | h == op
+  = if List.elem' h ops then lemmaPermutationHeadTailElem h ops else lemmaPermutationHeadTailNotElem h ops
+  | otherwise
+  = if List.elem' h ops then lemmaPermutationHeadTailElem h ops else lemmaPermutationHeadTailNotElem h ops
+
+
+{-@ ple lemmaPReverse0 @-}
+{-@ lemmaPReverse0 :: Eq a => h:a -> ops:[a] -> {ops':[a] | Just ops' == removeFirst h (List.concat ops (cons h List.empty))}
+  -> {isPermutation ops ops'} @-}
+lemmaPReverse0 :: Eq a => a -> [a] -> [a] -> ()
+lemmaPReverse0 _ [] _ = ()
+lemmaPReverse0 h (op:ops) []
+  | Nothing <- removeFirst h (List.concat (op:ops) [h])
+  = ()
+  | Just _ <- removeFirst h (List.concat (op:ops) [h])
+  = ()
+lemmaPReverse0 h (op:ops) (op':ops')
+  | Nothing <- removeFirst h (List.concat (op:ops) [h])
+  = lemmaElemConcat h (op:ops) [h]
+  | Just _ <- removeFirst h (List.concat (op:ops) [h])
+  , h /= op
+  = lemmaPReverse0 h ops ops'
+  | List.elem' h ops
+  = lemmaPermutationHeadTailElem h ops
+  | otherwise
+  = lemmaPermutationHeadTailNotElem h ops
+
+{-@ ple lemmaPermutationReverse @-}
 {-@ lemmaPermutationReverse :: Eq a => ops:[a] -> {isPermutation ops (List.reverse ops)} @-}
 lemmaPermutationReverse :: Eq a => [a] -> ()
 lemmaPermutationReverse [] = ()
 lemmaPermutationReverse (h:t) = case removeFirst h (List.concat (List.reverse t) [h]) of
-  Nothing -> 
-        assume (List.elem' h (List.concat (List.reverse t) [h])) -- TODO
+  Nothing -> lemmaReverseElem h (h:t)
   Just ops' ->
-        isPermutation (h:t) (List.reverse (h:t))
-    === isPermutation (h:t) (List.concat (List.reverse t) [h])
-    === isPermutation t ops'
-        ?   lemmaPermutationReverse t
-        &&& assert (isPermutation t (List.reverse t))
-        &&& assume (isPermutation (List.reverse t) ops') -- TODO
+            lemmaPermutationReverse t
+        &&& lemmaPReverse0 h (List.reverse t) ops'
         &&& lemmaPermutationTransitive t (List.reverse t) ops'
-    === isPermutation (List.reverse t) ops'
-    === True
-    *** QED
 
 {-@ ple lemmaPermutationTransitive @-}
 {-@ lemmaPermutationTransitive :: Eq a => ops1:[a] -> ops2:[a] -> ops3:[a] -> {(isPermutation ops1 ops2 && isPermutation ops2 ops3) => isPermutation ops1 ops3} @-}
