@@ -64,11 +64,19 @@ lawCommutativityIAEq' x@(TwoPMap m p t) k v  vop'
         v1 = maybe v (foldr (flip apply) v) (Map.lookup k p)
         TwoPMap m1 p1 t1 = applyTwoPMap x op1
 
+
 {-@ lemma0 :: (Ord (Operation v), VRDT v) => ops:[Operation v] -> vop:Operation v ->
   {v:v | allCompatibleState v ops && compatibleState v vop && allCompatible' vop ops} ->
   {compatibleState (List.foldr (flip apply) v ops) vop} @-}
 lemma0 :: (Ord (Operation v), VRDT v) => [Operation v] -> Operation v -> v -> ()
-lemma0 = undefined
+lemma0 [] _ _ = ()
+lemma0 (op:ops) vop v =
+        lemma0 ops vop v
+      ? lemma0 ops op v
+      ? lawCompatibilityCommutativity op vop
+      ? lawCommutativity (List.foldr (flip apply) v ops) op vop
+      ? lawCommutativity (List.foldr (flip apply) v ops) vop op
+
 
 
 
