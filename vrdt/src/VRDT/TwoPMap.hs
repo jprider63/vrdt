@@ -1,5 +1,6 @@
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
+{-@ LIQUID "--noadt" @-}
 
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -46,17 +47,35 @@ import           VRDT.TwoPMap.LemmaDI
 coercAxiom0 :: ()
 coercAxiom0 = ()
 
+{-@ assume coercAxiom1 :: {v : () | compatibleTwoPMap' ~~ compatibleTwoPMap} @-}
+coercAxiom1 :: ()
+coercAxiom1 = ()
+
+{-@ assume coercAxiom2 :: {v : () | compatibleStateTwoPMap' ~~ compatibleStateTwoPMap} @-}
+coercAxiom2 :: ()
+coercAxiom2 = ()
+
 {-@ reflect applyTwoPMap' @-}
 applyTwoPMap' :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> Operation (TwoPMap k v) -> TwoPMap k v
 applyTwoPMap' = applyTwoPMap
 
+
+{-@ reflect compatibleTwoPMap' @-}
+compatibleTwoPMap' :: (Eq k, VRDT v) => Operation (TwoPMap k v) -> Operation (TwoPMap k v) -> Bool
+compatibleTwoPMap' = compatibleTwoPMap
+
+{-@ reflect compatibleStateTwoPMap' @-}
+compatibleStateTwoPMap' :: (Ord k, VRDT v) => TwoPMap k v -> Operation (TwoPMap k v) -> Bool
+compatibleStateTwoPMap' = compatibleStateTwoPMap
+
+
 instance (Ord k, Ord (Operation v), VRDT v) => VRDT (TwoPMap k v) where
   type Operation (TwoPMap k v) = TwoPMapOp k v
   apply x op = applyTwoPMap' x op
-  compatible x y = compatibleTwoPMap x y
-  compatibleState x y = compatibleStateTwoPMap x y
+  compatible x y = compatibleTwoPMap' x y
+  compatibleState x y = compatibleStateTwoPMap' x y
   lawCommutativity x op1 op2 = lawCommutativityTwoPMap x op1 op2
-  lawCompatibilityCommutativity op1 op2 = undefined
+  lawCompatibilityCommutativity op1 op2 = lawCompatibilitycommutativityTwoPMap op1 op2
 
 
 

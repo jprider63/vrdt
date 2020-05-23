@@ -48,6 +48,12 @@ data TwoPMap k v = TwoPMap {
   }
 -- TODO: Invariant that keys are disjoint.
 
+{-@ data TwoPMapOp k v = 
+    TwoPMapInsert {twoPMapOpIKey :: k, twoPMapOpV :: v}
+  | TwoPMapApply {twoPMapOpAKey :: k,  twoPMapOpOp :: (Operation v)}
+  | TwoPMapDelete {twoPMapOpDKey :: k}
+@-}
+
 data TwoPMapOp k v = 
     TwoPMapInsert k v
   | TwoPMapApply k (Operation v)
@@ -113,7 +119,13 @@ compatibleTwoPMap (TwoPMapApply k' vop') (TwoPMapInsert k v) | k == k' = compati
 compatibleTwoPMap (TwoPMapApply k op) (TwoPMapApply k' op') | k == k' = compatible op op'
 compatibleTwoPMap _                   _                               = True
 
-
+{-@ ple lawCompatibilitycommutativityTwoPMap @-}
+{-@ lawCompatibilitycommutativityTwoPMap :: (Eq k, VRDT v) => op1:TwoPMapOp k v -> op2:TwoPMapOp k v -> {compatibleTwoPMap op1 op2 == compatibleTwoPMap op2 op1} @-}
+lawCompatibilitycommutativityTwoPMap :: (Eq k, VRDT v) => TwoPMapOp k v -> TwoPMapOp k v -> ()
+lawCompatibilitycommutativityTwoPMap  (TwoPMapApply k v) (TwoPMapApply k' v')
+  | k == k' = lawCompatibilityCommutativity v v'
+lawCompatibilitycommutativityTwoPMap  _ _ = ()
+  
 {-@ reflect compatibleStateTwoPMap @-}
 compatibleStateTwoPMap :: (Ord k, VRDT v) => TwoPMap k v -> TwoPMapOp k v -> Bool
 compatibleStateTwoPMap (TwoPMap m p t) (TwoPMapInsert k' v)
