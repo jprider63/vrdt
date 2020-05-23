@@ -299,22 +299,12 @@ lemmaPermutationTransitive _  [] _  = ()
 lemmaPermutationTransitive _  _  [] = ()
 lemmaPermutationTransitive ops1 ops2 ops3 | not (isPermutation ops1 ops2) = ()
 lemmaPermutationTransitive ops1 ops2 ops3 | not (isPermutation ops2 ops3) = ()
--- lemmaPermutationTransitive ops1@(h1:t1) ops2@(h2:t2) ops3 = case removeFirst h2 ops3 of
---   Nothing -> ()
---   Just ops3' -> case removeFirst h2 ops1 of
---     Nothing -> lemmaPermutationCommutative ops1 ops2
---     Just ops1' -> 
---             isPermutation ops1 ops3
---         ==! isPermutation ops1' ops3'
---         *** QED
-      
-
 lemmaPermutationTransitive ops1@(h1:t1) ops2@(h2:t2) ops3 = case removeFirst h1 ops2 of
   Nothing -> ()
   Just ops2' -> case removeFirst h1 ops3 of
     Nothing ->
           assert (List.elem' h1 ops2) ? lemmaRemoveFirstElem h1 ops2 ops2'
-      &&& assert (isPermutation ops2 ops3)
+      &&& assert (isPermutation ops2 ops3) ? lemmaPermutationContainsElem' h1 ops2 ops3
       &&& assert (List.elem' h1 ops3)
     Just ops3' -> 
           lemmaPermutationCommutative ops1 ops2
@@ -328,13 +318,27 @@ lemmaPermutationTransitive ops1@(h1:t1) ops2@(h2:t2) ops3 = case removeFirst h1 
 
 {-@ lemmaRemoveFirstPermutation' :: Eq a => v:a -> ops1:[a] -> {ops1':[a] | removeFirst v ops1 == Just ops1'} -> ops2:[a] -> {ops2':[a] | removeFirst v ops2 == Just ops2'} -> {isPermutation ops1 ops2 => isPermutation ops1' ops2'} @-}
 lemmaRemoveFirstPermutation' :: Eq a => a -> [a] -> [a] -> [a] -> [a] -> ()
-lemmaRemoveFirstPermutation' _ _ _ _ _ = undefined
+lemmaRemoveFirstPermutation' _ _ _ _ _ = undefined -- TODO
+
+{-@ lemmaPermutationContainsElem' :: Eq a => op:a -> ops1:[a] -> {ops2:[a] | isPermutation ops1 ops2} -> {List.elem' op ops1 => List.elem' op ops2} @-}
+lemmaPermutationContainsElem' :: Eq a => a -> [a] -> [a] -> ()
+lemmaPermutationContainsElem' _ _ _ = undefined -- TODO
 
 
-
-{-@ lemmaPermutationCommutative :: Eq a => ops1:[a] -> ops2:[a] -> {isPermutation ops1 ops2 => isPermutation ops2 ops1} @-}
+{-@ ple lemmaPermutationCommutative @-}
+{-@ lemmaPermutationCommutative :: Eq a => ops1:[a] -> ops2:[a] -> {isPermutation ops1 ops2 => isPermutation ops2 ops1} / [len ops2] @-}
 lemmaPermutationCommutative :: Eq a => [a] -> [a] -> ()
-lemmaPermutationCommutative _ _ = undefined -- TODO
+lemmaPermutationCommutative [] [] = ()
+lemmaPermutationCommutative _  [] = ()
+lemmaPermutationCommutative [] _  = ()
+lemmaPermutationCommutative ops1 ops2@(h2:t2) = case removeFirst h2 ops1 of
+  Nothing -> undefined -- lemmaPermutationContainsElem h2 t2 ops1 -- TODO
+  Just ops1' -> 
+        isPermutation ops2 ops1
+    === isPermutation t2 ops1' ? lemmaPermutationCommutative t2 ops1'
+    === isPermutation ops1' t2
+    ==! True -- TODO
+    *** QED
 
 
 
