@@ -334,11 +334,68 @@ lemmaPermutationTransitive ops1@(h1:t1) ops2@(h2:t2) ops3 = case removeFirst h1 
       &&& lemmaPermutationTransitive t1 ops2' ops3'
       &&& assert (isPermutation t1 ops3')
       &&& assert (isPermutation ops1 ops3)
-
+{-@ ple lemmaRemoveFirstPermutation' @-}
 {-@ lemmaRemoveFirstPermutation' :: Eq a => v:a -> ops1:[a] -> {ops1':[a] | removeFirst v ops1 == Just ops1'} -> ops2:[a] -> {ops2':[a] | removeFirst v ops2 == Just ops2'} -> {isPermutation ops1 ops2 => isPermutation ops1' ops2'} @-}
 lemmaRemoveFirstPermutation' :: Eq a => a -> [a] -> [a] -> [a] -> [a] -> ()
-lemmaRemoveFirstPermutation' _ _ _ _ _ = undefined -- TODO
-
+lemmaRemoveFirstPermutation' vd ops1 ops1' ops2 ops2'
+  | not (isPermutation ops1 ops2) = ()
+lemmaRemoveFirstPermutation' vd [] ops1' _ ops2' = ()
+lemmaRemoveFirstPermutation' vd _ ops1' [] ops2' = ()
+lemmaRemoveFirstPermutation' vd opsa1@(op1:ops1) ops1' opsa2@(op2:ops2) ops2'
+  -- | Just _ <- removeFirst vd opsa1
+  -- , Just _ <- removeFirst vd opsa2
+  -- , vd == op1
+  -- = ()
+  -- | Just _ <- removeFirst vd opsa1
+  -- , Just _ <- removeFirst vd opsa2
+  -- , vd == op2
+  -- = ()
+  --   ? isPermutation opsa1 (cons op2 ops2)
+  --   ? lemmaRemoveFirstPermutation op2 ops2 opsa1 ops1'
+  -- | Just _ <- removeFirst vd opsa1
+  -- , Just _ <- removeFirst vd opsa2
+  -- , Nothing <- removeFirst vd ops1
+  -- = ()
+  -- | Just _ <- removeFirst vd opsa1
+  -- , Just _ <- removeFirst vd opsa2
+  -- , Nothing <- removeFirst vd ops2
+  -- = ()
+  -- | Just ops1'' <- removeFirst vd ops1
+  -- , Just ops2'' <- removeFirst vd ops2
+  -- , vd /= op1
+  -- , vd /= op2
+  -- , op1 == op2
+  -- =   isPermutation opsa1 opsa2
+  --   -- ? assert (op1:ops1'' == ops1')
+  --   -- ? assert (op2:ops2'' == ops2')
+  -- === isPermutation (op1:ops1) (op2:ops2)
+  -- === isPermutation ops1 ops2
+  -- ? lemmaRemoveFirstPermutation' vd ops1 ops1'' ops2 ops2''
+  -- === isPermutation ops1' ops2'
+  -- *** QED
+  | Just _ <- removeFirst vd opsa1
+  , Just _ <- removeFirst vd opsa2
+  , Just ops1'' <- removeFirst vd ops1
+  , Just ops2'' <- removeFirst vd ops2
+  , Just ops2No1 <- removeFirst op1 ops2''
+  -- , _            <- removeFirst op1 (op2:ops2'')
+  , vd /= op1
+  , vd /= op2
+  , op1 /= op2
+  =   isPermutation opsa1 opsa2
+    -- ? assert (op1:ops1'' == ops1')
+    -- ? assert (op2:ops2'' == ops2')
+  === isPermutation (op1:ops1) (op2:ops2)
+  ? lemmaRemoveFirstPermutation' vd ops1 ops1'' ops2 ops2''
+  -- === isPermutation ()
+  === isPermutation (op1:ops1'') (op2:ops2'')
+  === isPermutation ops1' ops2'
+  *** QED
+  | otherwise = undefined
+-- lemmaRemoveFirstPermutation' vd opsa1@(op1:ops1) ops1' opsa2@(op2:ops2) ops2'
+--   | Just _ <- removeFirst vd opsa1
+--   , Just _ <- removeFirst vd opsa2
+--   = ()
 {-@ lemmaPermutationContainsElem' :: Eq a => op:a -> ops1:[a] -> {ops2:[a] | isPermutation ops1 ops2} -> {List.elem' op ops1 => List.elem' op ops2} @-}
 lemmaPermutationContainsElem' :: Eq a => a -> [a] -> [a] -> ()
 lemmaPermutationContainsElem' _ _ _ = undefined -- TODO
