@@ -343,6 +343,10 @@ lemmaRemoveFirstPermutation' _ _ _ _ _ = undefined -- TODO
 lemmaPermutationContainsElem' :: Eq a => a -> [a] -> [a] -> ()
 lemmaPermutationContainsElem' _ _ _ = undefined -- TODO
 
+{-@ lemmaPermutationContainsElem'' :: Eq a => op:a -> ops1:[a] -> {ops2:[a] | isPermutation ops1 ops2} -> {List.elem' op ops2 => List.elem' op ops1} @-}
+lemmaPermutationContainsElem'' :: Eq a => a -> [a] -> [a] -> ()
+lemmaPermutationContainsElem'' _ _ _ = undefined -- TODO
+
 
 {-@ ple lemmaPermutationCommutative @-}
 {-@ lemmaPermutationCommutative :: Eq a => ops1:[a] -> ops2:[a] -> {isPermutation ops1 ops2 => isPermutation ops2 ops1} / [len ops2] @-}
@@ -350,14 +354,21 @@ lemmaPermutationCommutative :: Eq a => [a] -> [a] -> ()
 lemmaPermutationCommutative [] [] = ()
 lemmaPermutationCommutative _  [] = ()
 lemmaPermutationCommutative [] _  = ()
+lemmaPermutationCommutative ops1 ops2 | not (isPermutation ops1 ops2) = ()
 lemmaPermutationCommutative ops1 ops2@(h2:t2) = case removeFirst h2 ops1 of
-  Nothing -> undefined -- lemmaPermutationContainsElem h2 t2 ops1 -- TODO
+  Nothing ->
+        assert (List.elem' h2 ops2)
+    &&& lemmaPermutationContainsElem'' h2 ops1 ops2
+    &&& assert (List.elem' h2 ops1)
+
   Just ops1' -> 
-        isPermutation ops2 ops1
-    === isPermutation t2 ops1' ? lemmaPermutationCommutative t2 ops1'
-    === isPermutation ops1' t2
-    ==! True -- TODO
-    *** QED
+        lemmaRemoveFirstPermutation h2 t2 ops1 ops1'
+    &&& assert (isPermutation ops1 (h2:t2))
+    &&& assert (isPermutation (h2:ops1') (h2:t2))
+    &&& assert (isPermutation ops1' t2)
+    &&& lemmaPermutationCommutative ops1' t2
+    &&& assert (isPermutation t2 ops1')
+    &&& assert (isPermutation ops2 ops1)
 
 
 
