@@ -414,9 +414,18 @@ lemmaRemoveFirstPermutation' vd opsa1@(op1:ops1) ops1' opsa2@(op2:ops2) ops2'
 lemmaPermutationContainsElem' :: Eq a => a -> [a] -> [a] -> ()
 lemmaPermutationContainsElem' _ _ _ = undefined -- TODO
 
-{-@ lemmaPermutationContainsElem'' :: Eq a => op:a -> ops1:[a] -> {ops2:[a] | isPermutation ops1 ops2} -> {List.elem' op ops2 => List.elem' op ops1} @-}
+{-@ ple lemmaPermutationContainsElem'' @-}
+{-@ lemmaPermutationContainsElem'' :: Eq a => op:a -> ops1:[a] -> {ops2:[a] | isPermutation ops1 (cons op ops2)} -> {isJust (removeFirst op ops1)} @-}
 lemmaPermutationContainsElem'' :: Eq a => a -> [a] -> [a] -> ()
-lemmaPermutationContainsElem'' _ _ _ = undefined -- TODO
+lemmaPermutationContainsElem'' _ [] _ = ()
+lemmaPermutationContainsElem'' op (op1:ops1) ops2
+  | op == op1
+  = ()
+  | otherwise
+  = () ?
+    isPermutation (op1:ops1) (op:ops2) ?
+    let Just ops2_op1 = removeFirst op1 ops2 in
+    lemmaPermutationContainsElem'' op ops1 ops2_op1
 
 
 {-@ ple lemmaPermutationCommutative @-}
@@ -429,7 +438,7 @@ lemmaPermutationCommutative ops1 ops2 | not (isPermutation ops1 ops2) = ()
 lemmaPermutationCommutative ops1 ops2@(h2:t2) = case removeFirst h2 ops1 of
   Nothing ->
         assert (List.elem' h2 ops2)
-    &&& lemmaPermutationContainsElem'' h2 ops1 ops2
+    &&& lemmaPermutationContainsElem'' h2 ops1 t2
     &&& assert (List.elem' h2 ops1)
 
   Just ops1' -> 
