@@ -37,5 +37,8 @@ lawCommutativityDAC x@(TwoPMap m p t) k' k vop
            === TwoPMap (Map.delete k' m) (Map.delete k' p) (Set.insert k' t)
            *** QED))
 
+
+{-@ lawCommutativityDA :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> k1:k -> k2:k -> vop2:Operation v -> {(compatibleTwoPMap (TwoPMapDelete k1) (TwoPMapApply k2 vop2) && compatibleStateTwoPMap x (TwoPMapDelete k1) && compatibleStateTwoPMap x (TwoPMapApply k2 vop2))  => ((applyTwoPMap (applyTwoPMap x (TwoPMapDelete k1)) (TwoPMapApply k2 vop2) == applyTwoPMap (applyTwoPMap x (TwoPMapApply k2 vop2)) (TwoPMapDelete k1)) && compatibleStateTwoPMap (applyTwoPMap x (TwoPMapDelete k1)) (TwoPMapApply k2 vop2))} @-}
+lawCommutativityDA :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> k -> k -> Operation v -> ()
 lawCommutativityDA x@(TwoPMap m p t) k' k vop =
     lawCommutativityDAC x k' k vop &&& lawCommutativityDAE x k' k vop
