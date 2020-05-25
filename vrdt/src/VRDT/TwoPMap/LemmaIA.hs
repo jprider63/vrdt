@@ -46,60 +46,60 @@ lawCommutativityIAEq x@(TwoPMap m p t) k v1 vop2
   | not (compatibleStateTwoPMap x (TwoPMapApply k vop2)) = ()
 
   | isJust (Map.lookup k m)
-  = undefined -- () -- TODO OK
+  = () -- TODO OK
 
   | (Set.member k t) 
-  = undefined -- () -- TODO OK
+  = () -- TODO OK
 
   | not (Set.member k t)
   , Nothing <- Map.lookup k p
-  = undefined -- TODO
-   -- -- OK. Takes 4.5 minues...
-   -- ( Map.lookup k m === Nothing *** QED) 
-   -- &&&( let v1 = maybe v (foldr (flip apply) v) Nothing
-   --        -- Just vv = Map.lookup k (Map.insert k v1 m)
-   --          -- Just vvv = Map.lookup k  (Map.insert k [vop'] p)
-   --          l2 = case Map.lookup k p of
-   --                 Nothing -> [vop']
-   --                 Just ops -> insertList vop' ops  in
-   --         (maybe v (foldr (flip apply) v) (Just [vop'])
-   --      ==.  foldr (flip apply) v [vop']
-   --      ==.  (flip apply) vop' (foldr (flip apply) v [])
-   --      ==.  (flip apply) vop' v
-   --      ==.  apply v vop'
-   --      ***  QED  )
-   --      -- -- &&& lemmaLookupInsert2 p k k' l2
-   --      -- -- &&& lemmaLookupDelete2 p k' k
-   --      -- -- &&& lemmaInsert k v1 k' v2 m
-   --      -- -- &&& lemmaInsertDelete k' l2 k p
-   --      &&& (l2 ==. [vop']  *** QED)
-   --      &&& (Map.lookup k (Map.insert k [vop'] p) ==. Just [vop'] *** QED)
-   --      &&& (applyTwoPMap (applyTwoPMap (TwoPMap m p t) op1) op2
-   --          ? lemmaLookupInsert m k v1
-   --          ? lemmaLookupInsert p k l2
-   --          ? (Map.lookup k m ==. Nothing *** QED)
-   --          ? lemmaDeleteInsert k [vop'] p
-   --          ? lemmaInsertTwice k (apply v1 vop') v1 m
-   --      ==.  applyTwoPMap (applyTwoPMap (TwoPMap m p t) (TwoPMapInsert k v)) op2
-   --      ==.  applyTwoPMap (TwoPMap (Map.insert k v1 m) p t) op2
-   --      ==.  applyTwoPMap (TwoPMap (Map.insert k v1 m) p t) (TwoPMapApply k vop')
-   --      ==.  TwoPMap (Map.insert k (apply v1 vop') (Map.insert k v1 m)) p t
-   --          ? ((Map.insert k (apply v1 vop') (Map.insert k v1 m)) ==. Map.insert k (apply v1 vop')  m *** QED)
-   --      ==.  TwoPMap (Map.insert k (apply v1 vop') m) p t
-   --            ? assert (not (Map.member k p))
-   --          ? (Map.delete k p ==. p *** QED)
-   --      ==.  TwoPMap (Map.insert k (apply v1 vop') m) (Map.delete k p) t
-   --      -- ==.  TwoPMap (Map.insert k v1 m) p  t
-   --      === TwoPMap (Map.insert k (apply v1 vop') m) -- here
-   --            (Map.delete k p) t
-   --      ==.  TwoPMap (Map.insert k (maybe v (foldr (flip apply) v) (Just [vop'])) m)
-   --            (Map.delete k (Map.insert k [vop'] p)) t
-   --      ===  applyTwoPMap (TwoPMap m (Map.insert k [vop'] p) t) op1 -- here
-   --      ==.  applyTwoPMap (applyTwoPMap (TwoPMap m p t) op2) op1
-   --      *** QED
-   --      ) -- &&&
-   --      -- ( applyTwoPMap (applyTwoPMap (TwoPMap m p t) op1) op2 === applyTwoPMap (applyTwoPMap (TwoPMap m p t) op2) op1 *** QED)
-   --    )
+  = 
+   -- OK. Takes 4.5 minues...
+   ( Map.lookup k m === Nothing *** QED) 
+   &&&( let v1 = maybe v (foldr (flip apply) v) Nothing
+          -- Just vv = Map.lookup k (Map.insert k v1 m)
+            -- Just vvv = Map.lookup k  (Map.insert k [vop'] p)
+            l2 = case Map.lookup k p of
+                   Nothing -> [vop']
+                   Just ops -> insertList vop' ops  in
+           (maybe v (foldr (flip apply) v) (Just [vop'])
+        ==.  foldr (flip apply) v [vop']
+        ==.  (flip apply) vop' (foldr (flip apply) v [])
+        ==.  (flip apply) vop' v
+        ==.  apply v vop'
+        ***  QED  )
+        -- -- &&& lemmaLookupInsert2 p k k' l2
+        -- -- &&& lemmaLookupDelete2 p k' k
+        -- -- &&& lemmaInsert k v1 k' v2 m
+        -- -- &&& lemmaInsertDelete k' l2 k p
+        &&& (l2 ==. [vop']  *** QED)
+        &&& (Map.lookup k (Map.insert k [vop'] p) ==. Just [vop'] *** QED)
+        &&& (applyTwoPMap (applyTwoPMap (TwoPMap m p t) op1) op2
+            ? lemmaLookupInsert m k v1
+            ? lemmaLookupInsert p k l2
+            ? (Map.lookup k m ==. Nothing *** QED)
+            ? lemmaDeleteInsert k [vop'] p
+            ? lemmaInsertTwice k (apply v1 vop') v1 m
+        ==.  applyTwoPMap (applyTwoPMap (TwoPMap m p t) (TwoPMapInsert k v)) op2
+        ==.  applyTwoPMap (TwoPMap (Map.insert k v1 m) p t) op2
+        ==.  applyTwoPMap (TwoPMap (Map.insert k v1 m) p t) (TwoPMapApply k vop')
+        ==.  TwoPMap (Map.insert k (apply v1 vop') (Map.insert k v1 m)) p t
+            ? ((Map.insert k (apply v1 vop') (Map.insert k v1 m)) ==. Map.insert k (apply v1 vop')  m *** QED)
+        ==.  TwoPMap (Map.insert k (apply v1 vop') m) p t
+              ? assert (not (Map.member k p))
+            ? (Map.delete k p ==. p *** QED)
+        ==.  TwoPMap (Map.insert k (apply v1 vop') m) (Map.delete k p) t
+        -- ==.  TwoPMap (Map.insert k v1 m) p  t
+        === TwoPMap (Map.insert k (apply v1 vop') m) -- here
+              (Map.delete k p) t
+        ==.  TwoPMap (Map.insert k (maybe v (foldr (flip apply) v) (Just [vop'])) m)
+              (Map.delete k (Map.insert k [vop'] p)) t
+        ===  applyTwoPMap (TwoPMap m (Map.insert k [vop'] p) t) op1 -- here
+        ==.  applyTwoPMap (applyTwoPMap (TwoPMap m p t) op2) op1
+        *** QED
+        ) -- &&&
+        -- ( applyTwoPMap (applyTwoPMap (TwoPMap m p t) op1) op2 === applyTwoPMap (applyTwoPMap (TwoPMap m p t) op2) op1 *** QED)
+      )
   | not (Set.member k t)
   , Just ops <- Map.lookup k p
   = 
@@ -355,7 +355,16 @@ lemmaRemoveFirst2 os@(o:os') o0 os_o0 o1 os_o1
   | o1 == o
   = ()
 
-
+{-@ ple lemmaRemoveFirst2' @-}
+{-@ lemmaRemoveFirst2' :: Eq o => o:o -> od:o -> os:[o] ->
+  {os_od:[o] | removeFirst od os == Just os_od} ->
+  {List.elem' o os_od => List.elem' o os} @-}
+lemmaRemoveFirst2' :: Eq o => o -> o -> [o] -> [o] -> ()
+lemmaRemoveFirst2' o od [] os_od  = ()
+lemmaRemoveFirst2' o od (os_head:os_tail) os_od
+  | od == os_head = ()
+  | Just os_tail_od <- removeFirst od os_tail
+  = lemmaRemoveFirst2' o od os_tail os_tail_od
 {-@ ple lemmaRemoveFirstPermutation' @-}
 {-@ lemmaRemoveFirstPermutation' :: Eq a => v:a -> ops1:[a] -> {ops1':[a] | removeFirst v ops1 == Just ops1'} -> ops2:[a] -> {ops2':[a] | removeFirst v ops2 == Just ops2'} -> {isPermutation ops1 ops2 => isPermutation ops1' ops2'} @-}
 lemmaRemoveFirstPermutation' :: Eq a => a -> [a] -> [a] -> [a] -> [a] -> ()
@@ -410,9 +419,23 @@ lemmaRemoveFirstPermutation' vd opsa1@(op1:ops1) ops1' opsa2@(op2:ops2) ops2'
         removeFirstvdops2 = removeFirst vd ops2
         op1EqOp2 = op1 == op2
 
+{-@ ple lemmaPermutationContainsElem' @-}
 {-@ lemmaPermutationContainsElem' :: Eq a => op:a -> ops1:[a] -> {ops2:[a] | isPermutation ops1 ops2} -> {List.elem' op ops1 => List.elem' op ops2} @-}
 lemmaPermutationContainsElem' :: Eq a => a -> [a] -> [a] -> ()
-lemmaPermutationContainsElem' _ _ _ = undefined -- TODO
+lemmaPermutationContainsElem' _ [] _ = ()
+lemmaPermutationContainsElem' _ _ [] = ()
+lemmaPermutationContainsElem' op (op1:ops1) ops2
+  | not (List.elem' op (op1:ops1))
+  = ()
+  | op == op1
+  = () ?
+    isPermutation (op1:ops1) ops2 ?
+    let Just ops = removeFirst op1 ops2 in
+    lemmaRemoveFirstElem op1 ops2 ops
+  | otherwise
+  = let Just ops2_op1 = removeFirst op1 ops2 in
+      lemmaPermutationContainsElem' op ops1 ops2_op1 &&&
+      lemmaRemoveFirst2' op op1 ops2 ops2_op1
 
 {-@ ple lemmaPermutationContainsElem'' @-}
 {-@ lemmaPermutationContainsElem'' :: Eq a => op:a -> ops1:[a] -> {ops2:[a] | isPermutation ops1 (cons op ops2)} -> {isJust (removeFirst op ops1)} @-}
