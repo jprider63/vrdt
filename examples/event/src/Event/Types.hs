@@ -20,8 +20,9 @@ import           VRDT.MultiSet (MultiSet(..))
 import           VRDT.Class
 import qualified VRDT.MultiSet.Internal as Internal
 import           VRDT.MultiSet.Internal (MultiSet(..), MultiSetOp(..))
-import Liquid.Data.Maybe
-import Liquid.Data.Map
+import           Liquid.Data.Maybe
+import           Liquid.Data.Map
+import           Liquid.ProofCombinators
 #endif
 
 #ifndef NotLiquid
@@ -157,68 +158,74 @@ instance VRDT Event where
   apply v_adIu (EventTitleOp op_adIv)
     = v_adIu
         {eventTitle = (apply (eventTitle v_adIu)) op_adIv}
-  lawCommutativity
-    v_adII
-    (EventDescriptionOp op1_adIJ)
-    (EventDescriptionOp op2_adIK)
-    = ((lawCommutativity (eventDescription v_adII))
-         op1_adIJ)
-        op2_adIK
-  lawCommutativity
-    v_adIL
-    (EventEndTimeOp op1_adIM)
-    (EventEndTimeOp op2_adIN)
-    = ((lawCommutativity (eventEndTime v_adIL)) op1_adIM)
-        op2_adIN
-  lawCommutativity
-    v_adIO
-    (EventLocationOp op1_adIP)
-    (EventLocationOp op2_adIQ)
-    = ((lawCommutativity (eventLocation v_adIO)) op1_adIP)
-        op2_adIQ
-  lawCommutativity
-    v_adIR
-    (EventRSVPsOp op1_adIS)
-    (EventRSVPsOp op2_adIT)
-    = ((lawCommutativity (eventRSVPs v_adIR)) op1_adIS)
-        op2_adIT
-  lawCommutativity
-    v_adIU
-    (EventStartTimeOp op1_adIV)
-    (EventStartTimeOp op2_adIW)
-    = ((lawCommutativity (eventStartTime v_adIU)) op1_adIV)
-        op2_adIW
-  lawCommutativity
-    v_adIX
-    (EventTitleOp op1_adIY)
-    (EventTitleOp op2_adIZ)
-    = ((lawCommutativity (eventTitle v_adIX)) op1_adIY)
-        op2_adIZ
+  -- lawCommutativity
+  --   v_adII
+  --   (EventDescriptionOp op1_adIJ)
+  --   (EventDescriptionOp op2_adIK)
+  --   = ((lawCommutativity (eventDescription v_adII))
+  --        op1_adIJ)
+  --       op2_adIK
+  -- lawCommutativity
+  --   v_adIL
+  --   (EventEndTimeOp op1_adIM)
+  --   (EventEndTimeOp op2_adIN)
+  --   = ((lawCommutativity (eventEndTime v_adIL)) op1_adIM)
+  --       op2_adIN
+  -- lawCommutativity
+  --   v_adIO
+  --   (EventLocationOp op1_adIP)
+  --   (EventLocationOp op2_adIQ)
+  --   = ((lawCommutativity (eventLocation v_adIO)) op1_adIP)
+  --       op2_adIQ
+  -- lawCommutativity
+  --   v_adIR
+  --   (EventRSVPsOp op1_adIS)
+  --   (EventRSVPsOp op2_adIT)
+  --   = ((lawCommutativity (eventRSVPs v_adIR)) op1_adIS)
+  --       op2_adIT
+  -- lawCommutativity
+  --   v_adIU
+  --   (EventStartTimeOp op1_adIV)
+  --   (EventStartTimeOp op2_adIW)
+  --   = ((lawCommutativity (eventStartTime v_adIU)) op1_adIV)
+  --       op2_adIW
+  -- lawCommutativity
+  --   v_adIX
+  --   (EventTitleOp op1_adIY)
+  --   (EventTitleOp op2_adIZ)
+  --   = ((lawCommutativity (eventTitle v_adIX)) op1_adIY)
+  --       op2_adIZ
   lawCommutativity _ _ _ = ()
-  lawCompatibilityCommutativity
-    (EventDescriptionOp op1_adJ0)
-    (EventDescriptionOp op2_adJ1)
-    = (lawCompatibilityCommutativity op1_adJ0) op2_adJ1
-  lawCompatibilityCommutativity
-    (EventEndTimeOp op1_adJ2)
-    (EventEndTimeOp op2_adJ3)
-    = (lawCompatibilityCommutativity op1_adJ2) op2_adJ3
-  lawCompatibilityCommutativity
-    (EventLocationOp op1_adJ4)
-    (EventLocationOp op2_adJ5)
-    = (lawCompatibilityCommutativity op1_adJ4) op2_adJ5
-  lawCompatibilityCommutativity
-    (EventRSVPsOp op1_adJ6)
-    (EventRSVPsOp op2_adJ7)
-    = (lawCompatibilityCommutativity op1_adJ6) op2_adJ7
-  lawCompatibilityCommutativity
-    (EventStartTimeOp op1_adJ8)
-    (EventStartTimeOp op2_adJ9)
-    = (lawCompatibilityCommutativity op1_adJ8) op2_adJ9
+  -- lawCompatibilityCommutativity
+  --   (EventDescriptionOp op1_adJ0)
+  --   (EventDescriptionOp op2_adJ1)
+  --   = (lawCompatibilityCommutativity op1_adJ0) op2_adJ1
+  -- lawCompatibilityCommutativity
+  --   (EventEndTimeOp op1_adJ2)
+  --   (EventEndTimeOp op2_adJ3)
+  --   = (lawCompatibilityCommutativity op1_adJ2) op2_adJ3
+  -- lawCompatibilityCommutativity
+  --   (EventLocationOp op1_adJ4)
+  --   (EventLocationOp op2_adJ5)
+  --   = (lawCompatibilityCommutativity op1_adJ4) op2_adJ5
+  -- lawCompatibilityCommutativity
+  --   (EventRSVPsOp op1_adJ6)
+  --   (EventRSVPsOp op2_adJ7)
+  --   = (lawCompatibilityCommutativity op1_adJ6) op2_adJ7
+  -- lawCompatibilityCommutativity
+  --   (EventStartTimeOp op1_adJ8)
+  --   (EventStartTimeOp op2_adJ9)
+  --   = (lawCompatibilityCommutativity op1_adJ8) op2_adJ9
   lawCompatibilityCommutativity
     (EventTitleOp op1_adJa)
     (EventTitleOp op2_adJb)
-    = (lawCompatibilityCommutativity op1_adJa) op2_adJb
+    -- = (lawCompatibilityCommutativity op1_adJa) op2_adJb
+    =
+        (lawCompatibilityCommutativity op1_adJa) op2_adJb
+    &&& assert (compatible op1_adJa op2_adJb == compatible op2_adJb op1_adJa)
+    &&& assume (compatible (EventTitleOp op1_adJa) (EventTitleOp op2_adJb) == compatible op1_adJa op2_adJb) -- Needed due to --noadt?
+    &&& assume (compatible (EventTitleOp op2_adJb) (EventTitleOp op1_adJa) == compatible op2_adJb op1_adJa) -- Needed due to --noadt?
+    &&& assert (compatible (EventTitleOp op1_adJa) (EventTitleOp op2_adJb) == compatible (EventTitleOp op2_adJb) (EventTitleOp op1_adJa))
   lawCompatibilityCommutativity _ _ = ()
 #endif
 
