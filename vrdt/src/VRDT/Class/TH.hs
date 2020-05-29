@@ -115,13 +115,14 @@ deriveVRDT n = reify n >>= \case
         applyD <- mkApply varMap
         -- enabledD <- mkEnabled varMap
         compatibleD <- mkCompatible varMap
+        compatibleStateD <- mkCompatibleState varMap
         lawCommutativityD <- mkCommutativity varMap
         lawCommutativityD' <- mkCommutativity' varMap
         -- lawNonCausalD <- mkNonCausal varMap
 
         -- fail $ show $ ppr lawNonCausalD
 
-        return $ InstanceD Nothing ctx (AppT (ConT ''VRDT) ty) [operationD, compatibleD, applyD, lawCommutativityD, lawCommutativityD'] -- enabledD, lawNonCausalD]
+        return $ InstanceD Nothing ctx (AppT (ConT ''VRDT) ty) [operationD, compatibleD, compatibleStateD, applyD, lawCommutativityD, lawCommutativityD'] -- enabledD, lawNonCausalD]
 
     mkApply :: Map Name Type -> Q Dec
     mkApply varMap = do
@@ -189,6 +190,20 @@ deriveVRDT n = reify n >>= \case
       let clss = clss' ++ [Clause [WildP, WildP] (NormalB $ ConE 'True) []]
 
       return $ FunD 'compatible clss
+
+    mkCompatibleState :: Map Name Type -> Q Dec
+    mkCompatibleState varMap = do
+      clss <- mapM (\(fName, ty) -> do
+          vName <- newName "v"
+          let fcName = fieldToOpConName fName
+          opName <- newName "op"
+          
+          let pats = [VarP vName, ConP fcName [VarP opName]]
+
+          let e = NormalB $ AppE (AppE (VarE 'compatibleState) (AppE (VarE fName) (VarE vName))) (VarE opName)
+          return $ Clause pats e []
+        ) $ Map.toList varMap
+      return $ FunD 'compatibleState clss
 
     mkCommutativity' :: Map Name Type -> Q Dec
     mkCommutativity' varMap = do
