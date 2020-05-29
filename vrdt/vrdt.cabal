@@ -30,6 +30,7 @@ library
       -- ProofCombinators
       VRDT.CausalTree
       VRDT.Class
+      VRDT.Class.Proof
       VRDT.Class.TH
       VRDT.Internal
       VRDT.LWW
@@ -40,6 +41,7 @@ library
       VRDT.Sum
       VRDT.Types
       VRDT.TwoPMap
+      VRDT.TwoPMap.Internal
   other-modules:
       Liquid.ProofCombinators
       Liquid.Data.Maybe

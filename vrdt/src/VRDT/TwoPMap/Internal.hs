@@ -5,32 +5,30 @@
 
 module VRDT.TwoPMap.Internal where
 
--- #define NotCheckAll True
-
 #if NotLiquid
 import qualified Data.Aeson as Aeson
 import           Data.Maybe
 import           Data.Map (Map)
 import qualified Data.Map as Map
 #else
+import           Liquid.Data.Map.Props
 import           Liquid.Data.Maybe
 import           Liquid.Data.List
 import qualified Liquid.Data.List as List
 import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
-import           VRDT.Class.Proof
 import           Prelude hiding (Maybe(..), isJust, maybe, foldr, flip, const)
+import           ProofCombinators
 #endif
 
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics
 
-import           Liquid.Data.Map.Props
-import           VRDT.Class
-import           VRDT.Internal
 import           Liquid.ProofCombinators
-import           ProofCombinators
+import           VRDT.Class
+import           VRDT.Class.Proof
+import           VRDT.Internal
 
 -- Keys are typically UniqueId (ClientId, NextId).
 
@@ -103,9 +101,6 @@ apply (TwoPMap m p t) (TwoPMapInsert k v)
 
 
 #if NotLiquid
-instance (Ord k, VRDT v, Ord (Operation v)) => VRDTInitial (TwoPMap k v) where
-    initVRDT = TwoPMap mempty mempty mempty
-    
 instance (Aeson.ToJSON k, Aeson.ToJSON v, Aeson.ToJSON (Operation v)) => Aeson.ToJSON (TwoPMapOp k v)
 instance (Aeson.FromJSON k, Aeson.FromJSON v, Aeson.FromJSON (Operation v)) => Aeson.FromJSON (TwoPMapOp k v)
 #endif

@@ -4,7 +4,10 @@
 
 {-# LANGUAGE UndecidableInstances #-}
 
-module VRDT.TwoPMap where
+module VRDT.TwoPMap (
+    module VRDT.TwoPMap
+  , module VRDT.TwoPMap.Internal
+  ) where
 
 -- #define NotCheckAll True
 
@@ -27,10 +30,11 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics
 
-import           Liquid.Data.Map.Props
 import           VRDT.Class
 import           VRDT.Internal
 import           VRDT.TwoPMap.Internal
+#ifndef NotLiquid
+import           Liquid.Data.Map.Props
 import           Liquid.ProofCombinators
 import           ProofCombinators
 import           VRDT.TwoPMap.LemmaIA
@@ -42,6 +46,7 @@ import           VRDT.TwoPMap.LemmaAI
 import           VRDT.TwoPMap.LemmaDA
 import           VRDT.TwoPMap.LemmaDD
 import           VRDT.TwoPMap.LemmaDI
+#endif
 
 {-@ assume coercAxiom0 :: {v : () | applyTwoPMap' ~~ applyTwoPMap} @-}
 coercAxiom0 :: ()
@@ -77,11 +82,18 @@ instance (Ord k, Ord (Operation v), VRDT v) => VRDT (TwoPMap k v) where
   lawCommutativity x op1 op2 = lawCommutativityTwoPMap x op1 op2
   lawCompatibilityCommutativity op1 op2 = lawCompatibilitycommutativityTwoPMap op1 op2
 
+#if NotLiquid
+instance (Ord k, VRDT v, Ord (Operation v)) => VRDTInitial (TwoPMap k v) where
+    initVRDT = TwoPMap mempty mempty mempty
+#endif
 
 
 
 {-@ lawCommutativityTwoPMap :: (Ord k, Ord (Operation v), VRDT v) => x : TwoPMap k v -> op1 : TwoPMapOp k v -> op2 : TwoPMapOp k v -> {(compatibleTwoPMap op1 op2 && compatibleStateTwoPMap x op1 && compatibleStateTwoPMap x op2)  => ((applyTwoPMap (applyTwoPMap x op1) op2 == applyTwoPMap (applyTwoPMap x op2) op1) && compatibleStateTwoPMap (applyTwoPMap x op1) op2)} @-}
 lawCommutativityTwoPMap :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMapOp k v -> ()
+#if NotLiquid
+lawCommutativityTwoPMap x op1 op2 = ()
+#else
 lawCommutativityTwoPMap x op1 op2
   | not (compatibleTwoPMap op1 op2 && compatibleStateTwoPMap x op1 && compatibleStateTwoPMap x op2) = ()
 lawCommutativityTwoPMap x (TwoPMapInsert k1 v1) (TwoPMapInsert k2 v2) = lawCommutativityII x k1 v1 k2 v2
@@ -93,3 +105,4 @@ lawCommutativityTwoPMap x (TwoPMapApply k1 v1)  (TwoPMapDelete k2)    = lawCommu
 lawCommutativityTwoPMap x (TwoPMapDelete k1)  (TwoPMapInsert k2 v2)   = lawCommutativityDI x k1 k2 v2
 lawCommutativityTwoPMap x (TwoPMapDelete k1)  (TwoPMapApply k2 v2)    = lawCommutativityDA x k1 k2 v2
 lawCommutativityTwoPMap x (TwoPMapDelete k1)  (TwoPMapDelete k2)      = lawCommutativityDD x k1 (TwoPMapDelete k1) k2
+#endif
