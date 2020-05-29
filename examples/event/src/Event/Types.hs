@@ -65,6 +65,7 @@ instance Ord t => VRDT (LWW t a) where
     | lwwTime l1 > lwwTime l2 = l1
     | otherwise = l2
   compatible l1 l2 = lwwTime l1 /= lwwTime l2
+  compatibleState l1 l2 = lwwTime l1 /= lwwTime l2
   lawCommutativity x y z = ()
   lawCompatibilityCommutativity _ _ = ()
 
@@ -81,6 +82,7 @@ instance Ord a => VRDT (Internal.MultiSet a) where
     apply = apply'
 
     compatible _ _ = True
+    compatibleState _ _ = True
     
     lawCommutativity m op1 op2 = Internal.lawCommutativity m op1 op2
 
@@ -129,6 +131,12 @@ instance VRDT Event where
     (EventTitleOp op2_adIH)
     = (compatible op1_adIG) op2_adIH
   compatible _ _ = True
+  compatibleState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventTitleOp op) = compatibleState eventTitle op
+  compatibleState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventDescriptionOp op) = compatibleState eventDescription op
+  compatibleState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventStartTimeOp op) = compatibleState eventStartTime op
+  compatibleState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventEndTimeOp op) = compatibleState eventEndTime op
+  compatibleState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventLocationOp op) = compatibleState eventLocation op
+  compatibleState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventRSVPsOp op) = compatibleState eventRSVPs op
   apply v_adIk (EventDescriptionOp op_adIl)
     = v_adIk
         {eventDescription = (apply (eventDescription v_adIk))
