@@ -266,11 +266,11 @@ lawCommutativityEq'
   :: Ord k 
   => v:k 
   -> posMultiSet:Map k PosInteger 
-  -> {negMultiSet:Map k NegInteger | Map.disjoint posMultiSet negMultiSet}
+  -> {negMultiSet':Map k NegInteger | Map.disjoint posMultiSet negMultiSet'}
   -> c1:Integer 
   -> c2:Integer
-  -> {c'':PosInteger | c'' == toC'' posMultiSet negMultiSet v c1 c2}
-  -> {apply (apply (MultiSet posMultiSet negMultiSet) (MultiSetOpAdd v c1)) (MultiSetOpAdd v c2) = MultiSet (Map.insert v c'' posMultiSet) (Map.delete v negMultiSet)}
+  -> {c'':PosInteger | c'' == toC'' posMultiSet negMultiSet' v c1 c2}
+  -> {apply (apply (MultiSet posMultiSet negMultiSet') (MultiSetOpAdd v c1)) (MultiSetOpAdd v c2) = MultiSet (Map.insert v c'' posMultiSet) (Map.delete v negMultiSet')}
 @-}
 lawCommutativityEq' 
   :: Ord k
@@ -334,11 +334,11 @@ lawCommutativityEq''
   :: Ord k 
   =>  v:k 
   -> posMultiSet:Map k PosInteger 
-  -> {negMultiSet:Map k NegInteger | Map.disjoint posMultiSet negMultiSet}
+  -> {negMultiSet':Map k NegInteger | Map.disjoint posMultiSet negMultiSet'}
   -> c1:Integer 
   -> c2:Integer
-  -> {c'':NegInteger | c'' == Map.toC'' posMultiSet negMultiSet v c1 c2}
-  -> {apply (apply (MultiSet posMultiSet negMultiSet) (MultiSetOpAdd v c1)) (MultiSetOpAdd v c2) = MultiSet (Map.delete v posMultiSet) (Map.insert v c'' negMultiSet)}
+  -> {c'':NegInteger | c'' == Map.toC'' posMultiSet negMultiSet' v c1 c2}
+  -> {apply (apply (MultiSet posMultiSet negMultiSet') (MultiSetOpAdd v c1)) (MultiSetOpAdd v c2) = MultiSet (Map.delete v posMultiSet) (Map.insert v c'' negMultiSet')}
 @-}
 lawCommutativityEq''
   :: Ord k
