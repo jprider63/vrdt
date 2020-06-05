@@ -1,61 +1,44 @@
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
-{-@ LIQUID "--noadt" @-}
--- {-@ LIQUID "--prune-unsorted" @-}
-
-{-# LANGUAGE TemplateHaskell #-}
-
 module Event.Types4 where
-
-
 import           VRDT.Class
-import qualified VRDT.MultiSet.Internal as Internal
-import           VRDT.MultiSet.Internal (MultiSet(..), MultiSetOp(..))
-import           Liquid.Data.Maybe
-import           Liquid.Data.Map
-import           VRDT.LWW
-import           ProofCombinators
 import           Liquid.ProofCombinators
-
-
-
-type LWWU a = LWW Int a
-
-data Event = Event {
-    eventTitle :: LWWU Int
-  , eventDescription :: LWWU Int
+data LWW t a = LWW {
+    lwwTime  :: t
+  , lwwValue :: a
   }
-
-data EventOp
-  = EventDescriptionOp ( (LWWU Int)) |
-    EventTitleOp ( (LWWU Int))
+instance Ord t => VRDT (LWW t a) where
+  type Operation (LWW t a) = LWW t a
+  apply l1 l2
+    | lwwTime l1 > lwwTime l2 = l1
+    | otherwise = l2
+  compatible l1 l2 = lwwTime l1 /= lwwTime l2
+  compatibleState l1 l2 = lwwTime l1 /= lwwTime l2
+  lawCommutativity x y z = ()
+  lawCompatibilityCommutativity _ _ = ()
 
 {-@ reflect applyLWW @-}
 applyLWW :: Ord t => LWW t a  -> LWW t a -> LWW t a
 applyLWW x y  = x
 
+data Event = Event {
+    eventDescription :: LWW Int Int
+  }
+
+data EventOp
+  = EventDescriptionOp (Operation (LWW Int Int))
 
 {-@ reflect applyEvent @-}
 applyEvent :: Event -> EventOp -> Event
-applyEvent v_adIk@(Event _eventTitle _eventDescription) (EventDescriptionOp op_adIl)
-    = Event _eventTitle (apply _eventDescription op_adIl)
-
-applyEvent v_adIu (EventTitleOp op_adIv)
-    = v_adIu
-        {eventTitle = (apply (eventTitle v_adIu)) op_adIv}
-
+applyEvent v_adIk@(Event _eventDescription) (EventDescriptionOp op_adIl)
+    = Event (applyLWW _eventDescription op_adIl)
 
 {-@ lawCommutativityEvent :: x:Event -> op1:EventOp -> op2:EventOp -> {True} @-}
 lawCommutativityEvent :: Event -> EventOp -> EventOp -> ()
 lawCommutativityEvent
-    v_adII@(Event _eventTitle _eventDescription)
+    v_adII@(Event _eventDescription)
     (EventDescriptionOp op1_adIJ)
     (EventDescriptionOp op2_adIK)
-    =  applyEvent (Event _eventTitle _eventDescription) (EventDescriptionOp op1_adIJ)
-       === Event _eventTitle (apply _eventDescription op1_adIJ)
+    =  applyEvent (Event _eventDescription) (EventDescriptionOp op1_adIJ)
+       === Event (apply _eventDescription op1_adIJ)
        *** QED
-lawCommutativityEvent _ _ _ = ()
-
-
-
-
