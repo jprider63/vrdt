@@ -1,5 +1,6 @@
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple-local" @-}
+{-@ LIQUID "--noadt" @-}
 
 module VRDT.CausalTree where
 
@@ -22,7 +23,6 @@ import           Prelude hiding (Maybe(..), concat)
 #endif
 import           Data.Maybe (mapMaybe)
 import           Data.Time.Clock (UTCTime)
-
 import           VRDT.Types
 import           VRDT.Internal
 
@@ -63,10 +63,18 @@ data CausalTreeLetter a =
   | CausalTreeLetterRoot -- | Root node. Should only be used as the initial node on creation.
   deriving (Show)
 
--- {-@ measure causalTreeWeaveLength @-}
--- causalTreeWeaveLength :: CausalTreeWeave id a -> Int
--- causalTreeWeaveLength (CausalTreeWeave _ []) = 0
--- causalTreeWeaveLength (CausalTreeWeave id (h:t)) = 1 + causalTreeWeaveLength h + causalTreeWeaveLength (CausalTreeWeave id t)
+{-@ measure causalTreeWeaveLength @-}
+causalTreeWeaveLength :: CausalTreeWeave id a -> Int
+causalTreeWeaveLength (CausalTreeWeave _ []) = 0
+causalTreeWeaveLength (CausalTreeWeave id (h:t)) = 1 + causalTreeWeaveLength h + causalTreeWeaveLength (CausalTreeWeave id t)
+
+{-@
+data CausalTreeWeave id a = CausalTreeWeave {
+    causalTreeWeaveAtom     :: CausalTreeAtom id a
+  , causalTreeWeaveChildren :: [CausalTreeWeave id a]
+  }
+
+@-}
 
 data CausalTreeWeave id a = CausalTreeWeave {
     causalTreeWeaveAtom     :: CausalTreeAtom id a
@@ -110,31 +118,32 @@ compatible :: Eq id => CausalTreeOp id a -> CausalTreeOp id a -> Bool
 compatible (CausalTreeOp _ (CausalTreeAtom id _)) (CausalTreeOp _ (CausalTreeAtom id' _)) = id /= id'
 
 
-{-@ reflect apply @-}
-apply :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTree id a
-apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
+-- {-@ reflect apply @-}
+-- apply :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTree id a
+-- apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
 
 
-{-@ reflect applyAtom @-}
--- {-@ lazy applyAtom @-} -- TODO: Prove termination. XXX
--- {-@ applyAtom :: Ord id => ct:CausalTree id a -> id -> CausalTreeAtom id a -> CausalTree id a / [length (causalTreeWeaveChildren ct)] @-}
-applyAtom :: Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> CausalTree id a
-applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave parentId atom of
-    Nothing -> 
-        -- ParentId not seen yet, so mark as pending.
-        let pending' = insertPending parentId atom pending in
-        CausalTree weave pending'
+-- {-@ reflect applyAtom @-}
+-- -- {-@ lazy applyAtom @-} -- TODO: Prove termination. XXX
+-- {-@ applyAtom :: Ord id => ct:CausalTree id a -> id -> CausalTreeAtom id a -> CausalTree id a @-}
+-- applyAtom :: Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> CausalTree id a
+-- applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave parentId atom of
+--     Nothing -> 
+--         -- ParentId not seen yet, so mark as pending.
+--         let pending' = insertPending parentId atom pending in
+--         CausalTree weave pending'
 
-    Just weave' -> 
-        -- Inserted, so apply any pending operations that may depend on this atom.
-        let opId = causalTreeAtomId atom in
-        let (pendingAtomsM, pending') = Map.updateLookupWithKey (\_ _ -> Nothing) opId pending in
-        let ct = CausalTree weave' pending' in
-        List.foldl' (\ct atom -> applyAtom ct opId atom) ct $ concat pendingAtomsM
+--     Just weave' -> 
+--         -- Inserted, so apply any pending operations that may depend on this atom.
+--         let opId = causalTreeAtomId atom in
+--         let (pendingAtomsM, pending') = Map.updateLookupWithKey (\_ _ -> Nothing) opId pending in
+--         let ct = CausalTree weave' pending' in
+--         List.foldl' (\ct atom -> applyAtom ct opId atom) ct $ concat pendingAtomsM
 
 
 -- {-@ lazy insertInWeave @-} -- TODO: Prove termination. XXX
--- {-@ insertInWeave :: Ord id => w:CausalTreeWeave id a -> id -> CausalTreeAtom id a -> Maybe (CausalTreeWeave id a) / [causalTreeWeaveLength w] @-}
+{-@ reflect insertInWeave @-}
+{-@ insertInWeave :: Ord id => w:CausalTreeWeave id a -> id -> CausalTreeAtom id a -> Maybe (CausalTreeWeave id a) / [causalTreeWeaveLength w]@-}
 insertInWeave :: Ord id => CausalTreeWeave id a -> id -> CausalTreeAtom id a -> Maybe (CausalTreeWeave id a)
 insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
     -- Is the current atom the target parent?
@@ -148,28 +157,29 @@ insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
           Nothing -> Nothing
           Just children -> Just $ CausalTreeWeave currentAtom children
 
-  where
+{-@ reflect insertInWeaveChildren  @-}
+{-@ insertInWeaveChildren :: Ord id => w:[CausalTreeWeave id a] ->  id -> CausalTreeAtom id a -> Maybe [CausalTreeWeave id a] / [len w] @-}
+insertInWeaveChildren :: Ord id => [CausalTreeWeave id a] ->  id -> CausalTreeAtom id a -> Maybe [CausalTreeWeave id a]
+insertInWeaveChildren [] _ _ = Nothing
+insertInWeaveChildren (w:ws) parentId atom = case insertInWeave w parentId atom of
+    Nothing ->
+        -- (w:) <$> insertInWeaveChildren ws parentId atom
+        case insertInWeaveChildren ws parentId atom of
+          Nothing ->
+            Nothing
+          Just ws ->
+            Just (w:ws)
+    Just w' ->
+        Just $ w':ws
 
-    -- insertInWeaveChildren :: [CausalTreeWeave a] -> AtomId -> CausalTreeAtom a -> Maybe [CausalTreeWeave a]
-    insertInWeaveChildren [] _ _ = Nothing
-    insertInWeaveChildren (w:ws) parentId atom = case insertInWeave w parentId atom of
-        Nothing ->
-            -- (w:) <$> insertInWeaveChildren ws parentId atom
-            case insertInWeaveChildren ws parentId atom of
-              Nothing ->
-                Nothing
-              Just ws ->
-                Just (w:ws)
-        Just w' ->
-            Just $ w':ws
-
-    -- insertAtom :: [CausalTreeWeave a] -> CausalTreeAtom a -> [CausalTreeWeave a]
-    insertAtom [] atom = [CausalTreeWeave atom []]
-    insertAtom l@(w:ws) atom 
-      | atom `atomGreaterThan` causalTreeWeaveAtom w = CausalTreeWeave atom []:l
-      | otherwise                                    = w:insertAtom ws atom
-
+{-@ reflect insertAtom @-}
+insertAtom :: Ord id => [CausalTreeWeave id a] -> CausalTreeAtom id a -> [CausalTreeWeave id a]
+insertAtom [] atom = [CausalTreeWeave atom []]
+insertAtom l@(w:ws) atom 
+  | atom `atomGreaterThan` causalTreeWeaveAtom w = CausalTreeWeave atom []:l
+  | otherwise                                    = w:insertAtom ws atom
 -- Compare whether an atom is greater than another atom, prioritizing CausalTreeLetterDelete.
+{-@ reflect atomGreaterThan @-}
 atomGreaterThan :: Ord id => CausalTreeAtom id a -> CausalTreeAtom id a -> Bool
 atomGreaterThan (CausalTreeAtom a1 CausalTreeLetterRoot) (CausalTreeAtom a2 CausalTreeLetterRoot)     = a1 > a2
 atomGreaterThan (CausalTreeAtom _ CausalTreeLetterRoot) (CausalTreeAtom _ _)                          = True
@@ -179,130 +189,130 @@ atomGreaterThan (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2 (Cau
 atomGreaterThan (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2 _)                        = False
 
 
-{-@ lawCommutativity :: Ord id => x : CausalTree id a -> op1 : CausalTreeOp id a -> op2 : CausalTreeOp id a -> {(compatible op1 op2) => apply (apply x op1) op2 == apply (apply x op2) op1} @-}
-lawCommutativity :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
-lawCommutativity _ _ _ = ()
+-- {-@ lawCommutativity :: Ord id => x : CausalTree id a -> op1 : CausalTreeOp id a -> op2 : CausalTreeOp id a -> {(compatible op1 op2) => apply (apply x op1) op2 == apply (apply x op2) op1} @-}
+-- lawCommutativity :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
+-- lawCommutativity _ _ _ = ()
 
-{-@ ple lawCompatibilityCommutativity @-}
-{-@ lawCompatibilityCommutativity :: Eq id => op1:CausalTreeOp id a -> op2:CausalTreeOp id a -> {compatible op1 op2 = compatible op2 op1} @-}
-lawCompatibilityCommutativity :: Eq id => CausalTreeOp id a -> CausalTreeOp id a -> ()
-lawCompatibilityCommutativity _ _ = ()
-
-
-
--- {-@ lawNonCausal :: Ord id => x : CausalTree id a -> {op1 : CausalTreeOp id a | enabled x op1} -> {op2 : CausalTreeOp id a | enabled x op2} -> {enabled (apply x op1) op2 <=> enabled (apply x op2) op1} @-}
--- lawNonCausal :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
--- lawNonCausal _ _ _ = ()
-
-#ifdef NotLiquid
+-- {-@ ple lawCompatibilityCommutativity @-}
+-- {-@ lawCompatibilityCommutativity :: Eq id => op1:CausalTreeOp id a -> op2:CausalTreeOp id a -> {compatible op1 op2 = compatible op2 op1} @-}
+-- lawCompatibilityCommutativity :: Eq id => CausalTreeOp id a -> CausalTreeOp id a -> ()
+-- lawCompatibilityCommutativity _ _ = ()
 
 
--- extractLetter :: t (CausalTreeAtom id a) -> t a
--- extractLetter :: [CausalTreeAtom id a] -> [a]
--- extractLetter = mapMaybe $ \a -> case causalTreeAtomLetter a of
-extractLetter :: CausalTreeAtom id a -> Maybe a
-extractLetter a = case causalTreeAtomLetter a of
-    CausalTreeLetter a -> Just a
-    CausalTreeLetterDelete -> Nothing
-    CausalTreeLetterRoot -> Nothing
 
-rootAtomId :: CausalTree id a -> id
-rootAtomId = causalTreeAtomId . causalTreeWeaveAtom . causalTreeWeave
+-- -- {-@ lawNonCausal :: Ord id => x : CausalTree id a -> {op1 : CausalTreeOp id a | enabled x op1} -> {op2 : CausalTreeOp id a | enabled x op2} -> {enabled (apply x op1) op2 <=> enabled (apply x op2) op1} @-}
+-- -- lawNonCausal :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
+-- -- lawNonCausal _ _ _ = ()
 
-preorder :: CausalTree id a -> [CausalTreeAtom id a]
-preorder = reverse . preorder'
+-- #ifdef NotLiquid
 
--- | Preorder traversal of a `CausalTree`. Returns atoms in reverse order.
--- Invariant: `CausalTreeLetter` is the only constructor in the returned list.
--- O(n)
---
--- JP: Can we efficiently return results in the correct order by doing a foldr?
-preorder' :: CausalTree id a -> [CausalTreeAtom id a]
-preorder' = snd . go False [] . causalTreeWeave
-  where
-    go !deleted !acc (CausalTreeWeave atom ws) = 
-      let (deleted', acc') = case causalTreeAtomLetter atom of
-            CausalTreeLetterDelete ->
-              if deleted then
-                (deleted, acc)
-              else
-                (True, pop acc)
-            CausalTreeLetterRoot ->
-              (deleted, acc)
-            CausalTreeLetter _ ->
-              (deleted, atom:acc)
-      in
-      let acc'' = snd $ List.foldl' (uncurry go) (False, acc') ws in
-      (deleted', acc'')
 
-    pop = List.drop 1
+-- -- extractLetter :: t (CausalTreeAtom id a) -> t a
+-- -- extractLetter :: [CausalTreeAtom id a] -> [a]
+-- -- extractLetter = mapMaybe $ \a -> case causalTreeAtomLetter a of
+-- extractLetter :: CausalTreeAtom id a -> Maybe a
+-- extractLetter a = case causalTreeAtomLetter a of
+--     CausalTreeLetter a -> Just a
+--     CausalTreeLetterDelete -> Nothing
+--     CausalTreeLetterRoot -> Nothing
 
--- JP: This does a version does a BFS.
+-- rootAtomId :: CausalTree id a -> id
+-- rootAtomId = causalTreeAtomId . causalTreeWeaveAtom . causalTreeWeave
+
+-- preorder :: CausalTree id a -> [CausalTreeAtom id a]
+-- preorder = reverse . preorder'
+
+-- -- | Preorder traversal of a `CausalTree`. Returns atoms in reverse order.
+-- -- Invariant: `CausalTreeLetter` is the only constructor in the returned list.
+-- -- O(n)
+-- --
+-- -- JP: Can we efficiently return results in the correct order by doing a foldr?
 -- preorder' :: CausalTree id a -> [CausalTreeAtom id a]
--- preorder' = go [] . causalTreeWeave
---  where
---   -- go deleted acc (CausalTreeWeave _atom ws) = 
---   go acc (CausalTreeWeave _atom ws) = 
---     let (_, acc') = List.foldl' visitor (False, acc) ws in
---     List.foldl' go acc' ws 
--- 
---   visitor (deleted, acc) (CausalTreeWeave atom _ws) = case causalTreeAtomLetter atom of
---     CausalTreeLetterDelete ->
---       -- Skip if already deleted.
---       if deleted then
---         (deleted, acc)
---       else
---         (True, pop acc)
---     
---     CausalTreeLetterRoot ->
---       -- Should be unreachable.
---       (deleted, acc)
--- 
---     CausalTreeLetter _ ->
---       (deleted, atom:acc)
---   
---   pop = List.drop 1
+-- preorder' = snd . go False [] . causalTreeWeave
+--   where
+--     go !deleted !acc (CausalTreeWeave atom ws) = 
+--       let (deleted', acc') = case causalTreeAtomLetter atom of
+--             CausalTreeLetterDelete ->
+--               if deleted then
+--                 (deleted, acc)
+--               else
+--                 (True, pop acc)
+--             CausalTreeLetterRoot ->
+--               (deleted, acc)
+--             CausalTreeLetter _ ->
+--               (deleted, atom:acc)
+--       in
+--       let acc'' = snd $ List.foldl' (uncurry go) (False, acc') ws in
+--       (deleted', acc'')
+
+--     pop = List.drop 1
+
+-- -- JP: This does a version does a BFS.
+-- -- preorder' :: CausalTree id a -> [CausalTreeAtom id a]
+-- -- preorder' = go [] . causalTreeWeave
+-- --  where
+-- --   -- go deleted acc (CausalTreeWeave _atom ws) = 
+-- --   go acc (CausalTreeWeave _atom ws) = 
+-- --     let (_, acc') = List.foldl' visitor (False, acc) ws in
+-- --     List.foldl' go acc' ws 
+-- -- 
+-- --   visitor (deleted, acc) (CausalTreeWeave atom _ws) = case causalTreeAtomLetter atom of
+-- --     CausalTreeLetterDelete ->
+-- --       -- Skip if already deleted.
+-- --       if deleted then
+-- --         (deleted, acc)
+-- --       else
+-- --         (True, pop acc)
+-- --     
+-- --     CausalTreeLetterRoot ->
+-- --       -- Should be unreachable.
+-- --       (deleted, acc)
+-- -- 
+-- --     CausalTreeLetter _ ->
+-- --       (deleted, atom:acc)
+-- --   
+-- --   pop = List.drop 1
       
 
 
-instance (FromJSON id, FromJSON a) => FromJSON (CausalTreeOp id a) where
-    parseJSON = Aeson.withObject "CausalTreeOp" $ \o -> 
-        CausalTreeOp <$> o .: "parent" <*> o .: "atom"
+-- instance (FromJSON id, FromJSON a) => FromJSON (CausalTreeOp id a) where
+--     parseJSON = Aeson.withObject "CausalTreeOp" $ \o -> 
+--         CausalTreeOp <$> o .: "parent" <*> o .: "atom"
 
-instance (ToJSON id, ToJSON a) => ToJSON (CausalTreeOp id a) where
-    toJSON (CausalTreeOp id a) = Aeson.object [
-        "parent" .= id
-      , "atom" .= a
-      ]
+-- instance (ToJSON id, ToJSON a) => ToJSON (CausalTreeOp id a) where
+--     toJSON (CausalTreeOp id a) = Aeson.object [
+--         "parent" .= id
+--       , "atom" .= a
+--       ]
 
-instance (FromJSON id, FromJSON a) => FromJSON (CausalTreeAtom id a) where
-    parseJSON = Aeson.withObject "CausalTreeAtom" $ \o ->
-        CausalTreeAtom <$> o .: "id" <*> o .: "letter"
+-- instance (FromJSON id, FromJSON a) => FromJSON (CausalTreeAtom id a) where
+--     parseJSON = Aeson.withObject "CausalTreeAtom" $ \o ->
+--         CausalTreeAtom <$> o .: "id" <*> o .: "letter"
 
-instance (ToJSON id, ToJSON a) => ToJSON (CausalTreeAtom id a) where
-    toJSON (CausalTreeAtom id letter) = Aeson.object [
-        "id" .= id
-      , "letter" .= letter
-      ]
+-- instance (ToJSON id, ToJSON a) => ToJSON (CausalTreeAtom id a) where
+--     toJSON (CausalTreeAtom id letter) = Aeson.object [
+--         "id" .= id
+--       , "letter" .= letter
+--       ]
 
-instance (FromJSON a) => FromJSON (CausalTreeLetter a) where
-    parseJSON = Aeson.withObject "CausalTreeLetter" $ \o -> do
-        c <- o .: "c"
-        case (c :: String) of
-            "letter" -> CausalTreeLetter <$> o .: "letter"
-            "delete" -> return CausalTreeLetterDelete
-            "root" -> return CausalTreeLetterRoot
+-- instance (FromJSON a) => FromJSON (CausalTreeLetter a) where
+--     parseJSON = Aeson.withObject "CausalTreeLetter" $ \o -> do
+--         c <- o .: "c"
+--         case (c :: String) of
+--             "letter" -> CausalTreeLetter <$> o .: "letter"
+--             "delete" -> return CausalTreeLetterDelete
+--             "root" -> return CausalTreeLetterRoot
 
-instance (ToJSON a) => ToJSON (CausalTreeLetter a) where
-    toJSON (CausalTreeLetter letter) = Aeson.object [
-        "c" .= ("letter" :: String)
-      , "letter" .= letter
-      ]
-    toJSON CausalTreeLetterDelete = Aeson.object [
-        "c" .= ("delete" :: String)
-      ]
-    toJSON CausalTreeLetterRoot = Aeson.object [
-        "c" .= ("root" :: String)
-      ]
+-- instance (ToJSON a) => ToJSON (CausalTreeLetter a) where
+--     toJSON (CausalTreeLetter letter) = Aeson.object [
+--         "c" .= ("letter" :: String)
+--       , "letter" .= letter
+--       ]
+--     toJSON CausalTreeLetterDelete = Aeson.object [
+--         "c" .= ("delete" :: String)
+--       ]
+--     toJSON CausalTreeLetterRoot = Aeson.object [
+--         "c" .= ("root" :: String)
+--       ]
 
-#endif
+-- #endif
