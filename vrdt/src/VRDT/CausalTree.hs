@@ -1,7 +1,8 @@
-{-@ LIQUID "--reflection" @-}
-{-@ LIQUID "--ple-local" @-}
-{-@ LIQUID "--noadt" @-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
+{-@ LIQUID "--reflection" @-}
+{-@ LIQUID "--ple" @-}
+{-@ LIQUID "--noadt" @-}
 module VRDT.CausalTree where
 
 #if NotLiquid
@@ -11,11 +12,12 @@ import qualified Data.Aeson as Aeson
 
 -- import           Liquid.Data.List (List(..))
 -- import qualified Liquid.Data.List as List
-import qualified Data.List as List
 #if NotLiquid
+import qualified Data.List as List
 import           Data.Map (Map)
 import qualified Data.Map as Map
 #else
+import qualified Liquid.Data.List as List
 import           Liquid.Data.Maybe
 import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
@@ -25,6 +27,7 @@ import           Data.Maybe (mapMaybe)
 import           Data.Time.Clock (UTCTime)
 import           VRDT.Types
 import           VRDT.Internal
+import           ProofCombinators
 
 -- Identifier for `CausalTree` is abstract, but you probably want to use `UTCTimestamp`.
 data CausalTree id a = CausalTree {
@@ -64,9 +67,16 @@ data CausalTreeLetter a =
   deriving (Show)
 
 {-@ measure causalTreeWeaveLength @-}
+{-@ causalTreeWeaveLength :: CausalTreeWeave id a -> {v:Int | v > 0} @-}
 causalTreeWeaveLength :: CausalTreeWeave id a -> Int
-causalTreeWeaveLength (CausalTreeWeave _ []) = 0
-causalTreeWeaveLength (CausalTreeWeave id (h:t)) = 1 + causalTreeWeaveLength h + causalTreeWeaveLength (CausalTreeWeave id t)
+causalTreeWeaveLength (CausalTreeWeave id xs) = 1 + causalTreeWeaveLengthList xs
+
+{-@ causalTreeWeaveLengthList :: [CausalTreeWeave id a] -> Nat @-}
+{-@ measure causalTreeWeaveLengthList @-}
+causalTreeWeaveLengthList :: [CausalTreeWeave id a] -> Int
+causalTreeWeaveLengthList [] = 0
+causalTreeWeaveLengthList (x:xs) = causalTreeWeaveLength x + causalTreeWeaveLengthList xs
+
 
 {-@
 data CausalTreeWeave id a = CausalTreeWeave {
@@ -118,32 +128,52 @@ compatible :: Eq id => CausalTreeOp id a -> CausalTreeOp id a -> Bool
 compatible (CausalTreeOp _ (CausalTreeAtom id _)) (CausalTreeOp _ (CausalTreeAtom id' _)) = id /= id'
 
 
--- {-@ reflect apply @-}
--- apply :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTree id a
--- apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
+{-@ reflect apply @-}
+apply :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTree id a
+apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
+
+{-@ reflect pendingAtomSize @-}
+{-@ pendingAtomSize :: Ord id => CausalTree id a -> id -> Nat @-}
+pendingAtomSize :: Ord id => CausalTree id a -> id -> Int
+pendingAtomSize (CausalTree _ pending) id
+  | Just x <- Map.lookup id pending
+  = List.length x
+  | otherwise
+  = 0
+
+{-@ reflect constConstNothing @-}
+constConstNothing :: a -> b -> Maybe c
+constConstNothing _ _ = Nothing
+
+{-@ reflect applyAtomHelper @-}
+{-@ applyAtomHelper :: Ord id => id:id -> ct:CausalTree id a -> CausalTreeAtom id a -> CausalTree id a / [pendingAtomSize ct id, 1] @-}
+applyAtomHelper :: Ord id => id -> CausalTree id a -> CausalTreeAtom id a -> CausalTree id a
+applyAtomHelper opId ct atom =
+#ifndef NotLiquid  
+  pendingAtomSize ct opId `cast`
+#endif
+  applyAtom ct opId atom
+
+{-@ reflect applyAtom @-}
+{-@ applyAtom :: Ord id => ct:CausalTree id a -> id:id -> CausalTreeAtom id a -> CausalTree id a / [pendingAtomSize ct id, 0] @-}
+applyAtom :: Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> CausalTree id a
+applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave parentId atom of
+    Nothing -> 
+        -- ParentId not seen yet, so mark as pending.
+        let pending' = insertPending parentId atom pending in
+        CausalTree weave pending'
+
+    Just weave' -> 
+        -- Inserted, so apply any pending operations that may depend on this atom.
+        let opId = causalTreeAtomId atom in
+        let (pendingAtomsM, pending') = Map.updateLookupWithKey constConstNothing opId pending in
+        let ct = CausalTree weave' pending' in
+        pendingAtomSize ct opId `cast`
+        List.foldl' (applyAtomHelper opId) ct $ concat pendingAtomsM
 
 
--- {-@ reflect applyAtom @-}
--- -- {-@ lazy applyAtom @-} -- TODO: Prove termination. XXX
--- {-@ applyAtom :: Ord id => ct:CausalTree id a -> id -> CausalTreeAtom id a -> CausalTree id a @-}
--- applyAtom :: Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> CausalTree id a
--- applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave parentId atom of
---     Nothing -> 
---         -- ParentId not seen yet, so mark as pending.
---         let pending' = insertPending parentId atom pending in
---         CausalTree weave pending'
-
---     Just weave' -> 
---         -- Inserted, so apply any pending operations that may depend on this atom.
---         let opId = causalTreeAtomId atom in
---         let (pendingAtomsM, pending') = Map.updateLookupWithKey (\_ _ -> Nothing) opId pending in
---         let ct = CausalTree weave' pending' in
---         List.foldl' (\ct atom -> applyAtom ct opId atom) ct $ concat pendingAtomsM
-
-
--- {-@ lazy insertInWeave @-} -- TODO: Prove termination. XXX
 {-@ reflect insertInWeave @-}
-{-@ insertInWeave :: Ord id => w:CausalTreeWeave id a -> id -> CausalTreeAtom id a -> Maybe (CausalTreeWeave id a) / [causalTreeWeaveLength w]@-}
+{-@ insertInWeave :: Ord id => w:CausalTreeWeave id a -> id -> CausalTreeAtom id a -> Maybe (CausalTreeWeave id a) / [causalTreeWeaveLength w, 0]@-}
 insertInWeave :: Ord id => CausalTreeWeave id a -> id -> CausalTreeAtom id a -> Maybe (CausalTreeWeave id a)
 insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
     -- Is the current atom the target parent?
@@ -158,7 +188,7 @@ insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
           Just children -> Just $ CausalTreeWeave currentAtom children
 
 {-@ reflect insertInWeaveChildren  @-}
-{-@ insertInWeaveChildren :: Ord id => w:[CausalTreeWeave id a] ->  id -> CausalTreeAtom id a -> Maybe [CausalTreeWeave id a] / [len w] @-}
+{-@ insertInWeaveChildren :: Ord id => w:[CausalTreeWeave id a] ->  id -> CausalTreeAtom id a -> Maybe [CausalTreeWeave id a] / [causalTreeWeaveLengthList w, len w] @-}
 insertInWeaveChildren :: Ord id => [CausalTreeWeave id a] ->  id -> CausalTreeAtom id a -> Maybe [CausalTreeWeave id a]
 insertInWeaveChildren [] _ _ = Nothing
 insertInWeaveChildren (w:ws) parentId atom = case insertInWeave w parentId atom of
