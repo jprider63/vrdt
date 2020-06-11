@@ -5,7 +5,7 @@
 
 module Liquid.Data.List where 
 
-import Prelude hiding (concat, reverse, length, foldr)
+import Prelude hiding (concat, reverse, length, foldr, foldl, foldl')
 
 -- type List a = [a]
 
@@ -52,3 +52,13 @@ empty = []
 foldr :: (a -> b -> b) -> b -> [a] -> b
 foldr f acc [] = acc
 foldr f acc (x:xs) = f x (foldr f acc xs)
+
+{-@ reflect foldl @-}
+foldl :: (b -> a -> b) -> b -> [a] -> b
+foldl f acc [] = acc
+foldl f acc (x:xs) = (foldl f (f acc x) xs)
+
+{-@ reflect foldl' @-}
+foldl' :: (b -> a -> b) -> b -> [a] -> b
+foldl' f acc [] = acc
+foldl' f acc (x:xs) = (foldl' f (f acc x) xs)
