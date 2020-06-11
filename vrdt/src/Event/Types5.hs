@@ -36,6 +36,15 @@ type ClientId = Integer
 
 type LWWU a = LWW UTCTimestamp a
 
+{-@ data Event = Event {
+    eventTitle :: LWWU Text
+  , eventDescription :: LWWU Text
+  , eventStartTime :: LWWU UTCTime
+  , eventEndTime :: LWWU UTCTime
+  , eventLocation :: LWWU Text
+  , eventRSVPs :: MultiSet Text
+} @-}
+
 data Event = Event {
     eventTitle :: LWWU Text
   , eventDescription :: LWWU Text
@@ -114,8 +123,8 @@ applyEvent :: Event -> EventOp -> Event
 applyEvent v_adIk@(Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs) (EventDescriptionOp op_adIl)
     = Event _eventTitle (apply _eventDescription op_adIl) _eventStartTime _eventEndTime _eventLocation _eventRSVPs
 
-applyEvent v_adIm@(Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs) (EventEndTimeOp op_adIn)
-    = Event _eventTitle _eventDescription _eventStartTime (apply _eventEndTime op_adIn) _eventLocation _eventRSVPs 
+applyEvent v_adIm (EventEndTimeOp op_adIn)
+    =  v_adIm {eventEndTime = (apply (eventEndTime v_adIm) op_adIn) }
 applyEvent v_adIo (EventLocationOp op_adIp)
     = v_adIo
         {eventLocation = (apply (eventLocation v_adIo)) op_adIp}
@@ -131,11 +140,11 @@ applyEvent v_adIu (EventTitleOp op_adIv)
         {eventTitle = (apply (eventTitle v_adIu)) op_adIv}
 {-@ lawCommutativityEvent :: x:Event -> op1:EventOp -> op2:EventOp -> {(compatibleEventState x op1 && compatibleEventState x op2 && compatibleEvent op1 op2) => (applyEvent (applyEvent x op1) op2 = applyEvent (applyEvent x op2) op1 && compatibleEventState (applyEvent x op1) op2)} @-}
 lawCommutativityEvent :: Event -> EventOp -> EventOp -> ()
-lawCommutativityEvent
-    v_adII@(Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs)
-    (EventDescriptionOp op1_adIJ)
-    (EventDescriptionOp op2_adIK)
-    =   ()
+-- lawCommutativityEvent
+--     v_adII
+--     (EventDescriptionOp op1_adIJ)
+--     (EventDescriptionOp op2_adIK)
+--     =   ()
     -- &&& (  applyEvent (apply v_adII (EventDescriptionOp op1_adIJ)) (EventDescriptionOp op2_adIK)
     -- ===  apply (apply (Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs) (EventDescriptionOp op1_adIJ)) (EventDescriptionOp op2_adIK)
     -- ===  apply (v_adII{eventDescription = apply (eventDescription v_adII) op1_adIJ}) (EventDescriptionOp op2_adIK)
@@ -148,10 +157,11 @@ lawCommutativityEvent
     --    ()
 
 lawCommutativityEvent
-    v_adIL@(Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs)
+    v_adIL-- @(Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs)
     (EventEndTimeOp op1_adIM)
     (EventEndTimeOp op2_adIN)
-    = ()
+    = -- lawCommutativity _eventEndTime op1_adIM op2_adIN
+      lawCommutativity (eventEndTime v_adIL) op1_adIM op2_adIN
 -- lawCommutativityEvent
 --     v_adIO
 --     (EventLocationOp op1_adIP)
