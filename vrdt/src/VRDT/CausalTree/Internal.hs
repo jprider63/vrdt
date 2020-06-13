@@ -21,6 +21,7 @@ import qualified Liquid.Data.List as List
 import           Liquid.Data.Maybe
 import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
+import           Liquid.Data.Map.Props
 import           Prelude hiding (Maybe(..), concat)
 #endif
 import           Data.Maybe (mapMaybe)
@@ -262,59 +263,62 @@ lemmaInsertInWeaveNothingEq :: Ord id => CausalTreeWeave id a -> id ->
   CausalTreeAtom id a -> CausalTreeAtom id a -> ()
 lemmaInsertInWeaveNothingEq _ _ _ _ = ()
 
+{-@ lemmaInsertInWeaveJustEq :: Ord id => w:CausalTreeWeave id a -> pid:id -> wop1 : CausalTreeWeave id a ->
+  wop2 : CausalTreeWeave id a -> 
+  {op1:CausalTreeAtom id a | insertInWeave w pid op1 == Just wop1} -> {op2:CausalTreeAtom id a | insertInWeave w pid op2 == Just wop2} ->
+  {insertInWeave wop1 pid op2 == insertInWeave wop2 pid op1} @-}
+lemmaInsertInWeaveJustEq :: Ord id
+  => CausalTreeWeave id a
+  -> id
+  -> CausalTreeWeave id a ->  CausalTreeWeave id a
+  -> CausalTreeAtom id a
+  -> CausalTreeAtom id a -> ()
+lemmaInsertInWeaveJustEq _ _ _ _ _ _ = ()
+
 {-@ lawCommutativityEq :: Ord id => x : CausalTree id a -> op1 : CausalTreeOp id a -> {op2 : CausalTreeOp id a | causalTreeOpParent op1 == causalTreeOpParent op2 && (compatible op1 op2 && compatibleState x op1 && compatibleState x op2)} -> {apply (apply x op1) op2 == apply (apply x op2) op1} @-}
 lawCommutativityEq :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
 lawCommutativityEq x@(CausalTree (CausalTreeWeave ctAtom weaveChildren) pending) op1@(CausalTreeOp pid1 (CausalTreeAtom id1 l1)) op2@(CausalTreeOp pid2 (CausalTreeAtom id2 l2))
   -- id1 /= id2
   -- pid1 == pid2
-  | Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
-  =   lemmaInsertInWeaveNothingEq
-        (CausalTreeWeave ctAtom weaveChildren)
-        pid1
-        (CausalTreeAtom id1 l1)
-        (CausalTreeAtom id2 l2)
-  &&& lemmaInsertPendingTwice pid1 (CausalTreeAtom id1 l1) (CausalTreeAtom id2 l2) pending
-  &&& (apply (apply x op1) op2
-  ==. apply (CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid1 (CausalTreeAtom id1 l1) pending)) op2
-  ==. CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid2 (CausalTreeAtom id2 l2) (insertPending pid1 (CausalTreeAtom id1 l1) pending))
-  ==. CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid1 (CausalTreeAtom id2 l2) (insertPending pid1 (CausalTreeAtom id1 l1) pending))
-  ==. apply (CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid2 (CausalTreeAtom id2 l2) pending)) op1
-  ==. apply (apply x op2) op1
+  -- | Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
+  -- =   lemmaInsertInWeaveNothingEq
+  --       (CausalTreeWeave ctAtom weaveChildren)
+  --       pid1
+  --       (CausalTreeAtom id1 l1)
+  --       (CausalTreeAtom id2 l2)
+  -- &&& lemmaInsertPendingTwice pid1 (CausalTreeAtom id1 l1) (CausalTreeAtom id2 l2) pending
+  -- &&& (apply (apply x op1) op2
+  -- ==. apply (CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid1 (CausalTreeAtom id1 l1) pending)) op2
+  -- ==. CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid2 (CausalTreeAtom id2 l2) (insertPending pid1 (CausalTreeAtom id1 l1) pending))
+  -- ==. CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid1 (CausalTreeAtom id2 l2) (insertPending pid1 (CausalTreeAtom id1 l1) pending))
+  -- ==. apply (CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid2 (CausalTreeAtom id2 l2) pending)) op1
+  -- ==. apply (apply x op2) op1
+  -- *** QED)
+  -- | Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
+  -- , Just _ <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
+  -- =   lemmaInsertInWeaveNothingEq
+  --       (CausalTreeWeave ctAtom weaveChildren)
+  --       pid2
+  --       (CausalTreeAtom id2 l2)
+  --       (CausalTreeAtom id1 l1)
+  | Just wop1 <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
+  , Just wop2 <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
+  = let id1pendingM = Map.lookup id1 pending
+        id2pendingM = Map.lookup id2 pending in
+    ( Map.updateLookupWithKey constConstNothing id1 pending
+  === (case id1pendingM of
+         Nothing -> (Nothing, pending)
+         Just x -> (constConstNothing id1 x === Nothing *** QED) `cast` (Just x, Map.delete id1 pending))
+  *** QED) &&&
+    ( apply x op1
+  === applyAtom x pid1 (CausalTreeAtom id1 l1)
+  === (case id1pendingM of
+         Nothing -> CausalTree wop1 pending
+         Just pops -> List.foldl' (applyAtomHelper id1) (CausalTree wop1 (Map.delete id1 pending)) pops)
   *** QED)
-  | Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
-  , Just _ <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
-  =   lemmaInsertInWeaveNothingEq
-        (CausalTreeWeave ctAtom weaveChildren)
-        pid2
-        (CausalTreeAtom id2 l2)
-        (CausalTreeAtom id1 l1)
-  | Just _ <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
-  , Just _ <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
+  | otherwise
   = undefined
 
-  -- = assume (insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id2 l2))
-  -- | causalTreeAtomId ctAtom == pid1
-  -- = undefined
-  -- -- (   insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
-  --   -- ==. Just (CausalTreeWeave ctAtom (insertAtom weaveChildren (CausalTreeAtom id1 l1)))
-  --   -- *** QED)
-  --   -- &&&
-  --   -- (   insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
-  --   -- ==. Just (CausalTreeWeave ctAtom (insertAtom weaveChildren (CausalTreeAtom id2 l2)))
-  --   -- *** QED)
-  --   -- &&&
-  --   -- (   insertInWeave (CausalTreeWeave ctAtom (insertAtom weaveChildren (CausalTreeAtom id1 l1))) pid2 (CausalTreeAtom id2 l2)
-  --   --     ?   lemmaInsertAtomTwice weaveChildren (CausalTreeAtom id1 l1) (CausalTreeAtom id2 l2)
-  --   -- ==. insertInWeave (CausalTreeWeave ctAtom (insertAtom weaveChildren (CausalTreeAtom id2 l2))) pid1 (CausalTreeAtom id1 l1)
-  --   -- *** QED)
-  --   -- &&&
-  --   -- (   apply x op1
-  --   -- === apply (CausalTree (CausalTreeWeave ctAtom weaveChildren) pending) (CausalTreeOp pid1 (CausalTreeAtom id1 l1))
-  --   -- === applyAtom (CausalTree (CausalTreeWeave ctAtom weaveChildren) pending) pid1 (CausalTreeAtom id1 l1)
-  --   -- -- === applyAtom ()
-  --   -- *** QED)
-  -- | causalTreeAtomId ctAtom /= pid1
-  -- = undefined
 
 
 {-@ lawCommutativityNEq :: Ord id => x : CausalTree id a -> op1 : CausalTreeOp id a -> {op2 : CausalTreeOp id a | causalTreeOpParent op1 /= causalTreeOpParent op2} -> {(compatible op1 op2 && compatibleState x op1 && compatibleState x op2) => apply (apply x op1) op2 == apply (apply x op2) op1} @-}
