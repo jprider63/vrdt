@@ -303,21 +303,52 @@ lawCommutativityEq x@(CausalTree (CausalTreeWeave ctAtom weaveChildren) pending)
   --       (CausalTreeAtom id1 l1)
   | Just wop1 <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
   , Just wop2 <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
-  = let id1pendingM = Map.lookup id1 pending
-        id2pendingM = Map.lookup id2 pending in
-    ( Map.updateLookupWithKey constConstNothing id1 pending
-  === (case id1pendingM of
+  =   (Map.updateLookupWithKey constConstNothing id1 pending
+      ? lemmaLookupDelete2 pending id1 id2
+      ? lemmaLookupDelete2 pending id2 id1
+  ==. (case id1pendingM of
          Nothing -> (Nothing, pending)
          Just x -> (constConstNothing id1 x === Nothing *** QED) `cast` (Just x, Map.delete id1 pending))
   *** QED) &&&
     ( apply x op1
-  === applyAtom x pid1 (CausalTreeAtom id1 l1)
-  === (case id1pendingM of
-         Nothing -> CausalTree wop1 pending
+  ==. applyAtom x pid1 (CausalTreeAtom id1 l1)
+  ==. (case id1pendingM of
+         Nothing -> CausalTree wop1 pending === List.foldl' (applyAtomHelper id1) (CausalTree wop1 pending) []
          Just pops -> List.foldl' (applyAtomHelper id1) (CausalTree wop1 (Map.delete id1 pending)) pops)
+  === List.foldl' (applyAtomHelper id1) (CausalTree wop1
+                                          id1pending)
+                                          id1pops
+  *** QED) &&&
+  ( Map.updateLookupWithKey constConstNothing id2 pending
+  ==. (case id2pendingM of
+         Nothing -> (Nothing, pending)
+         Just x -> (constConstNothing id2 x === Nothing *** QED) `cast` (Just x, Map.delete id2 pending))
+  *** QED) &&&
+    ( apply x op2
+  ==. applyAtom x pid2 (CausalTreeAtom id2 l2)
+  ==. (case id2pendingM of
+         Nothing -> CausalTree wop2 pending
+         Just pops -> List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete id2 pending)) pops)
+  === List.foldl' (applyAtomHelper id2) (CausalTree wop2
+                                          id2pending)
+                                          id2pops
   *** QED)
   | otherwise
   = undefined
+  where id1pendingM = Map.lookup id1 pending
+        id2pendingM = Map.lookup id2 pending
+        id1pending = case id1pendingM of
+                       Nothing -> pending
+                       Just pops -> (Map.delete id1 pending)
+        id1pops = case id1pendingM of
+                    Nothing -> []
+                    Just pops -> pops
+        id2pending = case id2pendingM of
+                       Nothing -> pending
+                       Just pops -> (Map.delete id2 pending)
+        id2pops = case id2pendingM of
+                    Nothing -> []
+                    Just pops -> pops
 
 
 
