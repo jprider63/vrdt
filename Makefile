@@ -1,6 +1,6 @@
 
 DIR=vrdt/src/
-LIQUID=liquid --typeclass --ghc-option=-XTypeFamilies --ghc-option=-XFlexibleContexts --ghc-option=-cpp -i $(DIR)
+LIQUID=liquid --typeclass --ghc-option=-XBangPatterns --ghc-option=-XTypeFamilies --ghc-option=-XFlexibleContexts --ghc-option=-cpp -i $(DIR)
 
 verify:
 	$(LIQUID) vrdt/src/Liquid/ProofCombinators.hs
