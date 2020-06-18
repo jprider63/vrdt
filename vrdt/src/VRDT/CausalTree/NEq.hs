@@ -15,6 +15,8 @@ import           Liquid.Data.Maybe
 import           Prelude                 hiding ( Maybe(..)
                                                 , empty
                                                 )
+import           Liquid.ProofCombinators
+import           ProofCombinators
 {-@ lemmaApplyAtomFoldNeq :: Ord id
  => ct:CausalTree id a
  -> opid1:id
@@ -34,6 +36,17 @@ lemmaApplyAtomFoldNeq = undefined
 
 {-@ lawCommutativityNEq :: Ord id => x : CausalTree id a -> op1 : CausalTreeOp id a -> {op2 : CausalTreeOp id a | causalTreeOpParent op1 /= causalTreeOpParent op2} -> {(compatible op1 op2 && compatibleState x op1 && compatibleState x op2) => apply (apply x op1) op2 == apply (apply x op2) op1} @-}
 lawCommutativityNEq :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
-lawCommutativityNEq ct@(CausalTree weave pending) op1@(CausalTreeOp pid1 (CausalTreeAtom id1 l1)) op2@(CausalTreeOp pid2 (CausalTreeAtom id2 l2))
-  | pid1 /= pid2
+lawCommutativityNEq 
+  x@(CausalTree (CausalTreeWeave ctAtom weaveChildren) pending)
+  op1@(CausalTreeOp pid1 (CausalTreeAtom id1 l1))
+  op2@(CausalTreeOp pid2 (CausalTreeAtom id2 l2))
+  -- case when two operations are unrelated
+  | pid1 /= id2 && pid2 /= id1 && pid1 /= id1 && pid2 /= id2
+  , Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
+  , Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
+  =    undefined -- lemmaInsertInWeaveNothingEq
+  | otherwise
   = undefined
+  where id2pendingM = Map.lookup id2 pending
+        id1pendingM = Map.lookup id1 pending
+
