@@ -43,7 +43,7 @@ lawCommutativityEq x@(CausalTree (CausalTreeWeave ctAtom weaveChildren) pending)
   *** QED)
   | Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
   , Just _ <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
-  =   lemmaInsertInWeaveNothingEq
+  =  lemmaInsertInWeaveNothingEq
         (CausalTreeWeave ctAtom weaveChildren)
         pid2
         (CausalTreeAtom id2 l2)
@@ -53,7 +53,7 @@ lawCommutativityEq x@(CausalTree (CausalTreeWeave ctAtom weaveChildren) pending)
   , Just wop2 <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
   , Nothing <- id1pendingM
   , Nothing <- id2pendingM
-  =   (Map.updateLookupWithKey constConstNothing id1 pending
+  =    (Map.updateLookupWithKey constConstNothing id1 pending
       ? lemmaLookupDelete2 pending id1 id2
       ? lemmaLookupDelete2 pending id2 id1
   ==. (Nothing, pending)
@@ -70,8 +70,8 @@ lawCommutativityEq x@(CausalTree (CausalTreeWeave ctAtom weaveChildren) pending)
   ==. applyAtom x pid2 (CausalTreeAtom id2 l2)
   ==. CausalTree wop2 pending
   ==. List.foldl' (applyAtomHelper id2) (CausalTree wop2
-                                          id2pending)
-                                          id2pops
+                                          pending)
+                                          []
   *** QED) &&&
     ( apply (apply x op1) op2
     ? lemmaInsertInWeaveJustEq
@@ -88,6 +88,8 @@ lawCommutativityEq x@(CausalTree (CausalTreeWeave ctAtom weaveChildren) pending)
   ==. CausalTree wop2op1 pending
   ==. applyAtom (CausalTree wop2 pending) pid1 (CausalTreeAtom id1 l1))
   *** QED)
+
+
   | Just wop1 <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
   , Just wop2 <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
   , Just pops1 <- id1pendingM
@@ -323,6 +325,5 @@ lawCommutativityEq x@(CausalTree (CausalTreeWeave ctAtom weaveChildren) pending)
     
   ==. apply (apply x op1) op2
   *** QED)
-  | otherwise = undefined
   where id2pendingM = Map.lookup id2 pending
         id1pendingM = Map.lookup id1 pending
