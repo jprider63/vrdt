@@ -160,7 +160,10 @@ compatibleState (CausalTree _ m) (CausalTreeOp pid (CausalTreeAtom id _))
 
 {-@ reflect compatible @-}
 compatible :: Eq id => CausalTreeOp id a -> CausalTreeOp id a -> Bool
-compatible (CausalTreeOp _ (CausalTreeAtom id _)) (CausalTreeOp _ (CausalTreeAtom id' _)) = id /= id'
+compatible (CausalTreeOp pid (CausalTreeAtom id _)) (CausalTreeOp pid' (CausalTreeAtom id' _)) =
+  id /= id'
+  -- maybe not necessary:
+  -- && not (pid == id' && pid' == id) 
 
 
 {-@ reflect apply @-}
