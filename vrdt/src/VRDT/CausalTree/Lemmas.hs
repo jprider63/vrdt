@@ -23,6 +23,19 @@ lemmaInsertAtomTwice
 lemmaInsertAtomTwice _ _ _ = undefined
 
 
+-- {-@ lemmaInsertInWeaveNothingNEq :: Ord id => w:CausalTreeWeave id a -> pid1:id -> {pid2:id | pid1 /= pid2} ->
+--   {op1:CausalTreeAtom id a | insertInWeave w pid op1 == Nothing} -> op2:CausalTreeAtom id a ->
+--   {insertInWeave w pid op2 == Nothing} @-}
+-- lemmaInsertInWeaveNothingNEq
+--   :: Ord id
+--   => CausalTreeWeave id a
+--   -> id
+--   -> CausalTreeAtom id a
+--   -> CausalTreeAtom id a
+--   -> ()
+-- lemmaInsertInWeaveNothingNEq _ _ _ _ = undefined
+
+
 
 {-@ lemmaInsertInWeaveNothingEq :: Ord id => w:CausalTreeWeave id a -> pid:id ->
   {op1:CausalTreeAtom id a | insertInWeave w pid op1 == Nothing} -> op2:CausalTreeAtom id a ->

@@ -41,10 +41,18 @@ lawCommutativityNEq
   op1@(CausalTreeOp pid1 (CausalTreeAtom id1 l1))
   op2@(CausalTreeOp pid2 (CausalTreeAtom id2 l2))
   -- case when two operations are unrelated
-  | pid1 /= id2 && pid2 /= id1 && pid1 /= id1 && pid2 /= id2
-  , Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
-  , Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
-  =    undefined -- lemmaInsertInWeaveNothingEq
+  -- | Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
+  -- , Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
+  -- = ( apply x op1
+  -- === CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid1 (CausalTreeAtom id1 l1) pending)
+  -- *** QED)
+  -- &&& ( apply x op2
+  -- === CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid2 (CausalTreeAtom id2 l2) pending)
+  -- *** QED)
+  -- &&& lemmaInsertPendingTwiceNEq pid1 pid2 (CausalTreeAtom id1 l1) (CausalTreeAtom id2 l2) pending
+  | Nothing  <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
+  , Just wop2 <-insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
+  = undefined
   | otherwise
   = undefined
   where id2pendingM = Map.lookup id2 pending

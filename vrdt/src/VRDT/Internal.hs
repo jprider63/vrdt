@@ -67,7 +67,10 @@ lemmaInsertPendingTwice k x y m
   ? Map.lemmaInsertTwice k (insertList x (insertList y zs)) (insertList y zs) m
 
 
-  
+{-@ lemmaInsertPendingTwiceNEq :: Ord a => k:k -> {k':k | k /= k'} -> x:a -> y:a -> xs:Map k [a] ->
+  {(insertPending k' y (insertPending k x xs) == insertPending k x (insertPending k' y xs))} @-}
+lemmaInsertPendingTwiceNEq :: (Ord k, Ord a) => k -> k -> a -> a -> Map k [a] -> ()
+lemmaInsertPendingTwiceNEq k k' x y m = undefined
 
   
 #endif
