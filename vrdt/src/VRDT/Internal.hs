@@ -72,6 +72,12 @@ lemmaInsertPendingTwice k x y m
 lemmaInsertPendingTwiceNEq :: (Ord k, Ord a) => k -> k -> a -> a -> Map k [a] -> ()
 lemmaInsertPendingTwiceNEq k k' x y m = undefined
 
+{-@ lemmaInsertPendingLookup :: Ord a => k:k -> {k':k | k /= k'} -> y:a -> xs:Map k [a] ->
+  {(Map.lookup k (insertPending k' y xs) == Map.lookup k xs)} @-}
+lemmaInsertPendingLookup :: (Ord k, Ord a) => k -> k -> a -> Map k [a] -> ()
+lemmaInsertPendingLookup k k' y m = undefined
+
+
   
 #endif
 
