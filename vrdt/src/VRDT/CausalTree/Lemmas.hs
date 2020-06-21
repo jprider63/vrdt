@@ -74,7 +74,7 @@ lemmaInsertInWeaveJustEq _ _ _ _ _ _ = undefined
   -> wop2 : CausalTreeWeave id a
   -> {op1:CausalTreeAtom id a | insertInWeave w pid1 op1 == Just wop1}
   -> {op2:CausalTreeAtom id a | (insertInWeave w pid2 op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2)}
-  -> {insertInWeave wop1 pid2 op2 == insertInWeave wop2 pid1 op1 && isJust (insertInWeave wop1 pid2 op2)} @-}
+  -> {insertInWeave wop1 pid2 op2 == insertInWeave wop2 pid1 op1 && isJust (insertInWeave wop1 pid2 op2) && (pid2 /= causalTreeAtomId op1) && (pid1 /= causalTreeAtomId op2)} @-}
 lemmaInsertInWeaveJustEq2
   :: Ord id
   => CausalTreeWeave id a
@@ -86,6 +86,7 @@ lemmaInsertInWeaveJustEq2
   -> CausalTreeAtom id a
   -> ()
 lemmaInsertInWeaveJustEq2 _ _ _ _ _ _ _ = undefined
+
 
 {-@ lemmaInsertInWeaveJustNEq :: Ord id
   => w:CausalTreeWeave id a

@@ -18,6 +18,7 @@ import           Prelude                 hiding ( Maybe(..)
                                                 )
 import           Liquid.ProofCombinators
 import           ProofCombinators
+
 {-@ lemmaApplyAtomFoldNeq :: Ord id
  => ct:CausalTree id a
  -> opid1:id
@@ -135,7 +136,6 @@ lawCommutativityNEq
   , Just wop2 <-insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
   -- , Just pops2 <- Map.lookup id2 pending
   -- TODO: this precondition is not needed; it can be derived
-  , pid1 /= id2 && pid2 /= id1
   = lemmaInsertInWeaveJustEq2
         (CausalTreeWeave ctAtom weaveChildren)
         pid2
@@ -218,7 +218,6 @@ lawCommutativityNEq
   ==. List.foldl' (applyAtomHelper id1) (List.foldl' (applyAtomHelper id2) (CausalTree wop2op1 id1id2pending) pops2) pops1
   *** QED )  &&&
   lemmaApplyAtomFoldNeq (CausalTree wop2op1 id1id2pending) id2 id1  pops2 pops1  
-
   | otherwise
   = undefined
   where id2pendingM = Map.lookup id2 pending
