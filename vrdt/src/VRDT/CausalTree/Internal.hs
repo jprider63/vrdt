@@ -3,7 +3,7 @@
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
 {-@ LIQUID "--noadt" @-}
-{-@ LIQUID "--no-termination" @-}
+--{-@ LIQUID "--no-termination" @-}
 module VRDT.CausalTree.Internal where
 
 #if NotLiquid
@@ -102,6 +102,7 @@ data CausalTreeWeave id a = CausalTreeWeave {
   }
   deriving (Show)
 
+{-@ lazy causalTreeWeaveLength  @-}
 {-@ measure causalTreeWeaveLength @-}
 {-@ causalTreeWeaveLength :: CausalTreeWeave id a -> {v:Int | v > 0} @-}
 causalTreeWeaveLength :: CausalTreeWeave id a -> Int
@@ -196,8 +197,10 @@ pendingAtomSize (CausalTree _ pending) id
 constConstNothing :: a -> b -> Maybe c
 constConstNothing _ _ = Nothing
 
+{-@ lazy applyAtomHelper @-}
 {-@ reflect applyAtomHelper @-}
-{-@ applyAtomHelper :: Ord id => id:id -> ct:CausalTree id a -> CausalTreeAtom id a -> CausalTree id a / [causalTreeSize ct, pendingSize (causalTreePending ct), 1] @-}
+--{-@ applyAtomHelper :: Ord id => sz:Nat -> id:id -> {ct:CausalTree id a | pendingSize (causalTreePending ct) < sz} -> CausalTreeAtom id a -> {v:CausalTree id a | pendingSize (causalTreePending v) < sz} / [pendingSize (causalTreePending ct)] @-}
+{-@ applyAtomHelper :: Ord id => id:id -> ct:CausalTree id a -> CausalTreeAtom id a -> v:CausalTree id a / [pendingSize (causalTreePending ct)] @-}
 applyAtomHelper :: Ord id => id -> CausalTree id a -> CausalTreeAtom id a -> CausalTree id a
 applyAtomHelper opId ct atom =
 -- #ifndef NotLiquid  
@@ -207,8 +210,9 @@ applyAtomHelper opId ct atom =
 
 
 -- termination metric: 
+{-@ lazy applyAtom @-}
 {-@ reflect applyAtom @-}
-{-@ applyAtom :: Ord id => ct:CausalTree id a -> id:id -> CausalTreeAtom id a -> CausalTree id a / [causalTreeSize ct, pendingSize (causalTreePending ct), 0] @-}
+{-@ applyAtom :: Ord id => ct:CausalTree id a -> id:id -> CausalTreeAtom id a -> CausalTree id a / [pendingSize (causalTreePending ct)] @-}
 applyAtom :: Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> CausalTree id a
 applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave parentId atom of
     Nothing -> 
@@ -221,7 +225,8 @@ applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave 
         let opId = causalTreeAtomId atom in
         let (pendingAtomsM, pending') = Map.updateLookupWithKey constConstNothing opId pending in
         let ct = CausalTree weave' pending' in
-        pendingAtomSize ct opId `cast`
+        -- assume (pendingSize pending' < pendingSize pending) `cast`
+        -- pendingAtomSize ct opId `cast`
         case pendingAtomsM of
           Nothing -> ct
           Just pendingAtoms -> List.foldl' (applyAtomHelper opId) ct pendingAtoms
