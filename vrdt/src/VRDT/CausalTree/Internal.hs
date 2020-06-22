@@ -103,13 +103,13 @@ data CausalTreeWeave id a = CausalTreeWeave {
   deriving (Show)
 
 {-@ lazy causalTreeWeaveLength  @-}
-{-@ measure causalTreeWeaveLength @-}
+{-@ reflect causalTreeWeaveLength @-}
 {-@ causalTreeWeaveLength :: CausalTreeWeave id a -> {v:Int | v > 0} @-}
 causalTreeWeaveLength :: CausalTreeWeave id a -> Int
 causalTreeWeaveLength (CausalTreeWeave id xs) = 1 + causalTreeWeaveLengthList xs
 
 {-@ causalTreeWeaveLengthList :: [CausalTreeWeave id a] -> Nat @-}
-{-@ measure causalTreeWeaveLengthList @-}
+{-@ reflect causalTreeWeaveLengthList @-}
 causalTreeWeaveLengthList :: [CausalTreeWeave id a] -> Int
 causalTreeWeaveLengthList [] = 0
 causalTreeWeaveLengthList (x:xs) = causalTreeWeaveLength x + causalTreeWeaveLengthList xs
@@ -240,7 +240,9 @@ insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
     | causalTreeAtomId currentAtom == parentId = 
         let children = insertAtom currentChildren atom in
         Just $ CausalTreeWeave currentAtom children
-    | otherwise = 
+    | otherwise =
+        causalTreeWeaveLength (CausalTreeWeave currentAtom currentChildren) `cast`
+        causalTreeWeaveLengthList currentChildren `cast`
         let childrenM = insertInWeaveChildren currentChildren parentId atom in
         -- CausalTreeWeave currentAtom <$> childrenM
         case childrenM of
@@ -251,7 +253,11 @@ insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
 {-@ insertInWeaveChildren :: Ord id => w:[CausalTreeWeave id a] ->  id -> CausalTreeAtom id a -> Maybe [CausalTreeWeave id a] / [causalTreeWeaveLengthList w, len w] @-}
 insertInWeaveChildren :: Ord id => [CausalTreeWeave id a] ->  id -> CausalTreeAtom id a -> Maybe [CausalTreeWeave id a]
 insertInWeaveChildren [] _ _ = Nothing
-insertInWeaveChildren (w:ws) parentId atom = case insertInWeave w parentId atom of
+insertInWeaveChildren (w:ws) parentId atom =
+  causalTreeWeaveLength w `cast`
+  causalTreeWeaveLengthList (w:ws) `cast`
+  causalTreeWeaveLengthList ws `cast`
+  case insertInWeave w parentId atom of
     Nothing ->
         -- (w:) <$> insertInWeaveChildren ws parentId atom
         case insertInWeaveChildren ws parentId atom of
