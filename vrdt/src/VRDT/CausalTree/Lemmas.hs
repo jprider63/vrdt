@@ -12,6 +12,7 @@ import           Liquid.Data.Map.Props
 import           VRDT.CausalTree.Internal
 import           Prelude                 hiding ( Maybe(..)
                                                 , empty
+                                                , (++)
                                                 )
 import qualified Liquid.Data.List              as List
 
@@ -109,22 +110,24 @@ lemmaInsertInWeaveJustNEq
 lemmaInsertInWeaveJustNEq _ _ _ _ _ = undefined
 
 -- -- 1 is dependent on 2
--- {-@ lemmaInsertInWeaveJustNEqRel :: Ord id
---   => w:CausalTreeWeave id a
---   -> pid1:id
---   -> {pid2:id | pid1 /= pid2}
---   -> wop2 : CausalTreeWeave id a
---   -> {op1:CausalTreeAtom id a | (insertInWeave w pid1 op1 == Nothing)}
---   -> {op2:CausalTreeAtom id a | (insertInWeave w pid2 op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2) && (pid1 == causalTreeAtomId op2)}
---   -> {insertInWeave wop2 pid1 op1 == Nothing}
---    @-}
--- lemmaInsertInWeaveJustNEqRel
---   :: Ord id
---   => CausalTreeWeave id a
---   -> id
---   -> id
---   -> CausalTreeWeave id a
---   -> CausalTreeAtom id a
---   -> CausalTreeAtom id a
---   -> ()
--- lemmaInsertInWeaveJustNEqRel _ _ _ _ _ = undefined
+{-@ lemmaInsertInWeaveJustNEqRel :: Ord id
+  => w:CausalTreeWeave id a
+  -> pid1:id
+  -> {pid2:id | pid1 /= pid2}
+  -> wop2 : CausalTreeWeave id a
+  -> {op1:CausalTreeAtom id a | (insertInWeave w pid1 op1 == Nothing)}
+  -> {op2:CausalTreeAtom id a | (insertInWeave w pid2 op2 == Just wop2) &&
+                                (causalTreeAtomId op1 /= causalTreeAtomId op2) &&
+                                (pid1 == causalTreeAtomId op2)}
+  -> {isJust (insertInWeave wop2 pid1 op1) && (pid2 /= causalTreeAtomId op1)}
+   @-}
+lemmaInsertInWeaveJustNEqRel
+  :: Ord id
+  => CausalTreeWeave id a
+  -> id
+  -> id
+  -> CausalTreeWeave id a
+  -> CausalTreeAtom id a
+  -> CausalTreeAtom id a
+  -> ()
+lemmaInsertInWeaveJustNEqRel _ _ _ _ _ = undefined

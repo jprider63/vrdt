@@ -7,12 +7,13 @@ module VRDT.Internal where
 import           Data.Map (Map)
 import qualified Data.Map as Map
 #else
-import           Liquid.Data.Maybe
+import           Liquid.Data.Maybe hiding (concat)
 import           Liquid.Data.Map (Map)
+import           Liquid.Data.List
 import           Liquid.ProofCombinators
 import qualified Liquid.Data.Map as Map
 import qualified Liquid.Data.Map.Props as Map
-import           Prelude hiding (Maybe(..))
+import           Prelude hiding (Maybe(..), concat)
 import qualified Data.Set as S
 #endif
 
@@ -32,6 +33,16 @@ insertList v [] = [v]
 insertList v (h:t)
   | v <= h    = v:h:t
   | otherwise = h:insertList v t
+
+{-@ insertListDestruct :: Ord a => x:a -> xs:[a] ->
+  (lts::[a], {gts:[a] | (concat lts gts == xs) && (concat lts (cons x gts) == insertList x xs)}) @-}
+insertListDestruct :: Ord a => a -> [a] -> ([a],[a])
+insertListDestruct v [] = ([],[])
+insertListDestruct v (h:t)
+  | v <= h = ([], h:t)
+  | otherwise =
+    let (lts,gts) = insertListDestruct v t in
+      (h:lts, gts)
 
 {-@ lemmaInsertListTwice :: Ord a => x:a -> y:a -> xs:[a] -> {insertList y (insertList x xs) == insertList x (insertList y xs)} @-}
 lemmaInsertListTwice :: Ord a => a -> a -> [a] -> ()
