@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-@ LIQUID "--reflection" @-}
-{-@ LIQUID "--ple" @-}
+{-@ LIQUID "--ple-local" @-}
 {-@ LIQUID "--noadt" @-}
 module VRDT.CausalTree.NEq where
 
@@ -20,6 +20,7 @@ import           Prelude                 hiding ( Maybe(..)
 import           Liquid.ProofCombinators
 import           ProofCombinators
 
+{-@ ple lemmaApplyAtomFoldNeq @-}
 {-@ lemmaApplyAtomFoldNeq :: Ord id
  => ct:CausalTree id a
  -> opid1:id
@@ -37,6 +38,86 @@ lemmaApplyAtomFoldNeq :: Ord id
  -> ()
 lemmaApplyAtomFoldNeq = undefined
 
+{-@ ple lawCommutativityNEqNN @-}
+{-@ lawCommutativityNEqNN :: Ord id =>
+     x : CausalTree id a
+  -> op1 : CausalTreeOp id a
+  -> {op2 : CausalTreeOp id a |
+        causalTreeOpParent op1 /= causalTreeOpParent op2 &&
+        (compatible op1 op2 && compatibleState x op1 && compatibleState x op2) &&
+        (Nothing == (insertInWeave (causalTreeWeave x) (causalTreeOpParent op1) (causalTreeOpAtom op1))) &&
+        (Nothing == (insertInWeave (causalTreeWeave x) (causalTreeOpParent op2) (causalTreeOpAtom op2)))}
+  -> {apply (apply x op1) op2 == apply (apply x op2) op1} @-}
+lawCommutativityNEqNN :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
+lawCommutativityNEqNN
+  x@(CausalTree ctw@(CausalTreeWeave ctAtom weaveChildren) pending)
+  op1@(CausalTreeOp pid1 (CausalTreeAtom id1 l1))
+  op2@(CausalTreeOp pid2 (CausalTreeAtom id2 l2))
+  -- case when two operations are unrelated
+  | Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
+  , Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
+  = ( apply x op1
+  ==. CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid1 (CausalTreeAtom id1 l1) pending)
+  *** QED)
+  &&& ( apply x op2
+  ==. CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid2 (CausalTreeAtom id2 l2) pending)
+  *** QED)
+  &&& lemmaInsertPendingTwiceNEq pid1 pid2 (CausalTreeAtom id1 l1) (CausalTreeAtom id2 l2) pending
+
+
+{-@ ple lawCommutativityNEqNJ @-}
+{-@ lawCommutativityNEqNJ :: Ord id =>
+     x : CausalTree id a
+  -> op1 : CausalTreeOp id a
+  -> {op2 : CausalTreeOp id a |
+        causalTreeOpParent op1 /= causalTreeOpParent op2 &&
+        (compatible op1 op2 && compatibleState x op1 && compatibleState x op2) &&
+        (Nothing == (insertInWeave (causalTreeWeave x) (causalTreeOpParent op1) (causalTreeOpAtom op1))) &&
+        (isJust (insertInWeave (causalTreeWeave x) (causalTreeOpParent op2) (causalTreeOpAtom op2))) &&
+        (causalTreeOpParent op1 /= causalTreeAtomId (causalTreeOpAtom op2))}
+  -> {apply (apply x op1) op2 == apply (apply x op2) op1} @-}
+lawCommutativityNEqNJ :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
+lawCommutativityNEqNJ
+  x@(CausalTree ctw@(CausalTreeWeave ctAtom weaveChildren) pending)
+  op1@(CausalTreeOp pid1 (CausalTreeAtom id1 l1))
+  op2@(CausalTreeOp pid2 (CausalTreeAtom id2 l2))
+  | Nothing  <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
+  , Just wop2 <-insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
+  , Nothing <- Map.lookup id2 pending
+  , pid1 /= id2
+  = ( apply x op1
+  ==. CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid1 (CausalTreeAtom id1 l1) pending)
+  *** QED) &&&
+  (   Map.updateLookupWithKey constConstNothing id2 pending
+  ==. (Nothing, pending)
+  *** QED) &&&
+  ( apply x op2
+  ==. applyAtom x pid2 (CausalTreeAtom id2 l2)
+  ==. CausalTree wop2 pending
+  *** QED) &&&
+  lemmaLookupDelete2 pending id1 id2 &&&
+  lemmaLookupDelete2 pending id2 id1 &&&
+  (   apply (apply x op1) op2
+  ==. apply (CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid1 (CausalTreeAtom id1 l1) pending)) op2
+      ? lemmaInsertPendingLookup id2 pid1 (CausalTreeAtom id1 l1) pending
+      ? (Map.lookup id2 (insertPending pid1 (CausalTreeAtom id1 l1) pending) ==. Nothing *** QED)
+  ==. applyAtom (CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid1 (CausalTreeAtom id1 l1) pending)) pid2 (CausalTreeAtom id2 l2)
+      ? (  Map.updateLookupWithKey constConstNothing id2
+           (insertPending pid1 (CausalTreeAtom id1 l1) pending)
+       ==. (Nothing, insertPending pid1 (CausalTreeAtom id1 l1) pending)
+       *** QED)
+  ==. CausalTree wop2 (insertPending pid1 (CausalTreeAtom id1 l1) pending)
+      ? lemmaInsertInWeaveJustNEq (CausalTreeWeave ctAtom weaveChildren) pid1 pid2 wop2 (CausalTreeAtom id1 l1) (CausalTreeAtom id2 l2)
+  ==. apply (CausalTree wop2 pending) op1
+  ==. apply (apply x op2) op1
+  *** QED)
+  | Nothing  <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
+  , Just wop2 <-insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
+  , Just pops2 <- Map.lookup id2 pending
+  , pid1 /= id2
+  = undefined
+
+
 {-@ lawCommutativityNEq :: Ord id => x : CausalTree id a -> op1 : CausalTreeOp id a -> {op2 : CausalTreeOp id a | causalTreeOpParent op1 /= causalTreeOpParent op2 && (compatible op1 op2 && compatibleState x op1 && compatibleState x op2)} -> {apply (apply x op1) op2 == apply (apply x op2) op1} @-}
 lawCommutativityNEq :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
 lawCommutativityNEq 
@@ -44,15 +125,9 @@ lawCommutativityNEq
   op1@(CausalTreeOp pid1 (CausalTreeAtom id1 l1))
   op2@(CausalTreeOp pid2 (CausalTreeAtom id2 l2))
   -- case when two operations are unrelated
-  -- | Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
-  -- , Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
-  -- = ( apply x op1
-  -- ==. CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid1 (CausalTreeAtom id1 l1) pending)
-  -- *** QED)
-  -- &&& ( apply x op2
-  -- ==. CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid2 (CausalTreeAtom id2 l2) pending)
-  -- *** QED)
-  -- &&& lemmaInsertPendingTwiceNEq pid1 pid2 (CausalTreeAtom id1 l1) (CausalTreeAtom id2 l2) pending
+  | Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
+  , Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
+  = lawCommutativityNEqNN x op1 op2
   -- | Nothing  <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
   -- , Just wop2 <-insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
   -- , Nothing <- Map.lookup id2 pending
@@ -219,105 +294,99 @@ lawCommutativityNEq
   -- ==. List.foldl' (applyAtomHelper id1) (List.foldl' (applyAtomHelper id2) (CausalTree wop2op1 id1id2pending) pops2) pops1
   -- *** QED )  &&&
   -- lemmaApplyAtomFoldNeq (CausalTree wop2op1 id1id2pending) id2 id1  pops2 pops1  
-  | Nothing  <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
-  , Just wop2 <-insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
-  , id2 == pid1
-  = -- lemmaInsertInWeaveJustNEqRel ctw pid1 pid2 wop2 (CausalTreeAtom id1 l1) (CausalTreeAtom id2 l2) &&&
-    assume (id1 /= pid2) &&&
-    -- let Just wop2op1 = insertInWeave wop2 pid2 (CausalTreeAtom id2 l2) in
-    -- assert (pid2 /= id1) &&&
-
+  -- | Nothing  <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
+  -- , Just wop2 <-insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
+  -- , id2 == pid1
+  -- = 
+  --   assume (id1 /= pid2) &&&
+  --   (constConstNothing id1 pops1 *** QED) &&&
+  -- -- id2
+  --   ( List.foldl' (applyAtomHelper id2) (CausalTree wop2 id2pending) []
+  -- ==. CausalTree wop2 id2pending
+  -- *** QED) &&&
   
-    (constConstNothing id1 pops1 *** QED) &&&
-
-
-  -- id2
-    ( List.foldl' (applyAtomHelper id2) (CausalTree wop2 id2pending) []
-  ==. CausalTree wop2 id2pending
-  *** QED) &&&
-  
-    (constConstNothing id2 pops2 *** QED) &&&
+  --   (constConstNothing id2 pops2 *** QED) &&&
     
-    ( Map.updateLookupWithKey constConstNothing id2 pending
-  ==. (id2pendingM, id2pending)
-  *** QED) &&&
+  --   ( Map.updateLookupWithKey constConstNothing id2 pending
+  -- ==. (id2pendingM, id2pending)
+  -- *** QED) &&&
   
 
-    ( apply x op2
-  ==. List.foldl' (applyAtomHelper id2) (CausalTree wop2 id2pending) pops2
-  *** QED) &&&
+  --   ( apply x op2
+  -- ==. List.foldl' (applyAtomHelper id2) (CausalTree wop2 id2pending) pops2
+  -- *** QED) &&&
 
 
-    ( Map.updateLookupWithKey constConstNothing id2 id1pending
-  ==. (id2pendingM, id1id2pending)
-  *** QED) &&&
+  --   ( Map.updateLookupWithKey constConstNothing id2 id1pending
+  -- ==. (id2pendingM, id1id2pending)
+  -- *** QED) &&&
 
-  -- id1
-    ( apply x op1
-  ==. CausalTree ctw (insertPending id2 (CausalTreeAtom id1 l1) pending)
-  ==. CausalTree ctw (Map.insert pid1 pid1pending' pending)
-  *** QED) &&&
+  -- -- id1
+  --   ( apply x op1
+  -- ==. CausalTree ctw (insertPending id2 (CausalTreeAtom id1 l1) pending)
+  -- ==. CausalTree ctw (Map.insert pid1 pid1pending' pending)
+  -- *** QED) &&&
 
-    (constConstNothing id2 pid1pending' *** QED) &&&
+  --   (constConstNothing id2 pid1pending' *** QED) &&&
 
-  -- id1 then id2
-  -- (      List.foldl' (applyAtomHelper pid1) (List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete id2 pending)) pops2) [CausalTreeAtom id1 l1]
-  --    ==. List.foldl' (applyAtomHelper pid1) (applyAtomHelper pid1 (List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete id2 pending)) pops2) (CausalTreeAtom id1 l1)) []
-  --    ==. applyAtomHelper pid1 (List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete id2 pending)) pops2) (CausalTreeAtom id1 l1)
-  --    ==.  apply (List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete id2 pending)) pops2) op1
-  --    *** QED) &&&
+  -- -- id1 then id2
+  -- -- (      List.foldl' (applyAtomHelper pid1) (List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete id2 pending)) pops2) [CausalTreeAtom id1 l1]
+  -- --    ==. List.foldl' (applyAtomHelper pid1) (applyAtomHelper pid1 (List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete id2 pending)) pops2) (CausalTreeAtom id1 l1)) []
+  -- --    ==. applyAtomHelper pid1 (List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete id2 pending)) pops2) (CausalTreeAtom id1 l1)
+  -- --    ==.  apply (List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete id2 pending)) pops2) op1
+  -- --    *** QED) &&&
 
-    ( apply (apply x op1) op2
-  ==. apply (CausalTree ctw (Map.insert pid1 pid1pending' pending)) op2
-      ? lemmaLookupInsert pending id2 pid1pending'
-      ? lemmaDeleteInsert id2 pid1pending' pending
-      ? (Map.lookup id2 (Map.insert pid1 pid1pending' pending) ==. Just pid1pending')
-  ==. List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 (Map.insert pid1 pid1pending' pending))) pid1pending'
-  ==. List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending)) pid1pending'
-  *** QED) &&&
+  --   ( apply (apply x op1) op2
+  -- ==. apply (CausalTree ctw (Map.insert pid1 pid1pending' pending)) op2
+  --     ? lemmaLookupInsert pending id2 pid1pending'
+  --     ? lemmaDeleteInsert id2 pid1pending' pending
+  --     ? (Map.lookup id2 (Map.insert pid1 pid1pending' pending) ==. Just pid1pending')
+  -- ==. List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 (Map.insert pid1 pid1pending' pending))) pid1pending'
+  -- ==. List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending)) pid1pending'
+  -- *** QED) &&&
 
-  -- id2 then id1
-    ( apply (apply x op2) op1
-  ==. apply (List.foldl' (applyAtomHelper id2) (CausalTree wop2 id2pending) pops2) op1
-      ? lemmaFoldlConcat (applyAtomHelper id2) (CausalTree wop2 id2pending) pops2  [CausalTreeAtom id1 l1]
-  ==. applyAtomHelper id2 (List.foldl' (applyAtomHelper id2) (CausalTree wop2 id2pending) pops2) (CausalTreeAtom id1 l1)
-  ==. List.foldl' (applyAtomHelper id2) (CausalTree wop2 id2pending)
-        (List.concat pops2 [CausalTreeAtom id1 l1])
-  *** QED) &&&
-    (List.foldl' (applyAtomHelper id2) (applyAtomHelper id2  (CausalTree wop2 (Map.delete pid1 pending)) (CausalTreeAtom id1 l1)) [] *** QED) &&&
+  -- -- id2 then id1
+  --   ( apply (apply x op2) op1
+  -- ==. apply (List.foldl' (applyAtomHelper id2) (CausalTree wop2 id2pending) pops2) op1
+  --     ? lemmaFoldlConcat (applyAtomHelper id2) (CausalTree wop2 id2pending) pops2  [CausalTreeAtom id1 l1]
+  -- ==. applyAtomHelper id2 (List.foldl' (applyAtomHelper id2) (CausalTree wop2 id2pending) pops2) (CausalTreeAtom id1 l1)
+  -- ==. List.foldl' (applyAtomHelper id2) (CausalTree wop2 id2pending)
+  --       (List.concat pops2 [CausalTreeAtom id1 l1])
+  -- *** QED) &&&
+  --   (List.foldl' (applyAtomHelper id2) (applyAtomHelper id2  (CausalTree wop2 (Map.delete pid1 pending)) (CausalTreeAtom id1 l1)) [] *** QED) &&&
 
-  (case Map.lookup id2 pending of
-    Nothing -> ()
-    Just _ ->  let (lts, gts) = insertListDestruct (CausalTreeAtom id1 l1) pops2 in
-               List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending)) (List.concat lts (CausalTreeAtom id1 l1:gts))
-               ? lemmaFoldlConcat (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending))
-                   lts (List.concat [CausalTreeAtom id1 l1] gts)
-               ? lemmaFoldlConcat (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending)) lts [CausalTreeAtom id1 l1]
-           ==. List.foldl' (applyAtomHelper id2)
-                 (List.foldl' (applyAtomHelper id2)
-                   (List.foldl' (applyAtomHelper id2)
-                     (CausalTree wop2 (Map.delete pid1 pending)) lts) [CausalTreeAtom id1 l1])
-                 gts
-              -- ? eq lemma
-           ==! List.foldl' (applyAtomHelper id2)
-                 (List.foldl' (applyAtomHelper id2)
-                   (List.foldl' (applyAtomHelper id2)
-                     (CausalTree wop2 (Map.delete pid1 pending)) lts) gts)
-                 [CausalTreeAtom id1 l1]
-              -- ? fold lemma again, apply twice
-               ? lemmaFoldlConcat (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending)) lts gts
-           === List.foldl' (applyAtomHelper id2)
-                 (List.foldl' (applyAtomHelper id2)
-                   (CausalTree wop2 (Map.delete pid1 pending)) (List.concat lts gts))
-                 [CausalTreeAtom id1 l1]
-           === List.foldl' (applyAtomHelper id2)
-                 (List.foldl' (applyAtomHelper id2)
-                   (CausalTree wop2 (Map.delete pid1 pending)) pops2)
-                 [CausalTreeAtom id1 l1]
-           *** QED
-   -- lemma: foldl' and ++
-  ) &&&
-  ()
+  -- (case Map.lookup id2 pending of
+  --   Nothing -> ()
+  --   Just _ ->  let (lts, gts) = insertListDestruct (CausalTreeAtom id1 l1) pops2 in
+  --              List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending)) (List.concat lts (CausalTreeAtom id1 l1:gts))
+  --              ? lemmaFoldlConcat (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending))
+  --                  lts (List.concat [CausalTreeAtom id1 l1] gts)
+  --              ? lemmaFoldlConcat (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending)) lts [CausalTreeAtom id1 l1]
+  --          ==. List.foldl' (applyAtomHelper id2)
+  --                (List.foldl' (applyAtomHelper id2)
+  --                  (List.foldl' (applyAtomHelper id2)
+  --                    (CausalTree wop2 (Map.delete pid1 pending)) lts) [CausalTreeAtom id1 l1])
+  --                gts
+  --             -- ? eq lemma
+  --          ==! List.foldl' (applyAtomHelper id2)
+  --                (List.foldl' (applyAtomHelper id2)
+  --                  (List.foldl' (applyAtomHelper id2)
+  --                    (CausalTree wop2 (Map.delete pid1 pending)) lts) gts)
+  --                [CausalTreeAtom id1 l1]
+  --             -- ? fold lemma again, apply twice
+  --              ? lemmaFoldlConcat (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending)) lts gts
+  --          === List.foldl' (applyAtomHelper id2)
+  --                (List.foldl' (applyAtomHelper id2)
+  --                  (CausalTree wop2 (Map.delete pid1 pending)) (List.concat lts gts))
+  --                [CausalTreeAtom id1 l1]
+  --          === List.foldl' (applyAtomHelper id2)
+  --                (List.foldl' (applyAtomHelper id2)
+  --                  (CausalTree wop2 (Map.delete pid1 pending)) pops2)
+  --                [CausalTreeAtom id1 l1]
+  --          *** QED
+  --  -- lemma: foldl' and ++
+  -- ) &&&
+  -- ()
   
   | otherwise
   = undefined
