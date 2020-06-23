@@ -289,21 +289,11 @@ lawCommutativityNEq
   (case Map.lookup id2 pending of
     Nothing -> ()
     Just _ ->  let (lts, gts) = insertListDestruct (CausalTreeAtom id1 l1) pops2 in
-               apply (apply x op1) op2
-           === List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending)) pid1pending'
-           === List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending)) (insertList (CausalTreeAtom id1 l1) pops2)
-           === List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending)) (List.concat lts (CausalTreeAtom id1 l1:gts))
-           === List.foldl' (applyAtomHelper id2)
-                 (CausalTree wop2 (Map.delete pid1 pending))
-                 (List.concat lts (List.concat [CausalTreeAtom id1 l1] gts))
+               List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending)) (List.concat lts (CausalTreeAtom id1 l1:gts))
                ? lemmaFoldlConcat (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending))
-                 lts (List.concat [CausalTreeAtom id1 l1] gts)
-           === List.foldl' (applyAtomHelper id2)
-                 (List.foldl' (applyAtomHelper id2)
-                   (CausalTree wop2 (Map.delete pid1 pending)) lts)
-                 (List.concat [CausalTreeAtom id1 l1] gts)
+                   lts (List.concat [CausalTreeAtom id1 l1] gts)
                ? lemmaFoldlConcat (applyAtomHelper id2) (CausalTree wop2 (Map.delete pid1 pending)) lts [CausalTreeAtom id1 l1]
-           === List.foldl' (applyAtomHelper id2)
+           ==. List.foldl' (applyAtomHelper id2)
                  (List.foldl' (applyAtomHelper id2)
                    (List.foldl' (applyAtomHelper id2)
                      (CausalTree wop2 (Map.delete pid1 pending)) lts) [CausalTreeAtom id1 l1])
@@ -324,10 +314,6 @@ lawCommutativityNEq
                  (List.foldl' (applyAtomHelper id2)
                    (CausalTree wop2 (Map.delete pid1 pending)) pops2)
                  [CausalTreeAtom id1 l1]
-           === List.foldl' (applyAtomHelper id2)
-                 (CausalTree wop2 (Map.delete pid1 pending))
-                 (List.concat pops2 [CausalTreeAtom id1 l1])
-           === apply (apply x op2) op1
            *** QED
    -- lemma: foldl' and ++
   ) &&&
