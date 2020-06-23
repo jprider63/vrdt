@@ -15,7 +15,7 @@ import           Prelude                 hiding ( Maybe(..)
                                                 , (++)
                                                 )
 import qualified Liquid.Data.List              as List
-
+import Liquid.ProofCombinators
 
 {-@ lemmaInsertAtomTwice :: cts:[CausalTreeWeave id a] -> a1:CausalTreeAtom id a -> {a2:CausalTreeAtom id a | causalTreeAtomId a2 /= causalTreeAtomId a1} ->
    {insertAtom (insertAtom cts a1) a2 == insertAtom (insertAtom cts a2) a1} @-}
@@ -131,3 +131,38 @@ lemmaInsertInWeaveJustNEqRel
   -> CausalTreeAtom id a
   -> ()
 lemmaInsertInWeaveJustNEqRel _ _ _ _ _ = undefined
+
+{-@ lemmaDeleteShrink :: Ord id
+  => x:Map.Map id [a]
+  -> k:id
+  -> {pops:[a] | Just pops == Map.lookup k x && List.length pops /= 0}
+  -> {pendingSize (Map.delete k x) < pendingSize x }  @-}
+lemmaDeleteShrink :: Ord id
+  => Map.Map id [a]
+  -> id
+  -> [a]
+  -> ()
+lemmaDeleteShrink Map.Tip k pops = Just pops *** QED
+lemmaDeleteShrink (Map.Map k' v t) k pops
+  | k == k'
+  = ( Map.delete k (Map.Map k' v t)
+  === t
+  *** QED) &&&
+  ( Just v === Just pops *** QED) &&& 
+  ( pendingSize (Map.Map k' v t)
+  === List.length v + pendingSize t
+  === List.length pops + pendingSize t
+  *** QED) &&&
+  ( pendingSize (Map.delete k (Map.Map k' v t))
+  === pendingSize t
+  *** QED) &&&
+  ()
+  | k > k'
+  = lemmaDeleteShrink t k pops
+  | otherwise
+  = assert (k < k')
+  ? Just pops
+  ? Map.Map k' v t
+  ? Map.delete k (Map.Map k' v t)
+  ? Map.lookup k t
+  ? Map.keyLeqLemma k k' v t
