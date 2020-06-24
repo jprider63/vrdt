@@ -25,10 +25,12 @@ import           ProofCombinators
  => ct:CausalTree id a
  -> opid1:id
  -> {opid2:id | opid1 /= opid2}
- -> atoms1:[CausalTreeAtom id a]
- -> atoms2:[CausalTreeAtom id a]
- -> {  (List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) ct atoms1) atoms2)
-    == (List.foldl' (applyAtomHelper opid1) (List.foldl' (applyAtomHelper opid2) ct atoms2) atoms1)} @-}
+ -> atoms1:[{a:CausalTreeAtom id a | isJust (insertInWeave (causalTreeWeave ct) opid1 a)}]
+ -> atoms2:[{a:CausalTreeAtom id a | isJust (insertInWeave (causalTreeWeave ct) opid2 a)}]
+ -> {  ((List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) ct atoms1) atoms2)
+    == (List.foldl' (applyAtomHelper opid1) (List.foldl' (applyAtomHelper opid2) ct atoms2) atoms1))
+    && ((causalTreePendingSize ct)
+    ==  (causalTreePendingSize (List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) ct atoms1) atoms2))) } / [causalTreePendingSize ct, 1, List.length atoms1 + List.length atoms2]  @-}
 lemmaApplyAtomFoldNeq :: Ord id
  => CausalTree id a
  -> id
@@ -36,7 +38,15 @@ lemmaApplyAtomFoldNeq :: Ord id
  -> [CausalTreeAtom id a]
  -> [CausalTreeAtom id a]
  -> ()
-lemmaApplyAtomFoldNeq = undefined
+lemmaApplyAtomFoldNeq _ _ _ [] [] =
+  -- prove the lemma that isJust insertInWeave => pending queue not changed
+  ()
+lemmaApplyAtomFoldNeq ct opid1 opid2 [] (atom2:atoms2) =
+  -- prove the lemma that isJust insertInWeave => pending queue not changed
+  lemmaApplyAtomFoldNeq ct opid1 opid2 [] atoms2
+  -- recursive call is not sufficient
+  -- we want another lemma which shows that inserting makes it more likely to yield Just
+lemmaApplyAtomFoldNeq ct opid1 opid2 (atom1:atoms1) atoms2 = ()
 
 {-@ ple lawCommutativityNEqNN @-}
 {-@ lawCommutativityNEqNN :: Ord id =>
@@ -75,7 +85,8 @@ lawCommutativityNEqNN
         (Nothing == (insertInWeave (causalTreeWeave x) (causalTreeOpParent op1) (causalTreeOpAtom op1))) &&
         (isJust (insertInWeave (causalTreeWeave x) (causalTreeOpParent op2) (causalTreeOpAtom op2))) &&
         (causalTreeOpParent op1 /= causalTreeAtomId (causalTreeOpAtom op2))}
-  -> {apply (apply x op1) op2 == apply (apply x op2) op1} @-}
+  -> {apply (apply x op1) op2 == apply (apply x op2) op1}
+  / [causalTreePendingSize x] @-}
 lawCommutativityNEqNJ :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
 lawCommutativityNEqNJ
   x@(CausalTree ctw@(CausalTreeWeave ctAtom weaveChildren) pending)
@@ -263,29 +274,19 @@ lawCommutativityNEqJJ
     ? lemmaApplyAtomFoldNeq (CausalTree wop1 id1pending) pid2 id1 [CausalTreeAtom id2 l2] pops1
   ==. List.foldl' (applyAtomHelper id1) (List.foldl' (applyAtomHelper pid2) (CausalTree wop1 id1pending) [CausalTreeAtom id2 l2]) pops1
   ==. List.foldl' (applyAtomHelper id1) (applyAtom (CausalTree wop1 id1pending) pid2 (CausalTreeAtom id2 l2)) pops1
-  ==. List.foldl' (applyAtomHelper id1) (List.foldl' (applyAtomHelper id2) (CausalTree wop1op2 id2id1pending) pops2) pops1
   ==. List.foldl' (applyAtomHelper id1) (List.foldl' (applyAtomHelper id2) (CausalTree wop2op1 id1id2pending) pops2) pops1
   *** QED )  &&&
   lemmaApplyAtomFoldNeq (CausalTree wop2op1 id1id2pending) id2 id1  pops2 pops1  
   where id2pendingM = Map.lookup id2 pending
         id1pendingM = Map.lookup id1 pending
-        
-        pid1pending'= (case Map.lookup pid1 pending of
-                        Nothing -> [CausalTreeAtom id1 l1]
-                        -- the naming pops1 here is misleading
-                        Just pops1 -> insertList (CausalTreeAtom id1 l1) pops1)
-
-        pid2pending'= case Map.lookup pid2 pending of
-                        Nothing -> [CausalTreeAtom id2 l2]
-                        Just pops2 -> insertList (CausalTreeAtom id2 l2) pops2
 
         -- pending ops for id1 after applying op2
 
-        id1pending = (case Map.lookup id1 pending of
+        id1pending = (case id1pendingM of
                        Nothing -> pending ==. Map.delete id1 pending
                        Just _ -> Map.delete id1 pending)
                      ==. Map.delete id1 pending
-        id2pending = (case Map.lookup id2 pending of
+        id2pending = (case id2pendingM of
                         Nothing -> pending ==. Map.delete id2 pending
                         Just _ -> Map.delete id2 pending)
                      ==. Map.delete id2 pending
@@ -316,9 +317,6 @@ lawCommutativityNEqJJ
                              Nothing -> id2pending ==. Map.delete id1 id2pending
                              Just _ -> Map.delete id1 id2pending)
                       ==. Map.delete id2 (Map.delete id1 pending)
-        id2id1pending = (case Map.lookup id1 id2pending of
-                             Nothing -> id2pending ==. Map.delete id1 id2pending
-                             Just _ -> Map.delete id1 id2pending)
 
 
 

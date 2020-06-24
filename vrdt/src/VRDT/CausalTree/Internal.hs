@@ -21,7 +21,8 @@ import           Liquid.Data.Maybe
 import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
 import           Liquid.Data.Map.Props
-import           Prelude hiding (Maybe(..))
+import qualified Data.Set as S
+import           Prelude hiding (Maybe(..), isNothing, isJust)
 #endif
 import           Data.Maybe (mapMaybe)
 import           Data.Time.Clock (UTCTime)
@@ -147,15 +148,47 @@ compatibleList :: Eq id => id -> [CausalTreeAtom id a] -> Bool
 compatibleList opid [] = True
 compatibleList opid (CausalTreeAtom opid' _:xs) = opid /= opid' && compatibleList opid xs
 
+{-@ reflect causalTreeIds @-}
+causalTreeIds :: Ord id => CausalTree id a -> S.Set id
+causalTreeIds (CausalTree weave pending) = weaveIds weave `S.union` pendingIds pending
+
+
+{-@ reflect pendingListIds @-}
+pendingListIds :: Ord id => [CausalTreeAtom id a] -> S.Set id
+pendingListIds [] = S.empty
+pendingListIds (x:xs) = S.singleton (causalTreeAtomId x) `S.union` pendingListIds xs
+
+{-@ reflect pendingIds @-}
+pendingIds :: Ord id => Map.Map id [CausalTreeAtom id a] -> S.Set id
+pendingIds Map.Tip = S.empty
+pendingIds (Map.Map k v t) = pendingListIds v `S.union` pendingIds t
+
+{-@ reflect weaveIds  @-}
+{-@ weaveIds :: Ord id => w:CausalTreeWeave id a -> S.Set id
+   / [causalTreeWeaveLength w, 0] @-}
+weaveIds :: Ord id => CausalTreeWeave id a -> S.Set id
+weaveIds w@(CausalTreeWeave atom children) =
+  causalTreeWeaveLength w `cast`
+  causalTreeWeaveLengthList children `cast`
+  S.singleton (causalTreeAtomId atom) `S.union` weaveListIds children
+
+{-@ reflect weaveListIds  @-}
+{-@ weaveListIds :: Ord id => w:[CausalTreeWeave id a] -> S.Set id
+   / [causalTreeWeaveLengthList w, List.length w] @-}
+weaveListIds :: Ord id => [CausalTreeWeave id a] -> S.Set id
+weaveListIds [] = S.empty
+weaveListIds (x:xs) =
+  causalTreeWeaveLength x `cast`
+  causalTreeWeaveLengthList xs `cast`
+  weaveIds x `S.union` weaveListIds xs
+
+
+
 {-@ reflect compatibleState @-}
 --{-@ compatibleState :: CausalTree id a -> CausalTreeOp id a -> Bool @-}
 compatibleState :: Ord id => CausalTree id a -> CausalTreeOp id a -> Bool
-compatibleState (CausalTree _ m) (CausalTreeOp pid (CausalTreeAtom id _))
-  | Nothing <- pendingM
-  = pid /= id
-  | Just pending <- pendingM
-  = pid /= id && compatibleList id pending
-  where pendingM = Map.lookup id m
+compatibleState ct (CausalTreeOp pid (CausalTreeAtom id _)) =
+  pid /= id && id `S.member` causalTreeIds ct
   
 
 
@@ -176,9 +209,14 @@ apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
 causalTreeSize :: Ord id => CausalTree id a -> Int
 causalTreeSize (CausalTree weave pending) = causalTreeWeaveLength weave + pendingSize pending 
 
+{-@ reflect causalTreePendingSize @-}
+{-@ causalTreePendingSize :: Ord id => CausalTree id a -> Nat @-}
+causalTreePendingSize :: Ord id => CausalTree id a -> Int
+causalTreePendingSize (CausalTree weave pending) = pendingSize pending 
+
 {-@ reflect pendingSize @-}
-{-@ pendingSize :: Ord id => Map id [CausalTreeAtom id a]-> Nat @-}
-pendingSize :: Ord id => Map id [CausalTreeAtom id a] -> Int
+{-@ pendingSize :: Ord id => Map id [a]-> Nat @-}
+pendingSize :: Ord id => Map id [a] -> Int
 -- TODO:
 pendingSize Map.Tip = 0
 pendingSize (Map.Map _ v t) = List.length v + pendingSize t
@@ -197,10 +235,15 @@ pendingAtomSize (CausalTree _ pending) id
 constConstNothing :: a -> b -> Maybe c
 constConstNothing _ _ = Nothing
 
+-- causalTreeIds vv == S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom))
 {-@ lazy applyAtomHelper @-}
 {-@ reflect applyAtomHelper @-}
---{-@ applyAtomHelper :: Ord id => sz:Nat -> id:id -> {ct:CausalTree id a | pendingSize (causalTreePending ct) < sz} -> CausalTreeAtom id a -> {v:CausalTree id a | pendingSize (causalTreePending v) < sz} / [pendingSize (causalTreePending ct)] @-}
-{-@ applyAtomHelper :: Ord id => id:id -> ct:CausalTree id a -> CausalTreeAtom id a -> v:CausalTree id a / [pendingSize (causalTreePending ct)] @-}
+{-@ applyAtomHelper :: Ord id
+  => id:id
+  -> ct:CausalTree id a
+  -> atom:CausalTreeAtom id a
+  -> {vv:CausalTree id a | True}
+/ [pendingSize (causalTreePending ct)] @-}
 applyAtomHelper :: Ord id => id -> CausalTree id a -> CausalTreeAtom id a -> CausalTree id a
 applyAtomHelper opId ct atom =
 -- #ifndef NotLiquid  
@@ -208,11 +251,13 @@ applyAtomHelper opId ct atom =
 -- #endif
   applyAtom ct opId atom
 
-
+-- causalTreeIds vv == S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom))
 -- termination metric: 
 {-@ lazy applyAtom @-}
 {-@ reflect applyAtom @-}
-{-@ applyAtom :: Ord id => ct:CausalTree id a -> id:id -> CausalTreeAtom id a -> CausalTree id a / [pendingSize (causalTreePending ct)] @-}
+{-@ applyAtom :: Ord id => ct:CausalTree id a -> id:id -> atom:CausalTreeAtom id a ->
+  {vv:CausalTree id a | True}
+/ [pendingSize (causalTreePending ct)] @-}
 applyAtom :: Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> CausalTree id a
 applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave parentId atom of
     Nothing -> 
@@ -233,7 +278,8 @@ applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave 
 
 
 {-@ reflect insertInWeave @-}
-{-@ insertInWeave :: Ord id => w:CausalTreeWeave id a -> id -> CausalTreeAtom id a -> Maybe (CausalTreeWeave id a) / [causalTreeWeaveLength w, 0]@-}
+{-@ insertInWeave :: Ord id => w:CausalTreeWeave id a -> id -> atom:CausalTreeAtom id a ->
+  Maybe ({vv:CausalTreeWeave id a| weaveIds vv == S.union (S.singleton (causalTreeAtomId atom)) (weaveIds w)}) / [causalTreeWeaveLength w, 0]@-}
 insertInWeave :: Ord id => CausalTreeWeave id a -> id -> CausalTreeAtom id a -> Maybe (CausalTreeWeave id a)
 insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
     -- Is the current atom the target parent?
@@ -250,7 +296,8 @@ insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
           Just children -> Just $ CausalTreeWeave currentAtom children
 
 {-@ reflect insertInWeaveChildren  @-}
-{-@ insertInWeaveChildren :: Ord id => w:[CausalTreeWeave id a] ->  id -> CausalTreeAtom id a -> Maybe [CausalTreeWeave id a] / [causalTreeWeaveLengthList w, len w] @-}
+{-@ insertInWeaveChildren :: Ord id => w:[CausalTreeWeave id a] ->  id -> atom:CausalTreeAtom id a -> Maybe {vv:[CausalTreeWeave id a] |
+            weaveListIds vv == S.union (S.singleton (causalTreeAtomId atom)) (weaveListIds w)} / [causalTreeWeaveLengthList w, len w] @-}
 insertInWeaveChildren :: Ord id => [CausalTreeWeave id a] ->  id -> CausalTreeAtom id a -> Maybe [CausalTreeWeave id a]
 insertInWeaveChildren [] _ _ = Nothing
 insertInWeaveChildren (w:ws) parentId atom =
@@ -271,6 +318,11 @@ insertInWeaveChildren (w:ws) parentId atom =
 
 
 {-@ reflect insertAtom @-}
+{-@ insertAtom :: Ord id
+  => ws:[CausalTreeWeave id a]
+  -> atom:CausalTreeAtom id a
+  -> {vv:[CausalTreeWeave id a] |
+      weaveListIds vv == S.union (S.singleton (causalTreeAtomId atom)) (weaveListIds ws) }@-}
 insertAtom :: Ord id => [CausalTreeWeave id a] -> CausalTreeAtom id a -> [CausalTreeWeave id a]
 insertAtom [] atom = [CausalTreeWeave atom []]
 insertAtom l@(w:ws) atom 

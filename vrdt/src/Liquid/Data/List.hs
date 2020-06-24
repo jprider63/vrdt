@@ -5,7 +5,7 @@
 
 module Liquid.Data.List where 
 
-import Prelude hiding (concat, reverse, length, foldr, foldl, foldl')
+import Prelude hiding (concat, reverse, length, foldr, foldl, foldl', (++))
 
 -- type List a = [a]
 
@@ -18,7 +18,7 @@ elem' x (h:t)
   | x == h    = True
   | otherwise = elem' x t
 
-{-@ length :: ls:[a] -> {v:Int | v = len ls} @-}
+{-@ length :: ls:[a] -> {v:Int | v = len ls && v >= 0} @-}
 {-@ measure length @-}
 length :: [a] -> Int
 length [] = 0
@@ -62,3 +62,10 @@ foldl f acc (x:xs) = (foldl f (f acc x) xs)
 foldl' :: (b -> a -> b) -> b -> [a] -> b
 foldl' f acc [] = acc
 foldl' f acc (x:xs) = (foldl' f (f acc x) xs)
+
+infixr 5 ++
+{-@ infixr 5 ++ @-}
+{-@ reflect ++ @-}
+(++) :: [a] -> [a] -> [a]
+[] ++ l = l
+(x:xs) ++ l = x : xs ++ l

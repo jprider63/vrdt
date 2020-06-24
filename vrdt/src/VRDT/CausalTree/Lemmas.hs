@@ -146,15 +146,15 @@ lemmaDeleteShrink Map.Tip k pops = Just pops *** QED
 lemmaDeleteShrink (Map.Map k' v t) k pops
   | k == k'
   = ( Map.delete k (Map.Map k' v t)
-  === t
+  ==. t
   *** QED) &&&
-  ( Just v === Just pops *** QED) &&& 
+  ( Just v ==. Just pops *** QED) &&& 
   ( pendingSize (Map.Map k' v t)
-  === List.length v + pendingSize t
-  === List.length pops + pendingSize t
+  ==. List.length v + pendingSize t
+  ==. List.length pops + pendingSize t
   *** QED) &&&
   ( pendingSize (Map.delete k (Map.Map k' v t))
-  === pendingSize t
+  ==. pendingSize t
   *** QED) &&&
   ()
   | k > k'
@@ -166,3 +166,5 @@ lemmaDeleteShrink (Map.Map k' v t) k pops
   ? Map.delete k (Map.Map k' v t)
   ? Map.lookup k t
   ? Map.keyLeqLemma k k' v t
+
+-- foldl 
