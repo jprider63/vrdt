@@ -174,18 +174,29 @@ lemmaInsertSubsetNothing _ _ _ = ()
   => pending:Map.Map id [CausalTreeAtom id a]
   -> k:id
   -> {atoms:[CausalTreeAtom id a] | Map.lookup k pending == Just atoms}
-  -> {newIds:S.Set id | S.isSubsetOf (pendingListIds (fromJust (Map.lookup k pending))) newIds}
-  -> {S.union (pendingIds (Map.delete k pending)) newIds == S.union (pendingIds pending) newIds }
+  -> {atomsNew:[CausalTreeAtom id a] | S.isSubsetOf (pendingListIds atoms) (pendingListIds atomsNew)}
+  -> {pendingIds (Map.insert k atomsNew pending) == S.union (pendingListIds atomsNew) (pendingIds pending)}
 @-}
 lemmaInsertSubsetJust :: Ord id
   => Map.Map id [CausalTreeAtom id a]
   -> id
   -> [CausalTreeAtom id a]
-  -> S.Set id
+  -> [CausalTreeAtom id a]
   -> ()
 lemmaInsertSubsetJust Map.Tip _ _ _ = ()
 lemmaInsertSubsetJust _ _ _ _ = ()
 
+{-@ lemmaLookupSubsetOf :: Ord id
+  => pending:Map.Map id [CausalTreeAtom id a]
+  -> k:id
+  -> {atoms:[CausalTreeAtom id a] | Map.lookup k pending == Just atoms}
+  -> {S.isSubsetOf (pendingListIds atoms) (pendingIds pending)} @-}
+lemmaLookupSubsetOf :: Ord id
+  => Map.Map id [CausalTreeAtom id a]
+  -> id
+  -> [CausalTreeAtom id a]
+  -> ()
+lemmaLookupSubsetOf _ _ _ = ()
 
 {-@ lemmaApplyAtomIds :: Ord id
   => ct:CausalTree id a
@@ -196,38 +207,48 @@ lemmaInsertSubsetJust _ _ _ _ = ()
 lemmaApplyAtomIds :: Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> ()
 lemmaApplyAtomIds ct@(CausalTree weave pending) parentId atom
   | Nothing <- insertInWeave weave parentId atom
-  = let pops = case Map.lookup parentId pending of
-                 Nothing -> [atom]
-                 Just xs -> insertList atom xs
-        popsOld = case Map.lookup parentId pending of
-                 Nothing -> []
-                 Just xs -> xs in
+  = undefined -- let pops = case Map.lookup parentId pending of
+    --              Nothing -> [atom]
+    --              Just xs -> insertList atom xs
+    --     popsOld = case Map.lookup parentId pending of
+    --              Nothing -> []
+    --              Just xs -> xs  in
+    --     -- pending' = case Map.lookup parentId pending of
+    --     --              Nothing -> pending
+    --     --              Just xs -> Map.delete parentId pending
+    --     --            === Map.delete parentId pending in
       
-    lemmaInsertListId atom popsOld &&&
+    -- lemmaInsertListId atom popsOld &&&
     
-    (constConstNothing parentId popsOld *** QED)  &&&
+    -- -- (constConstNothing parentId popsOld *** QED)  &&&
     
-    (   insertPending parentId atom pending
-    ==. Map.insert parentId pops pending
-    *** QED) &&&
+    -- (   insertPending parentId atom pending
+    -- ==. Map.insert parentId pops pending
+    -- *** QED) &&&
 
-    (   S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom))
-    ==. S.union (weaveIds weave) (S.union (pendingIds pending) (S.singleton (causalTreeAtomId atom)))
-    *** QED) &&&
+    -- (   S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom))
+    -- ==. S.union (weaveIds weave) (S.union (pendingIds pending) (S.singleton (causalTreeAtomId atom)))
+    -- *** QED) &&&
 
-    (applyAtom ct parentId atom *** QED) &&&
+    -- (   applyAtom ct parentId atom
+    -- ==. CausalTree weave (insertPending parentId atom pending)
+    -- *** QED) &&&
+
+    -- (applyAtom ct parentId atom *** QED) &&&
     
-    (   case Map.lookup parentId pending of
-          Nothing -> lemmaInsertSubsetNothing pending parentId pops &&&
-                     (   pendingListIds pops
-                     ==. pendingListIds [atom]
-                     ==. S.singleton (causalTreeAtomId atom)
-                     *** QED) &&&
-                     (   applyAtom ct parentId atom
-                     ==. CausalTree weave (insertPending parentId atom pending)
-                     *** QED)
+    -- (   case Map.lookup parentId pending of
+    --       Nothing ->  lemmaInsertSubsetNothing pending parentId pops &&&
+    --                  (   pendingListIds pops
+    --                  ==. pendingListIds [atom]
+    --                  ==. S.singleton (causalTreeAtomId atom)
+    --                  *** QED)
 
-          Just xs -> undefined)
+    --       Just xs -> ((   pendingListIds pops
+    --                  ==. pendingListIds (atom:popsOld)
+    --                  ==. S.union (S.singleton (causalTreeAtomId atom)) (pendingListIds popsOld)
+    --                  *** QED) &&&
+    --                    lemmaInsertSubsetJust pending parentId popsOld pops) &&&
+    --                    lemmaLookupSubsetOf pending parentId popsOld)
   | Just weave' <- insertInWeave weave parentId atom
   = undefined
 
