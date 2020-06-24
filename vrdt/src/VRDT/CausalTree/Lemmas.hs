@@ -7,7 +7,9 @@ module VRDT.CausalTree.Lemmas where
 import           Liquid.Data.Maybe
 import           Liquid.Data.Map                ( Map )
 import qualified Liquid.Data.Map               as Map
+import qualified Data.Set                      as S
 import           Liquid.Data.Map.Props
+import           VRDT.Internal
 
 import           VRDT.CausalTree.Internal
 import           Prelude                 hiding ( Maybe(..)
@@ -131,6 +133,104 @@ lemmaInsertInWeaveJustNEqRel
   -> CausalTreeAtom id a
   -> ()
 lemmaInsertInWeaveJustNEqRel _ _ _ _ _ = undefined
+
+{-@ lemmaFoldlIds :: Ord id
+  => ct:CausalTree id a
+  -> id:id
+  -> atoms:[CausalTreeAtom id a]
+  -> {causalTreeIds (List.foldl' (applyAtomHelper id) ct atoms) == S.union (causalTreeIds ct) (pendingListIds atoms)}
+  / [causalTreePendingSize ct, 1]  @-}
+lemmaFoldlIds :: Ord id => CausalTree id a -> id -> [CausalTreeAtom id a] -> ()
+lemmaFoldlIds _ _ _ = undefined
+
+
+{-@ lemmaInsertListId :: Ord id
+  => x:CausalTreeAtom id a
+  -> xs:[CausalTreeAtom id a]
+  -> {pendingListIds (insertList x xs) == S.union (S.singleton (causalTreeAtomId x)) (pendingListIds xs)} @-}
+lemmaInsertListId :: Ord id
+  => CausalTreeAtom id a
+  -> [CausalTreeAtom id a]
+  -> ()  
+lemmaInsertListId x [] = ()
+lemmaInsertListId x (y:ys)
+  | x <= y = ()
+  | otherwise = lemmaInsertListId x ys
+
+{-@ lemmaInsertSubsetNothing :: Ord id
+  => pending:Map.Map id [CausalTreeAtom id a]
+  -> {k:id | isNothing (Map.lookup k pending)}
+  -> atoms:[CausalTreeAtom id a]
+  -> {pendingIds (Map.insert k atoms pending) == S.union (pendingListIds atoms) (pendingIds pending)} @-}
+lemmaInsertSubsetNothing :: Ord id
+  => Map.Map id [CausalTreeAtom id a]
+  -> id
+  -> [CausalTreeAtom id a]
+  -> ()
+lemmaInsertSubsetNothing Map.Tip _ _ = ()
+lemmaInsertSubsetNothing _ _ _ = ()
+
+{-@ lemmaInsertSubsetJust :: Ord id
+  => pending:Map.Map id [CausalTreeAtom id a]
+  -> k:id
+  -> {atoms:[CausalTreeAtom id a] | Map.lookup k pending == Just atoms}
+  -> {newIds:S.Set id | S.isSubsetOf (pendingListIds (fromJust (Map.lookup k pending))) newIds}
+  -> {S.union (pendingIds (Map.delete k pending)) newIds == S.union (pendingIds pending) newIds }
+@-}
+lemmaInsertSubsetJust :: Ord id
+  => Map.Map id [CausalTreeAtom id a]
+  -> id
+  -> [CausalTreeAtom id a]
+  -> S.Set id
+  -> ()
+lemmaInsertSubsetJust Map.Tip _ _ _ = ()
+lemmaInsertSubsetJust _ _ _ _ = ()
+
+
+{-@ lemmaApplyAtomIds :: Ord id
+  => ct:CausalTree id a
+  -> id:id
+  -> atom:CausalTreeAtom id a
+  -> {S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom)) == causalTreeIds (applyAtom ct id atom)}
+  / [causalTreePendingSize ct, 0] @-}
+lemmaApplyAtomIds :: Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> ()
+lemmaApplyAtomIds ct@(CausalTree weave pending) parentId atom
+  | Nothing <- insertInWeave weave parentId atom
+  = let pops = case Map.lookup parentId pending of
+                 Nothing -> [atom]
+                 Just xs -> insertList atom xs
+        popsOld = case Map.lookup parentId pending of
+                 Nothing -> []
+                 Just xs -> xs in
+      
+    lemmaInsertListId atom popsOld &&&
+    
+    (constConstNothing parentId popsOld *** QED)  &&&
+    
+    (   insertPending parentId atom pending
+    ==. Map.insert parentId pops pending
+    *** QED) &&&
+
+    (   S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom))
+    ==. S.union (weaveIds weave) (S.union (pendingIds pending) (S.singleton (causalTreeAtomId atom)))
+    *** QED) &&&
+
+    (applyAtom ct parentId atom *** QED) &&&
+    
+    (   case Map.lookup parentId pending of
+          Nothing -> lemmaInsertSubsetNothing pending parentId pops &&&
+                     (   pendingListIds pops
+                     ==. pendingListIds [atom]
+                     ==. S.singleton (causalTreeAtomId atom)
+                     *** QED) &&&
+                     (   applyAtom ct parentId atom
+                     ==. CausalTree weave (insertPending parentId atom pending)
+                     *** QED)
+
+          Just xs -> undefined)
+  | Just weave' <- insertInWeave weave parentId atom
+  = undefined
+
 
 {-@ lemmaDeleteShrink :: Ord id
   => x:Map.Map id [a]
