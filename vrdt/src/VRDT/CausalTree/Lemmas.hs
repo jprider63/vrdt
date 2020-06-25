@@ -249,8 +249,38 @@ lemmaApplyAtomIds ct@(CausalTree weave pending) parentId atom
     --                  *** QED) &&&
     --                    lemmaInsertSubsetJust pending parentId popsOld pops) &&&
     --                    lemmaLookupSubsetOf pending parentId popsOld)
+  -- | Just weave' <- insertInWeave weave parentId atom
+  -- , Nothing <- Map.lookup (causalTreeAtomId atom) pending
+  -- = ( Map.updateLookupWithKey constConstNothing (causalTreeAtomId atom) pending
+  -- ==. (Nothing, pending)
+  -- *** QED) &&&
+  -- (   applyAtom (CausalTree weave pending) parentId atom
+  -- ==. CausalTree weave' pending
+  -- *** QED
+  -- )
   | Just weave' <- insertInWeave weave parentId atom
+  , Just [] <- Map.lookup (causalTreeAtomId atom) pending
+  = ()
+  | otherwise
   = undefined
+  -- = let pops = case Map.lookup parentId pending of
+  --                Nothing -> []
+  --                Just xs -> xs
+  --       pending' = case Map.lookup parentId pending of
+  --                    Nothing -> pending
+  --                    Just xs -> Map.delete parentId pending
+  --                  === Map.delete parentId pending
+  --       aid = causalTreeAtomId atom in
+  --   case pops of {
+  --           -- Just, [] case: discharge with the lemma about lookup just
+  --           -- Nothing case: trivial
+  --     [] -> (   List.foldl' (applyAtomHelper aid) ct pops
+  --           === ct
+  --           *** QED)
+      
+  --   }
+
+
 
 
 {-@ lemmaDeleteShrink :: Ord id
