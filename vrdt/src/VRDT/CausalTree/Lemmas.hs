@@ -139,9 +139,16 @@ lemmaInsertInWeaveJustNEqRel _ _ _ _ _ = undefined
   -> id:id
   -> atoms:[CausalTreeAtom id a]
   -> {causalTreeIds (List.foldl' (applyAtomHelper id) ct atoms) == S.union (causalTreeIds ct) (pendingListIds atoms)}
-  / [causalTreePendingSize ct, 1]  @-}
+  / [causalTreePendingSize ct, 1, List.length atoms]  @-}
 lemmaFoldlIds :: Ord id => CausalTree id a -> id -> [CausalTreeAtom id a] -> ()
-lemmaFoldlIds _ _ _ = undefined
+lemmaFoldlIds ct pid [] = ()
+lemmaFoldlIds ct pid (a:as) =
+  (   applyAtomHelper pid ct a
+  === applyAtom ct pid a
+  *** QED) &&&
+  assume (causalTreePendingSize (applyAtomHelper pid ct a) == causalTreePendingSize ct) &&&
+  lemmaApplyAtomIds ct pid a &&&
+  lemmaFoldlIds (applyAtomHelper pid ct a) pid as
 
 
 {-@ lemmaInsertListId :: Ord id
@@ -222,7 +229,7 @@ lemmaLookupSubsetOf _ _ _ = ()
   -> id:id
   -> atom:CausalTreeAtom id a
   -> {S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom)) == causalTreeIds (applyAtom ct id atom)}
-  / [causalTreePendingSize ct, 0] @-}
+  / [causalTreePendingSize ct, 0, 0] @-}
 lemmaApplyAtomIds :: Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> ()
 lemmaApplyAtomIds ct@(CausalTree weave pending) parentId atom
   | Nothing <- insertInWeave weave parentId atom
@@ -303,6 +310,8 @@ lemmaApplyAtomIds ct@(CausalTree weave pending) parentId atom
   lemmaDeleteShrink pending aid pops &&&
   lemmaDeleteSubsetJust pending aid pops (pendingListIds pops) &&&
   lemmaLookupSubsetOf pending aid pops &&&
+  (causalTreePendingSize (CausalTree weave' (Map.delete aid pending)) < causalTreePendingSize ct
+  *** QED) &&&
   lemmaFoldlIds (CausalTree weave' (Map.delete aid pending)) aid pops
 
   | otherwise
