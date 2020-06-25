@@ -186,6 +186,25 @@ lemmaInsertSubsetJust :: Ord id
 lemmaInsertSubsetJust Map.Tip _ _ _ = ()
 lemmaInsertSubsetJust _ _ _ _ = ()
 
+
+
+{-@ lemmaDeleteSubsetJust :: Ord id
+  => pending:Map.Map id [CausalTreeAtom id a]
+  -> k:id
+  -> {atoms:[CausalTreeAtom id a] | Map.lookup k pending == Just atoms}
+  -> {ids:S.Set id | S.isSubsetOf (pendingListIds atoms) ids}
+  -> {S.union ids (pendingIds (Map.delete k pending)) == S.union ids (pendingIds pending)}
+@-}
+lemmaDeleteSubsetJust :: Ord id
+  => Map.Map id [CausalTreeAtom id a]
+  -> id
+  -> [CausalTreeAtom id a]
+  -> S.Set id
+  -> ()
+lemmaDeleteSubsetJust Map.Tip _ _ _ = ()
+lemmaDeleteSubsetJust _ _ _ _ = ()
+
+
 {-@ lemmaLookupSubsetOf :: Ord id
   => pending:Map.Map id [CausalTreeAtom id a]
   -> k:id
@@ -258,9 +277,34 @@ lemmaApplyAtomIds ct@(CausalTree weave pending) parentId atom
   -- ==. CausalTree weave' pending
   -- *** QED
   -- )
+  -- | Just weave' <- insertInWeave weave parentId atom
+  -- , Just [] <- Map.lookup (causalTreeAtomId atom) pending
+  -- = ( Map.updateLookupWithKey constConstNothing (causalTreeAtomId atom) pending
+  --     ? constConstNothing (causalTreeAtomId atom) []
+  -- ==. (Just [], Map.delete (causalTreeAtomId atom) pending)
+  -- *** QED) &&&
+
+  -- (   List.foldl' (applyAtomHelper (causalTreeAtomId atom)) (CausalTree weave' (Map.delete (causalTreeAtomId atom) pending)) []
+  -- ==. CausalTree weave' (Map.delete (causalTreeAtomId atom) pending)
+  -- *** QED) &&&
+  
+  -- (   applyAtom (CausalTree weave pending) parentId atom
+  -- ==. CausalTree weave' (Map.delete (causalTreeAtomId atom) pending)
+  -- *** QED
+  -- ) &&&
+  -- lemmaDeleteSubsetJust pending (causalTreeAtomId atom) [] S.empty
   | Just weave' <- insertInWeave weave parentId atom
-  , Just [] <- Map.lookup (causalTreeAtomId atom) pending
-  = ()
+  , Just pops@(_:_) <- Map.lookup (causalTreeAtomId atom) pending
+  = let aid = causalTreeAtomId atom in
+  ( Map.updateLookupWithKey constConstNothing (causalTreeAtomId atom) pending
+      ? constConstNothing aid pops
+  ==. (Just pops, Map.delete aid pending)
+  *** QED) &&&
+  lemmaDeleteShrink pending aid pops &&&
+  lemmaDeleteSubsetJust pending aid pops (pendingListIds pops) &&&
+  lemmaLookupSubsetOf pending aid pops &&&
+  lemmaFoldlIds (CausalTree weave' (Map.delete aid pending)) aid pops
+
   | otherwise
   = undefined
   -- = let pops = case Map.lookup parentId pending of
