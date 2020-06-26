@@ -19,18 +19,21 @@ import           Prelude                 hiding ( Maybe(..)
                                                 )
 import           Liquid.ProofCombinators
 import           ProofCombinators
+import qualified Data.Set as S
 
-{-@ ple lemmaApplyAtomFoldNeq @-}
+--{-@ ple lemmaApplyAtomFoldNeq @-}
 {-@ lemmaApplyAtomFoldNeq :: Ord id
  => ct:CausalTree id a
- -> opid1:id
- -> {opid2:id | opid1 /= opid2}
- -> atoms1:[{a:CausalTreeAtom id a | isJust (insertInWeave (causalTreeWeave ct) opid1 a)}]
- -> atoms2:[{a:CausalTreeAtom id a | isJust (insertInWeave (causalTreeWeave ct) opid2 a)}]
+ -> {opid1:id | S.member opid1 (weaveIds (causalTreeWeave ct))}
+ -> {opid2:id | S.member opid2 (weaveIds (causalTreeWeave ct)) && opid1 /= opid2}
+ -> atoms1:[CausalTreeAtom id a]
+ -> atoms2:[CausalTreeAtom id a]
  -> {  ((List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) ct atoms1) atoms2)
     == (List.foldl' (applyAtomHelper opid1) (List.foldl' (applyAtomHelper opid2) ct atoms2) atoms1))
-    && ((causalTreePendingSize ct)
-    ==  (causalTreePendingSize (List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) ct atoms1) atoms2))) } / [causalTreePendingSize ct, 1, List.length atoms1 + List.length atoms2]  @-}
+     } / [causalTreePendingSize ct, 1, List.length atoms1 + List.length atoms2]  @-}
+
+-- && ((causalTreePendingSize ct)
+-- ==  (causalTreePendingSize (List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) ct atoms1) atoms2)))
 lemmaApplyAtomFoldNeq :: Ord id
  => CausalTree id a
  -> id
@@ -38,15 +41,39 @@ lemmaApplyAtomFoldNeq :: Ord id
  -> [CausalTreeAtom id a]
  -> [CausalTreeAtom id a]
  -> ()
-lemmaApplyAtomFoldNeq _ _ _ [] [] =
-  -- prove the lemma that isJust insertInWeave => pending queue not changed
-  ()
-lemmaApplyAtomFoldNeq ct opid1 opid2 [] (atom2:atoms2) =
-  -- prove the lemma that isJust insertInWeave => pending queue not changed
-  lemmaApplyAtomFoldNeq ct opid1 opid2 [] atoms2
-  -- recursive call is not sufficient
-  -- we want another lemma which shows that inserting makes it more likely to yield Just
-lemmaApplyAtomFoldNeq ct opid1 opid2 (atom1:atoms1) atoms2 = ()
+lemmaApplyAtomFoldNeq ct opid1 opid2 atoms1 [] =
+      List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) ct atoms1) []
+  === (List.foldl' (applyAtomHelper opid1) ct atoms1)
+  === List.foldl' (applyAtomHelper opid1) (List.foldl' (applyAtomHelper opid2) ct []) atoms1
+  *** QED
+lemmaApplyAtomFoldNeq ct opid1 opid2 atoms1 [atom2] = undefined
+lemmaApplyAtomFoldNeq ct opid1 opid2 atoms1 (atom2:atoms2@(_:_)) =
+      List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) ct atoms1) (atom2:atoms2 ==. atom2:List.concat [] atoms2 ==. List.concat [atom2] atoms2)
+      ? lemmaFoldlConcat (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) ct atoms1) [atom2] atoms2
+  ==. List.foldl' (applyAtomHelper opid2)
+       (List.foldl' (applyAtomHelper opid2) 
+         (List.foldl' (applyAtomHelper opid1) ct atoms1) [atom2]) atoms2
+      ? lemmaFoldlIds ct opid1 atoms1
+      ? (List.length atoms1 + List.length [atom2] < List.length atoms1 + List.length (atom2:atoms2))
+      ? (List.length atoms1 + List.length [atom2] > 0)
+      ? causalTreePendingSize ct
+      ? lemmaApplyAtomFoldNeq ct opid1 opid2 atoms1 [atom2]
+  ==. List.foldl' (applyAtomHelper opid2)
+       (List.foldl' (applyAtomHelper opid1) 
+         (List.foldl' (applyAtomHelper opid2) ct [atom2]) atoms1) atoms2
+      ? lemmaFoldlIds ct opid2 [atom2]
+      ? lemmaFoldlIds (List.foldl' (applyAtomHelper opid2) ct [atom2]) opid1 atoms1
+      ? lemmaFoldlIds (List.foldl' (applyAtomHelper opid2) ct [atom2]) opid2 atoms2
+      ? (List.length atoms1 + List.length atoms2 < List.length atoms1 + List.length (atom2:atoms2))
+      ? assert (causalTreePendingSize (List.foldl' (applyAtomHelper opid2) ct [atom2]) <= causalTreePendingSize ct)
+      ? lemmaApplyAtomFoldNeq (List.foldl' (applyAtomHelper opid2) ct [atom2]) opid1 opid2 atoms1 atoms2
+      ? lemmaFoldlConcat (applyAtomHelper opid2) ct [atom2] atoms2
+  ==. List.foldl' (applyAtomHelper opid1)
+       (List.foldl' (applyAtomHelper opid2) 
+         (List.foldl' (applyAtomHelper opid2) ct [atom2]) atoms2
+   ==. (List.foldl' (applyAtomHelper opid2) ct (List.concat [atom2] atoms2 ==. atom2:atoms2))) atoms1
+  *** QED
+  
 
 {-@ ple lawCommutativityNEqNN @-}
 {-@ lawCommutativityNEqNN :: Ord id =>
