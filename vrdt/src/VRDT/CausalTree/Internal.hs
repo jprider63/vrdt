@@ -279,7 +279,7 @@ applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave 
 
 {-@ reflect insertInWeave @-}
 {-@ insertInWeave :: Ord id => w:CausalTreeWeave id a -> k:id -> atom:CausalTreeAtom id a ->
-  {vv:Maybe ({vv:CausalTreeWeave id a| weaveIds vv == S.union (S.singleton (causalTreeAtomId atom)) (weaveIds w)}) | isJust vv <=> S.member k (weaveIds w)} / [causalTreeWeaveLength w, 0]@-}
+  {vvm:Maybe ({vv:CausalTreeWeave id a| weaveIds vv == S.union (S.singleton (causalTreeAtomId atom)) (weaveIds w)}) | isJust vvm = S.member k (weaveIds w)} / [causalTreeWeaveLength w, 0]@-}
 insertInWeave :: Ord id => CausalTreeWeave id a -> id -> CausalTreeAtom id a -> Maybe (CausalTreeWeave id a)
 insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
     -- Is the current atom the target parent?
@@ -296,8 +296,7 @@ insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
           Just children -> Just $ CausalTreeWeave currentAtom children
 
 {-@ reflect insertInWeaveChildren  @-}
-{-@ insertInWeaveChildren :: Ord id => w:[CausalTreeWeave id a] ->  k:id -> atom:CausalTreeAtom id a -> {vv:Maybe {vv:[CausalTreeWeave id a] |
-            weaveListIds vv == S.union (S.singleton (causalTreeAtomId atom)) (weaveListIds w)} | isJust vv <=> S.member k (weaveListIds w)} / [causalTreeWeaveLengthList w, len w] @-}
+{-@ insertInWeaveChildren :: Ord id => w:[CausalTreeWeave id a] ->  k:id -> atom:CausalTreeAtom id a -> {vvm:Maybe {vv:[CausalTreeWeave id a] | weaveListIds vv == S.union (S.singleton (causalTreeAtomId atom)) (weaveListIds w)} | isJust vvm = S.member k (weaveListIds w)} / [causalTreeWeaveLengthList w, len w] @-}
 insertInWeaveChildren :: Ord id => [CausalTreeWeave id a] ->  id -> CausalTreeAtom id a -> Maybe [CausalTreeWeave id a]
 insertInWeaveChildren [] _ _ = Nothing
 insertInWeaveChildren (w:ws) parentId atom =
