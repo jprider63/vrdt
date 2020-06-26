@@ -13,11 +13,12 @@ import           Liquid.Data.List
 import           Liquid.ProofCombinators
 import qualified Liquid.Data.Map as Map
 import qualified Liquid.Data.Map.Props as Map
-import           Prelude hiding (Maybe(..), concat)
+import           Prelude hiding (Maybe(..), concat, length)
 import qualified Data.Set as S
 #endif
 
 {-@ reflect insertPending @-}
+--{-@ insertPending :: (Ord k, Ord a) => k -> a -> Map k [a] -> Map k [a] @-}
 insertPending :: (Ord k, Ord a) => k -> a -> Map k [a] -> Map k [a]
 #if NotLiquid
 insertPending k op p = Map.insertWith (++) k [op] p
@@ -27,7 +28,7 @@ insertPending k op p = case Map.lookup k p of
     Just ops -> Map.insert k (insertList op ops) p
 
 {-@ reflect insertList @-}
-{-@ insertList :: Ord a => x:a -> xs:[a] -> {vv:[a] | S.fromList vv == S.union (S.fromList xs) (S.singleton x)} @-}
+{-@ insertList :: Ord a => x:a -> xs:[a] -> {vv:[a] | length vv /= 0 && S.fromList vv == S.union (S.fromList xs) (S.singleton x)} @-}
 insertList :: Ord a => a -> [a] -> [a]
 insertList v [] = [v]
 insertList v (h:t)
