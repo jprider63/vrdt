@@ -42,6 +42,7 @@ executable event
     , kyowon-reflex
     , reflex
     , reflex-vty
+    , semialign
     , text
     , time
     , transformers
