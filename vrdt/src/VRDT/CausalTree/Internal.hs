@@ -22,7 +22,7 @@ import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
 import           Liquid.Data.Map.Props
 import qualified Data.Set as S
-import           Prelude hiding (Maybe(..), isNothing, isJust)
+import           Prelude hiding (Maybe(..), isNothing, isJust, flip)
 #endif
 import           Data.Maybe (mapMaybe)
 import           Data.Time.Clock (UTCTime)
@@ -151,7 +151,7 @@ idUniqueList (CausalTreeAtom opid' _:xs) =
 {-@ reflect idUniqueMap @-}
 idUniqueMap :: Ord id => Map.Map id [CausalTreeAtom id a] -> Bool
 idUniqueMap Map.Tip = True
-idUniqueMap (Map.Map k xs t) = idUniqueList xs && S.disjoint (pendingListIds xs) (pendingIds t)
+idUniqueMap (Map.Map k xs t) = idUniqueList xs && S.null (S.intersection (pendingListIds xs) (pendingIds t)) && idUniqueMap t
 
 
 {-@ reflect causalTreeIds @-}
@@ -188,7 +188,7 @@ idUniqueWeaveList [] = True
 idUniqueWeaveList (w:ws) =
   causalTreeWeaveLength w `cast`
   causalTreeWeaveLengthList ws `cast`
-  idUniqueWeave w && S.disjoint (weaveIds w) (weaveListIds ws) && idUniqueWeaveList ws
+  idUniqueWeave w && S.null (S.intersection (weaveIds w) (weaveListIds ws)) && idUniqueWeaveList ws
 
 
 {-@ reflect weaveIds  @-}
@@ -230,7 +230,7 @@ lemmaInsertListId x (y:ys)
   | otherwise = lemmaInsertListId x ys
 
 
-{-@ insertListRespectsUniq :: Ord id => x:CausalTreeAtom id a ->  {xs:[CausalTreeAtom id a] | not (S.member (causalTreeAtomId x) (pendingListIds xs)) && idUniqueList xs} -> {idUniqueList (insertList x xs)} @-}
+{-@ insertListRespectsUniq :: Ord id => x:CausalTreeAtom id a ->  {xs:[CausalTreeAtom id a] | not (S.member (causalTreeAtomId x) (pendingListIds xs)) && idUniqueList xs} -> {idUniqueList (insertList x xs) && (pendingListIds (insertList x xs) == S.union (pendingListIds xs) (S.singleton (causalTreeAtomId x)))} @-}
 insertListRespectsUniq :: Ord id => CausalTreeAtom id a ->  [CausalTreeAtom id a] -> ()
 insertListRespectsUniq (CausalTreeAtom aid _) [] = ()
 insertListRespectsUniq atom1@(CausalTreeAtom aid _) (atom2@(CausalTreeAtom aid' _) : as)
@@ -240,6 +240,34 @@ insertListRespectsUniq atom1@(CausalTreeAtom aid _) (atom2@(CausalTreeAtom aid' 
   = lemmaInsertListId atom1 as &&&
     insertListRespectsUniq atom1 as
 
+{-@ insertPendingRespectsUniq :: Ord id => k:id -> x:CausalTreeAtom id a -> {pending:Map id [CausalTreeAtom id a] | idUniqueMap pending && not (S.member (causalTreeAtomId x) (pendingIds pending))} -> {idUniqueMap (insertPending k x pending) && (S.union (pendingIds pending) (S.singleton (causalTreeAtomId x)) == pendingIds (insertPending k x pending))} @-}
+insertPendingRespectsUniq :: Ord id => id -> CausalTreeAtom id a -> Map id [CausalTreeAtom id a] -> ()
+insertPendingRespectsUniq pid atom@(CausalTreeAtom aid _) Map.Tip = ()
+insertPendingRespectsUniq pid atom@(CausalTreeAtom aid _) (Map.Map k v t)
+  -- | pid == k = insertListRespectsUniq atom v &&&
+  --   (Map.lookup pid (Map.Map k v t) ==. Just v *** QED) &&&
+  --   (insertPending pid atom (Map.Map k v t) ==. Map.Map k (insertList atom v) t *** QED)
+  -- | pid < k =
+  --   Map.keyLeqLemma pid k v t &&&
+  --   (   case Map.lookup pid t of
+  --         Nothing -> ()
+  --         Just _ -> ()) &&&
+  --   (   Map.lookup pid t ==. Nothing *** QED) &&&
+  --   (   Map.lookup pid (Map.Map k v t) ==. Nothing *** QED) &&&
+  --   (   case Map.lookup pid t of
+  --       Nothing -> (insertPending pid atom (Map.Map k v t)
+  --                   ==. Map.Map pid [atom] (Map.Map k v t)
+  --                   *** QED) &&&
+  --                  (idUniqueMap (Map.Map pid [atom] (Map.Map k v t))
+  --                  ==. (idUniqueList [atom] && (S.null (S.intersection (pendingListIds [atom]) (pendingIds (Map.Map k v t)))) && idUniqueMap (Map.Map k v t)) *** QED);
+  --       Just _ -> ())
+  | pid > k = (Map.lookup pid (Map.Map k v t)
+          === Map.lookup pid t
+          *** QED)
+  | otherwise = undefined
+    where pops = case Map.lookup pid (Map.Map k v t) of
+            Nothing -> [atom]
+            Just xs -> insertList atom xs
 
 
 {-@ reflect compatibleState @-}
@@ -319,18 +347,18 @@ applyAtomHelper opId ct atom =
 --   -> atoms:[CausalTreeAtom id a]
 --   ->  @-}
 
-{-@ delimitByPred :: p:(a -> Bool) -> f:(a -> b) -> {vv:({x:a | p x} -> b) | True} @-}
-delimitByPred :: (a -> Bool) -> (a -> b) -> a -> b
-delimitByPred p f = f
+-- {-@ delimitByPred :: p:(a -> Bool) -> f:(a -> b) -> {vv:({x:a | p x} -> b) | True} @-}
+-- delimitByPred :: (a -> Bool) -> (a -> b) -> a -> b
+-- delimitByPred p f = f
 
 -- {-@ reflect delimitBySize @-}
--- {-@ delimitBySize :: Ord id => top:Nat -> f:(CausalTree id a -> b) -> {_:({x:CausalTree id a | causalTreePendingSize x < top} -> b) | True} @-}
--- delimitBySize :: Int -> (a -> Int) -> (a -> b) -> a -> b
--- delimitBySize sz p f = f
+-- {-@ delimitBySize :: Ord id => top:Nat -> f:(CausalTree id a -> b) -> {x:CausalTree id a | causalTreePendingSize x < top} -> b | True @-}
+-- delimitBySize :: Ord id => Int -> (CausalTree id a -> b) -> (CausalTree id a -> b)
+-- delimitBySize p f = f
 
-{-@ reflect pendingSizeLessThan @-}
-pendingSizeLessThan :: Ord id => Int -> CausalTree id a -> Bool
-pendingSizeLessThan i ct = causalTreePendingSize ct < i
+-- {-@ reflect pendingSizeLessThan @-}
+-- pendingSizeLessThan :: Ord id => Int -> CausalTree id a -> Bool
+-- pendingSizeLessThan i ct = causalTreePendingSize ct < i
 
 -- {-@ foldlBounded :: Ord id
 --   => opid:id
@@ -341,6 +369,10 @@ pendingSizeLessThan i ct = causalTreePendingSize ct < i
 -- @-}
 -- fjiweo
 
+--{-@ lazy applyAtom @-}
+{-@ reflect flip @-}
+flip :: (a -> b -> c) -> b -> a -> c
+flip f x y = f y x
 {-@ lazy applyAtom @-}
 {-@ reflect applyAtom @-}
 {-@ applyAtom :: Ord id => ct:CausalTree id a -> id:id -> atom:CausalTreeAtom id a ->

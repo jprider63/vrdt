@@ -192,18 +192,6 @@ lemmaFoldlIds ct@(CausalTree weave pending) pid (a:as)
   lemmaFoldlIds (applyAtomHelper pid ct a) pid as
   where aid = causalTreeAtomId a
 
-{-@ lemmaInsertListId :: Ord id
-  => x:CausalTreeAtom id a
-  -> xs:[CausalTreeAtom id a]
-  -> {pendingListIds (insertList x xs) == S.union (S.singleton (causalTreeAtomId x)) (pendingListIds xs)} @-}
-lemmaInsertListId :: Ord id
-  => CausalTreeAtom id a
-  -> [CausalTreeAtom id a]
-  -> ()  
-lemmaInsertListId x [] = ()
-lemmaInsertListId x (y:ys)
-  | x <= y = ()
-  | otherwise = lemmaInsertListId x ys
 
 {-@ lemmaInsertSubsetNothing :: Ord id
   => pending:Map.Map id [CausalTreeAtom id a]
