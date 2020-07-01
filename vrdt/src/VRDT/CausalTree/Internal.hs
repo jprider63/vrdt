@@ -3,7 +3,7 @@
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
 {-@ LIQUID "--noadt" @-}
---{-@ LIQUID "--no-termination" @-}
+
 module VRDT.CausalTree.Internal where
 
 #if NotLiquid
@@ -213,21 +213,25 @@ weaveListIds (x:xs) =
 {-@ reflect idUniqueCausalTree @-}
 idUniqueCausalTree :: Ord id => CausalTree id a -> Bool
 idUniqueCausalTree (CausalTree weave pending) =
-  idUniqueWeave weave && idUniqueMap pending
-  -- disjoint?
+  idUniqueWeave weave &&
+  idUniqueMap pending &&
+  S.null (S.intersection (weaveIds weave) (pendingIds pending))
+
 
 
 {-@ reflect compatibleState @-}
 --{-@ compatibleState :: CausalTree id a -> CausalTreeOp id a -> Bool @-}
 compatibleState :: Ord id => CausalTree id a -> CausalTreeOp id a -> Bool
-compatibleState ct (CausalTreeOp pid (CausalTreeAtom id _)) =
-  pid /= id && id `S.member` causalTreeIds ct
+compatibleState ct@(CausalTree weave pending) (CausalTreeOp pid (CausalTreeAtom id _)) =
+  (not (id `S.member` causalTreeIds ct)) && idUniqueCausalTree ct
+  -- pid /= id && 
 
 {-@ reflect compatible @-}
 compatible :: Eq id => CausalTreeOp id a -> CausalTreeOp id a -> Bool
 compatible (CausalTreeOp pid (CausalTreeAtom id _)) (CausalTreeOp pid' (CausalTreeAtom id' _)) =
   id /= id'
   -- maybe not necessary:
+  -- don't uncomment this unless it's really needed
   -- && not (pid == id' && pid' == id) 
 
 
@@ -408,6 +412,82 @@ atomGreaterThan (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2 (Cau
 atomGreaterThan (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2 _)                        = False
 
 
+-- Lemmas
+-- some of them should not appear here
+-- due to a bug in LH, the data invariant is somehow lost in
+-- Lemmas.hs. I have to do the proofs here
+{-@ lemmaLookupSubsetOf :: Ord id
+  => pending:Map.Map id [CausalTreeAtom id a]
+  -> k:id
+  -> {atoms:[CausalTreeAtom id a] | Map.lookup k pending == Just atoms}
+  -> {S.isSubsetOf (pendingListIds atoms) (pendingIds pending) && (idUniqueMap pending => idUniqueList atoms && S.null (S.intersection (pendingIds (Map.delete k pending)) (pendingListIds atoms)))} @-}
+lemmaLookupSubsetOf :: Ord id
+  => Map.Map id [CausalTreeAtom id a]
+  -> id
+  -> [CausalTreeAtom id a]
+  -> ()
+lemmaLookupSubsetOf Map.Tip pid atoms  =
+  (Just atoms === Map.lookup pid Map.Tip === Nothing  *** QED) 
+lemmaLookupSubsetOf m@(Map.Map k v m') pid atoms
+  | pid < k
+  = Map.keyLeqLemma pid k v m' &&&
+    (Just atoms === Map.lookup pid m === Nothing  *** QED) 
+  | pid == k
+  = Map.lookup pid m === Just v === Just atoms *** QED
+  | otherwise
+  = lemmaLookupSubsetOf m' pid atoms
+
+
+
+
+{-@ ple insertListRespectsUniq @-}
+{-@ insertListRespectsUniq :: Ord id => x:CausalTreeAtom id a ->  {xs:[CausalTreeAtom id a] | True} -> {((not (S.member (causalTreeAtomId x) (pendingListIds xs)) && idUniqueList xs) => idUniqueList (insertList x xs)) && (pendingListIds (insertList x xs) == S.union (pendingListIds xs) (S.singleton (causalTreeAtomId x)))} @-}
+insertListRespectsUniq :: Ord id => CausalTreeAtom id a ->  [CausalTreeAtom id a] -> ()
+insertListRespectsUniq (CausalTreeAtom aid _) [] = ()
+insertListRespectsUniq atom1@(CausalTreeAtom aid _) (atom2@(CausalTreeAtom aid' _) : as)
+  | atom1 < atom2
+  = insertListRespectsUniq atom1 as
+  | atom1 > atom2
+  = insertListRespectsUniq atom1 as
+  | otherwise
+  = ()
+
+
+{-@ ple insertPendingRespectsUniq @-}
+{-@ insertPendingRespectsUniq :: Ord id => k:id -> x:CausalTreeAtom id a -> {pending:Map id [CausalTreeAtom id a] | True} -> {((idUniqueMap pending && not (S.member (causalTreeAtomId x) (pendingIds pending))) => idUniqueMap (insertPending k x pending)) && (S.union (pendingIds pending) (S.singleton (causalTreeAtomId x)) == pendingIds (insertPending k x pending))} @-}
+insertPendingRespectsUniq :: Ord id => id -> CausalTreeAtom id a -> Map id [CausalTreeAtom id a] -> ()
+insertPendingRespectsUniq pid atom@(CausalTreeAtom aid _) Map.Tip = ()
+insertPendingRespectsUniq pid atom@(CausalTreeAtom aid _) (Map.Map k v t)
+  | pid == k = insertListRespectsUniq atom v &&&
+    (Map.lookup pid (Map.Map k v t) ==. Just v *** QED) &&&
+    (insertPending pid atom (Map.Map k v t) ==. Map.Map k (insertList atom v) t *** QED)
+  | pid < k =
+    (Map.Map k v t *** QED) &&&
+    Map.keyLeqLemma pid k v t &&&
+    (   case Map.lookup pid t of
+          Nothing -> ()
+          Just _ -> ()) &&&
+    (   Map.lookup pid t === Nothing *** QED) &&&
+    (   Map.lookup pid (Map.Map k v t) === Nothing *** QED) &&&
+    (   case Map.lookup pid t of
+        Nothing -> (insertPending pid atom (Map.Map k v t)
+                    === Map.Map pid [atom] (Map.Map k v t)
+                    *** QED) &&&
+                   (idUniqueMap (Map.Map pid [atom] (Map.Map k v t))
+                   === (idUniqueList [atom] && (S.null (S.intersection (pendingListIds [atom]) (pendingIds (Map.Map k v t)))) && idUniqueMap (Map.Map k v t)) *** QED);
+        Just _ -> ())
+  | otherwise = (Map.lookup pid (Map.Map k v t)
+          ==. Map.lookup pid t
+          *** QED) &&&
+              (insertPending pid atom (Map.Map k v t)
+              ==. Map.insert pid pops (Map.Map k v t)
+              ==. Map.Map k v (Map.insert pid pops t)
+              ==. Map.Map k v (insertPending pid atom t)
+              *** QED) &&&
+              insertPendingRespectsUniq pid atom t
+    where pops = case Map.lookup pid (Map.Map k v t) of
+            Nothing -> [atom]
+            Just xs -> insertList atom xs
 
 
 
