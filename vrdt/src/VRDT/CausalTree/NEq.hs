@@ -32,7 +32,7 @@ import qualified Data.Set as S
    == (List.foldl' (applyAtomHelper opid1) (List.foldl' (applyAtomHelper opid2) ct atoms2) atoms1))
      } / [causalTreePendingSize ct, 1, List.length atoms1 + List.length atoms2]  @-}
 
-lemmaApplyAtomFoldNeq :: Ord id
+lemmaApplyAtomFoldNeq :: forall id a. Ord id
  => CausalTree id a
  -> id
   -> id
@@ -49,10 +49,21 @@ lemmaApplyAtomFoldNeq :: Ord id
 --   ==. (List.foldl' (applyAtomHelper opid2) ct atoms2)
 --   ==. List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) ct []) atoms2
 --   *** QED
-lemmaApplyAtomFoldNeq ct@(CausalTree weave pending) opid1 opid2 (atom1@(CausalTreeAtom aid1 _):atoms1) [atom2] =
- -- (S.intersection (pendingListIds (atom1:atoms1)) (causalTreeIds ct)
- -- === S.intersection (S.union (S.singleton aid1) (pendingListIds atoms1)) (causalTreeIds ct)
- -- *** QED) &&&
+lemmaApplyAtomFoldNeq ct@(CausalTree weave pending) opid1 opid2 (atom1@(CausalTreeAtom aid1 _):atoms1) [atom2@(CausalTreeAtom aid2 _)] =
+ (compatible (CausalTreeOp opid1 atom1) (CausalTreeOp opid2 atom2)
+ ==. aid1 /= aid2
+ *** QED) &&&
+ (pendingListIds [atom2]
+ `cast` pendingListIds ([] :: [CausalTreeAtom id a])
+ *** QED) &&&
+ (compatibleState ct (CausalTreeOp opid1 atom1)
+ === (not (aid1 `S.member ` causalTreeIds ct) && idUniqueCausalTree ct)
+ *** QED) &&&
+ (compatibleState ct (CausalTreeOp opid2 atom2)
+ === (not (aid2 `S.member ` causalTreeIds ct) && idUniqueCausalTree ct)
+ *** QED) &&&
+ toProof (insertInWeave weave opid1 atom1) &&&
+ toProof (insertInWeave weave opid2 atom2) &&&
  (List.foldl' (applyAtomHelper opid2) (applyAtom ct opid1 atom1) [atom2]
  ==. List.foldl' (applyAtomHelper opid2) (applyAtomHelper opid2 (applyAtom ct opid1 atom1) atom2) []
  ==. applyAtomHelper opid2 (applyAtom ct opid1 atom1) atom2
@@ -66,20 +77,24 @@ lemmaApplyAtomFoldNeq ct@(CausalTree weave pending) opid1 opid2 (atom1@(CausalTr
   ==. List.foldl' (applyAtomHelper opid2) (applyAtomHelper opid2 ct atom2) []
   ==. applyAtom ct opid2 atom2
   *** QED) &&&
+  toProof (pendingListIds (atom1:atoms1) `cast` pendingListIds atoms1) &&&
+  lemmaApplyAtomIds' ct opid1 atom1 &&&
+  toProof (idUniqueList (atom1:atoms1) `cast` idUniqueList atoms1) &&&
   (List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) ct (atom1:atoms1)) [atom2]
-  === List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) (applyAtomHelper opid1 ct atom1) atoms1) [atom2]
-  === List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) (applyAtom ct opid1 atom1) atoms1) [atom2]
+  ==. List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) (applyAtomHelper opid1 ct atom1) atoms1) [atom2]
+  ==. List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) (applyAtom ct opid1 atom1) atoms1) [atom2]
+    -- ? assert (S.null (S.intersection (causalTreeIds (applyAtom ct opid1 atom1)) (pendingListIds atoms1)))
+  -- atoms1
     ? lemmaApplyAtomFoldNeq (applyAtom ct opid1 atom1) opid1 opid2 atoms1 [atom2]
-  === List.foldl' (applyAtomHelper opid1) (List.foldl' (applyAtomHelper opid2) (applyAtom ct opid1 atom1) [atom2]) atoms1
-  === List.foldl' (applyAtomHelper opid1) (applyAtom (applyAtom ct opid1 atom1 )  opid2 atom2) atoms1
+  ==. List.foldl' (applyAtomHelper opid1) (List.foldl' (applyAtomHelper opid2) (applyAtom ct opid1 atom1) [atom2]) atoms1
+  ==. List.foldl' (applyAtomHelper opid1) (applyAtom (applyAtom ct opid1 atom1 )  opid2 atom2) atoms1
     ? lawCommutativityNEqJJ ct (CausalTreeOp opid1 atom1) (CausalTreeOp opid2 atom2)
-  === List.foldl' (applyAtomHelper opid1) (applyAtom (applyAtom ct opid2 atom2 )  opid1 atom1) atoms1
-  === List.foldl' (applyAtomHelper opid1) (applyAtomHelper opid1 (applyAtom ct opid2 atom2 ) atom1) atoms1
-  === List.foldl' (applyAtomHelper opid1) (applyAtom ct opid2 atom2 ) (atom1:atoms1)
+  ==. List.foldl' (applyAtomHelper opid1) (applyAtom (applyAtom ct opid2 atom2 )  opid1 atom1) atoms1
+  ==. List.foldl' (applyAtomHelper opid1) (applyAtomHelper opid1 (applyAtom ct opid2 atom2 ) atom1) atoms1
+  ==. List.foldl' (applyAtomHelper opid1) (applyAtom ct opid2 atom2 ) (atom1:atoms1)
   -- ==. List.foldl' (applyAtomHelper opid2) (applyAtomHelper opid2 (List.foldl' (applyAtomHelper opid1) (applyAtom ct opid1 atom1) atoms1) atom2 ==. applyAtom (List.foldl' (applyAtomHelper opid1) (applyAtom ct opid1 atom1) atoms1) opid2 atom2) []
   -- ==. applyAtom (List.foldl' (applyAtomHelper opid1) (applyAtom ct opid1 atom1) atoms1)  opid2 atom2
-    -- ? lemmaApplyAtomIds' ct opid1 atom1
-    -- ? lemmaFoldlIds (applyAtom ct opid1 atom1) opid1 atoms1
+
     --   ? causalTreePendingSize (applyAtom ct opid1 atom1)
     --   ? List.length atoms1 + List.length [atom2] < List.length (atom1:atoms1) + List.length [atom2]
     --   ? toProof (S.member opid1 (causalTreeIds (applyAtom ct opid1 atom1)))
