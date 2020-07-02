@@ -418,7 +418,15 @@ lemmaDeleteSubsetJust m@(Map.Map k v t) pid atoms ids
     *** QED) &&&
     lemmaDeleteSubsetJust t pid atoms ids
 
-
+{-@ ple lemmaApplyAtomIds' @-}
+{-@ lemmaApplyAtomIds' :: Ord id
+  => {ct:CausalTree id a | idUniqueCausalTree ct}
+  -> {id:id | S.member id (weaveIds (causalTreeWeave ct))}
+  -> {atom:CausalTreeAtom id a | not (S.member (causalTreeAtomId atom) (causalTreeIds ct))}
+  -> {(causalTreePendingSize (applyAtom ct id atom) <= causalTreePendingSize ct) && (S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom)) == causalTreeIds (applyAtom ct id atom)) && (S.isSubsetOf (weaveIds (causalTreeWeave ct)) (weaveIds (causalTreeWeave (applyAtom ct id atom)))) && (idUniqueCausalTree (applyAtom ct id atom))}
+@-}
+lemmaApplyAtomIds' :: Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> ()
+lemmaApplyAtomIds' ct parentId atom = lemmaApplyAtomIds ct parentId atom &&& applyAtomRespectsUniq ct parentId atom
 
 {-@ lemmaApplyAtomIds :: Ord id
   => ct:CausalTree id a
