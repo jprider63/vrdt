@@ -370,7 +370,11 @@ lemmaFoldlIds ct@(CausalTree weave pending) pid (a:as)
   where aid = causalTreeAtomId a
 
 
-
+-- {-@ lemmaDeleteSubset :: Ord id
+--   => pending:Map.Map id [CausalTreeAtom id a]
+--   -> k:id
+--   -> {S.isSubsetOf (pendingIds (Map.delete k pending)) (pending) }@-}
+-- jfioew
 
 {-@ lemmaDeleteSubsetJust :: Ord id
   => pending:Map.Map id [CausalTreeAtom id a]
