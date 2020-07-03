@@ -39,7 +39,6 @@ lemmaApplyAtomFoldNeq :: forall id a. Ord id
  -> [CausalTreeAtom id a]
  -> [CausalTreeAtom id a]
  -> ()
-lemmaApplyAtomFoldNeq ct opid1 opid2 atoms1 atoms2 = undefined
 lemmaApplyAtomFoldNeq ct opid1 opid2 atoms1 [] =
       List.foldl' (applyAtomHelper opid2) (List.foldl' (applyAtomHelper opid1) ct atoms1) []
   ==. (List.foldl' (applyAtomHelper opid1) ct atoms1)
@@ -423,7 +422,6 @@ lawCommutativityNEqJJ
       `cast` (xs ==. pops1)
       `cast` ()
     }) &&&
-  lemmaDeleteSubsetJust pending id2 pops2 (pendingListIds pops2) &&&
   toProof (causalTreeIds (CausalTree ctw id2pending)
           `cast` pendingIds id2pending
           `cast` pendingIds pending) &&&
@@ -432,7 +430,6 @@ lawCommutativityNEqJJ
   toProof (causalTreeIds (CausalTree ctw id1pending)
           `cast` pendingIds pending) &&&
   toProof (not (S.member id1 (causalTreeIds (CausalTree ctw id1pending)))) &&&
-
 
   lemmaApplyAtomIds' (CausalTree ctw id2pending) pid2 atom2 &&&
   (idUniqueList [CausalTreeAtom id1 l1]
@@ -447,7 +444,17 @@ lawCommutativityNEqJJ
   *** QED) &&&
   toProof (pendingListIds pops2) &&&
   toProof (idUniqueList pops2) &&&
-  lemmaApplyAtomFoldNeq (CausalTree wop2 id2pending) pid1 id2 [CausalTreeAtom id1 l1] pops2 &&&
+  (case pops2 of
+     [] -> ()
+     _ -> lemmaDeleteShrink pending id2 pops2 &&&
+       toProof (List.length pops2 >= 1) &&&
+       (causalTreePendingSize (CausalTree wop2 id2pending)
+       ==. pendingSize id2pending
+       *** QED) &&&
+       (causalTreePendingSize x
+        ==. pendingSize pending *** QED)  &&&
+       lemmaApplyAtomFoldNeq (CausalTree wop2 id2pending) pid1 id2 [CausalTreeAtom id1 l1] pops2 ) &&&
+  
   (   apply (apply x op2) op1
   ==. apply (List.foldl' (applyAtomHelper id2) (CausalTree wop2 id2pending) pops2) op1
   ==. List.foldl' (applyAtomHelper pid1) (List.foldl' (applyAtomHelper id2) (CausalTree wop2 id2pending) pops2) [CausalTreeAtom id1 l1]
@@ -471,7 +478,18 @@ lawCommutativityNEqJJ
   toProof (idUniqueCausalTree (CausalTree wop1 id1pending)) &&&
   toProof (idUniqueList [CausalTreeAtom id2 l2]) &&&
   toProof (S.null (S.intersection (pendingListIds [CausalTreeAtom id2 l2]) (causalTreeIds (CausalTree wop1 id1pending)))) &&&
-  lemmaApplyAtomFoldNeq (CausalTree wop1 id1pending) pid2 id1 [CausalTreeAtom id2 l2] pops1 &&&
+
+  (case pops1 of
+     [] -> ()
+     _ -> lemmaDeleteShrink pending id1 pops1 &&&
+       toProof (List.length pops1 >= 1) &&&
+       (causalTreePendingSize (CausalTree wop1 id1pending)
+       ==. pendingSize id1pending
+       *** QED) &&&
+       toProof (causalTreePendingSize (CausalTree wop1 id1pending) < causalTreePendingSize x) &&&
+       lemmaApplyAtomFoldNeq (CausalTree wop1 id1pending) pid2 id1 [CausalTreeAtom id2 l2] pops1 ) &&&
+
+
   toProof (weaveIds wop2op1 `cast` pendingIds id1id2pending) &&&
   (case Map.lookup id1 id2pending of
      { Nothing -> ();
@@ -490,7 +508,22 @@ lawCommutativityNEqJJ
   toProof (S.null (S.intersection (pendingListIds pops1) (pendingIds id1id2pending))) &&&
   toProof (S.null (S.intersection (pendingListIds pops1) (weaveIds wop2op1))) &&&
   toProof (S.null (S.intersection (pendingListIds pops1) (pendingListIds pops2))) &&&
-  lemmaApplyAtomFoldNeq (CausalTree wop2op1 id1id2pending) id2 id1  pops2 pops1 &&&
+
+  (causalTreePendingSize (CausalTree wop2op1 id1id2pending)
+  ==. pendingSize id1id2pending
+  *** QED) &&&
+
+  (if List.length pops1 >0 || List.length pops2 > 0
+  then
+     (if isJust id1pendingM
+      then (lemmaDeleteShrink id2pending id1 pops1 &&& lemmaDeleteShrink pending id1 pops1)
+      else ()) &&&
+     (if isJust id2pendingM
+      then (lemmaDeleteShrink id1pending id2 pops2 &&& lemmaDeleteShrink pending id2 pops2)
+      else ()) &&&
+     toProof (pendingSize id1id2pending < pendingSize pending) &&&
+     lemmaApplyAtomFoldNeq (CausalTree wop2op1 id1id2pending) id2 id1  pops2 pops1
+  else ()) &&&
   (   apply (apply x op1) op2
   ==. apply (List.foldl' (applyAtomHelper id1) (CausalTree wop1 id1pending) pops1) op2
   ==. List.foldl' (applyAtomHelper pid2) (List.foldl' (applyAtomHelper id1) (CausalTree wop1 id1pending) pops1) [CausalTreeAtom id2 l2]
