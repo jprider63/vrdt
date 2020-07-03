@@ -592,7 +592,7 @@ lawCommutativityNEqNJ'
   , Just wop2 <-insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
   , id2 == pid1
   = 
-    assume (id1 /= pid2) &&&
+    assert (id1 /= pid2) &&&
     (constConstNothing id1 pops1 *** QED) &&&
   -- id2
     ( List.foldl' (applyAtomHelper id2) (CausalTree wop2 id2pending) []
