@@ -255,6 +255,11 @@ lawCommutativityNEqNJ
 
   ==.  List.foldl' (applyAtomHelper pid1) (List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete id2 pending)) pops2) [CausalTreeAtom id1 l1]
   ==.  List.foldl' (applyAtomHelper id2) (List.foldl' (applyAtomHelper pid1) (CausalTree wop2 (Map.delete id2 pending)) [CausalTreeAtom id1 l1]) pops2
+  -- does not go through
+      -- ? lemmaDeleteSubsetJust pending id2 pops2 (pendingListIds pops2)
+      -- ? assert (idUniqueWeave wop2)
+      -- ? assert (idUniqueMap pending)
+      -- ? assert (idUniqueCausalTree (CausalTree wop2 (Map.delete id2 pending)))
       ? lemmaApplyAtomFoldNeq (CausalTree wop2 (Map.delete id2 pending)) id2 pid1 pops2 [CausalTreeAtom id1 l1]
   ==.  apply (List.foldl' (applyAtomHelper id2) (CausalTree wop2 (Map.delete id2 pending)) pops2) op1
   ==. apply (apply x op2) op1
