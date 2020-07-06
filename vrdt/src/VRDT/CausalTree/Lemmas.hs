@@ -588,8 +588,6 @@ lemmaInsertAtomInsertInWeaveChildren
     ==. insertInWeaveChildren ((CausalTreeWeave atom1 []) : ws) pid2 atom2
     ==. Just (CausalTreeWeave atom1 []:wsop2)
     *** QED) &&&
-    -- assume (List.length wsop2 > 0) &&&
-    -- assume (atom1 `atomGreaterThan` causalTreeWeaveAtom (List.head wsop2)) &&&
 
     (case insertInWeave w pid2 atom2 of{
        Nothing -> let Just wsop2' = insertInWeaveChildren ws' pid2 atom2 in
@@ -623,6 +621,154 @@ lemmaInsertAtomInsertInWeaveChildren
 
   | Nothing <- insertInWeaveChildren ws pid2 atom2
   = Nothing === insertInWeaveChildren ws pid2 atom2 === Just wsop2 *** QED
+
+{-@ lemmaInsertInWeaveChildrenJustEq2 :: Ord id
+  => w:[CausalTreeWeave id a]
+  -> pid1:id
+  -> pid2:id
+  -> wop1 : [CausalTreeWeave id a]
+  -> wop2 : [CausalTreeWeave id a]
+  -> {op1:CausalTreeAtom id a | (insertInWeaveChildren w pid1 op1 == Just wop1) && (causalTreeAtomId op1 /= pid2)}
+  -> {op2:CausalTreeAtom id a | (insertInWeaveChildren w pid2 op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2) && (causalTreeAtomId op2 /= pid1)}
+  -> {insertInWeaveChildren wop1 pid2 op2 == insertInWeaveChildren wop2 pid1 op1 && isJust (insertInWeaveChildren wop1 pid2 op2)}
+/ [causalTreeWeaveLengthList w, List.length w, 0]@-}
+lemmaInsertInWeaveChildrenJustEq2
+  :: Ord id
+  => [CausalTreeWeave id a]
+  -> id
+  -> id
+  -> [CausalTreeWeave id a]
+  -> [CausalTreeWeave id a]
+  -> CausalTreeAtom id a
+  -> CausalTreeAtom id a
+  -> ()
+lemmaInsertInWeaveChildrenJustEq2
+  []
+  pid1
+  pid2
+  wsop1
+  wsop2
+  atom1
+  atom2
+  = Nothing === insertInWeaveChildren [] pid1 atom1 === Just wsop1 *** QED
+lemmaInsertInWeaveChildrenJustEq2
+  (w@(CausalTreeWeave catom@(CausalTreeAtom cid _) children):ws)
+  pid1
+  pid2
+  wsop1
+  wsop2
+  atom1@(CausalTreeAtom id1 _)
+  atom2@(CausalTreeAtom id2 _)
+  | pid1 == pid2
+  = lemmaInsertInWeaveListJustEq (w:ws) pid1 wsop1 wsop2 atom1 atom2
+  | Just wop1 <- insertInWeave w pid1 atom1
+  , Just wop2 <- insertInWeave w pid2 atom2
+  = toProof (List.length (w:ws)
+             `cast` List.length ws
+             `cast` causalTreeWeaveLengthList (w:ws)
+             `cast` causalTreeWeaveLengthList ws
+             `cast` causalTreeWeaveLength w
+             `cast` List.length (w:ws)) &&&
+    
+    (insertInWeaveChildren (w:ws) pid1 atom1
+     ==. Just wsop1
+     ==. Just (wop1:ws)
+     *** QED) &&&
+    (insertInWeaveChildren (w:ws) pid2 atom2
+     ==. Just wsop2
+     ==. Just (wop2:ws)
+     *** QED) &&&
+    let Just wop1op2 = insertInWeave wop1 pid2 atom2
+        Just wop2op1 = insertInWeave wop2 pid1 atom1 in
+    lemmaInsertInWeaveJustEq2 w pid1 pid2 wop1 wop2 atom1 atom2 &&&
+    (Just wop1op2 ==. Just wop2op1 *** QED) &&&
+    (insertInWeaveChildren (wop1:ws) pid2 atom2
+    ==. Just (wop1op2:ws)
+    *** QED) &&&
+    (insertInWeaveChildren (wop2:ws) pid1 atom1
+    ==. Just (wop2op1:ws)
+    *** QED)
+  | Nothing <- insertInWeave w pid1 atom1
+  , Nothing <- insertInWeave w pid2 atom2
+  = (insertInWeaveChildren (w:ws) pid1 atom1
+     ==. Just wsop1
+     -- ==. Just (wop1:ws)
+     *** QED) &&&
+    (insertInWeaveChildren (w:ws) pid2 atom2
+     ==. Just wsop2
+     -- ==. Just (wop2:ws)
+     *** QED) &&&
+    let Just wsop1' = insertInWeaveChildren ws pid1 atom1
+        Just wsop2' = insertInWeaveChildren ws pid2 atom2 in
+    (Just wsop1
+    ==. Just (w:wsop1')
+    *** QED) &&&
+    (Just wsop2
+    ==. Just (w:wsop2')
+    *** QED) &&&
+    let Just wsop2op1' = insertInWeaveChildren wsop2' pid1 atom1
+        Just wsop1op2' = insertInWeaveChildren wsop1' pid2 atom2 in
+    (insertInWeaveChildren wsop1 pid2 atom2
+    ==. Just (w:wsop1op2')
+    *** QED) &&&
+    (insertInWeaveChildren wsop2 pid1 atom1
+    ==. Just (w:wsop2op1')
+    *** QED) &&&
+    toProof (List.length (w:ws)
+             `cast` List.length ws
+             `cast` causalTreeWeaveLengthList (w:ws)
+             `cast` causalTreeWeaveLengthList ws
+             `cast` causalTreeWeaveLength w
+             `cast` List.length (w:ws)) &&&
+    lemmaInsertInWeaveChildrenJustEq2 ws pid1 pid2 wsop1' wsop2' atom1 atom2 &&&
+    (Just wsop1op2' ==. Just wsop2op1' *** QED)
+  | Just w' <- insertInWeave w pid1 atom1
+  , Nothing <- insertInWeave w pid2 atom2
+  = (insertInWeaveChildren (w:ws) pid1 atom1
+     ==. Just wsop1
+     ==. Just (w':ws)
+     *** QED) &&&
+    (insertInWeaveChildren (w:ws) pid2 atom2
+     ==. Just wsop2
+     -- ==. Just (wop2:ws)
+     *** QED) &&&
+    let Just wsop2' = insertInWeaveChildren ws pid2 atom2 in
+    (Just wsop2
+    ==. Just (w:wsop2')
+    *** QED) &&&
+    (case insertInWeave w' pid2 atom2 of
+       Nothing -> ()
+       Just _ -> ()) &&&
+    (insertInWeaveChildren (w':ws) pid2 atom2
+    ==. Just (w':wsop2')
+    *** QED) &&&
+    (insertInWeaveChildren (w:wsop2') pid1 atom1
+    ==. Just (w':wsop2')
+    *** QED)
+  | Just w' <- insertInWeave w pid2 atom2
+  , Nothing <- insertInWeave w pid1 atom1
+  = (insertInWeaveChildren (w:ws) pid2 atom2
+     ==. Just wsop2
+     ==. Just (w':ws)
+     *** QED) &&&
+    (insertInWeaveChildren (w:ws) pid1 atom1
+     ==. Just wsop1
+     -- ==. Just (wop1:ws)
+     *** QED) &&&
+    let Just wsop1' = insertInWeaveChildren ws pid1 atom1 in
+    (Just wsop1
+    ==. Just (w:wsop1')
+    *** QED) &&&
+    (case insertInWeave w' pid1 atom1 of
+       Nothing -> ()
+       Just _ -> ()) &&&
+    (insertInWeaveChildren (w':ws) pid1 atom1
+    ==. Just (w':wsop1')
+    *** QED) &&&
+    (insertInWeaveChildren (w:wsop1') pid2 atom2
+    ==. Just (w':wsop1')
+    *** QED)
+
 {-@ lemmaInsertInWeaveJustEq2 :: Ord id
   => w:CausalTreeWeave id a
   -> pid1:id
@@ -631,7 +777,8 @@ lemmaInsertAtomInsertInWeaveChildren
   -> wop2 : CausalTreeWeave id a
   -> {op1:CausalTreeAtom id a | (insertInWeave w pid1 op1 == Just wop1) && (causalTreeAtomId op1 /= pid2)}
   -> {op2:CausalTreeAtom id a | (insertInWeave w pid2 op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2) && (causalTreeAtomId op2 /= pid1)}
-  -> {insertInWeave wop1 pid2 op2 == insertInWeave wop2 pid1 op1 && isJust (insertInWeave wop1 pid2 op2)} @-}
+  -> {insertInWeave wop1 pid2 op2 == insertInWeave wop2 pid1 op1 && isJust (insertInWeave wop1 pid2 op2)}
+/ [causalTreeWeaveLength w, 0, if (pid1 == (causalTreeAtomId (causalTreeWeaveAtom w))) then 0 else 1]@-}
 lemmaInsertInWeaveJustEq2
   :: Ord id
   => CausalTreeWeave id a
@@ -678,7 +825,9 @@ lemmaInsertInWeaveJustEq2
     (insertInWeave wop2 pid1 atom1
     === Just (CausalTreeWeave catom childrenop2op1)
     *** QED) &&&
-    (childrenop1op2 ==! childrenop2op1 *** QED)
+    toProof (causalTreeWeaveLength w `cast` causalTreeWeaveLengthList children) &&&
+    lemmaInsertInWeaveChildrenJustEq2 children pid1 pid2 childrenop1 childrenop2 atom1 atom2 &&&
+    (Just childrenop1op2 === Just childrenop2op1 *** QED)
   | Nothing <- insertInWeave w pid1 atom1
   = insertInWeave w pid1 atom1 === Just wop1 *** QED
   | Nothing <- insertInWeave w pid2 atom2
@@ -687,23 +836,32 @@ lemmaInsertInWeaveJustEq2
   , Just _ <- insertInWeave w pid1 atom1
   , Just _ <- insertInWeave w pid2 atom2
   = (insertInWeave w pid1 atom1
-    === Just wop1
+    ==. Just wop1
     *** QED) &&&
     (insertInWeave w pid2 atom2
-    === Just wop2
+    ==. Just wop2
     *** QED) &&&
     let Just childrenop2 = insertInWeaveChildren children pid2 atom2 in
     (Just wop2
-    === Just (CausalTreeWeave catom childrenop2)
+    ==. Just (CausalTreeWeave catom childrenop2)
     *** QED) &&&
     (Just wop1
-    === Just (CausalTreeWeave catom (insertAtom children atom1))
-    *** QED)
-    -- (insertInWeave wop1 pid2 atom2
-    -- === )
-  | pid2 == cid
-  = undefined
-
+    ==. Just (CausalTreeWeave catom (insertAtom children atom1))
+    *** QED) &&&
+    (insertInWeave wop2 pid1 atom1
+    ==. Just (CausalTreeWeave catom (insertAtom childrenop2 atom1))
+    *** QED) &&&
+    let Just childrenop1op2 = insertInWeaveChildren (insertAtom children atom1) pid2 atom2 in
+    (insertInWeave wop1 pid2 atom2
+    ==. Just (CausalTreeWeave catom childrenop1op2)
+    *** QED) &&&
+    lemmaInsertAtomInsertInWeaveChildren children atom1 pid2 atom2 childrenop2 &&&
+    (Just childrenop1op2 ==. Just (insertAtom childrenop2 atom1) *** QED)
+  | pid2 == cid -- && pid1 /= cid
+  = (if (pid1 == cid) then 0 else 1) `cast`
+    (if (pid2 == cid) then 0 else 1) `cast`
+    (causalTreeWeaveLength w) `cast`
+    lemmaInsertInWeaveJustEq2  w pid2 pid1 wop2 wop1 atom2 atom1
 
 --{-@ ple lemmaInsertInWeaveJustNEq @-}
 {-@ lemmaInsertInWeaveJustNEq :: Ord id
