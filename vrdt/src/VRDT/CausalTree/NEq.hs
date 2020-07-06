@@ -174,21 +174,20 @@ listLast (x:xs@(_:_)) =
 cons :: a -> [a] -> [a]
 cons x xs = x:xs
 
-{-@ lawCommutatiityNEqNJFoldl :: Ord id =>
-     x : CausalTree id a
-  -> {pid1 : id | not (S.member pid1 (causalTreeWeave ))}
-  -> atom1 : {CausalTreeAtom id a | not (S.member (causalTreeAtomId atom1) (causalTreeIds x))}
-  -> pid2 : id
-  -> atoms2 : {[CausalTreeAtom id a] | idUniqueList atoms2 && not (S.member (causalTreeAtomId atom1) (pendingListIds atoms2)) && (S.null (S.intersection (pendingListIds atoms2) (causalTreeIds x)))}
-  -> {op2 : CausalTreeOp id a |
-        causalTreeOpParent op1 /= causalTreeOpParent op2 &&
-        (compatible op1 op2 && compatibleState x op1 && compatibleState x op2) &&
-        (Nothing == (insertInWeave (causalTreeWeave x) (causalTreeOpParent op1) (causalTreeOpAtom op1))) &&
-        (isJust (insertInWeave (causalTreeWeave x) (causalTreeOpParent op2) (causalTreeOpAtom op2)))}
-  -> {apply (apply x op1) op2 == apply (apply x op2) op1}
-  / [causalTreePendingSize x, 1, List.length atoms2] @-}
-
-
+-- {-@ lawCommutatiityNEqNJFoldl :: Ord id =>
+--      x : CausalTree id a
+--   -> {pid1 : id | not (S.member pid1 (causalTreeWeave ))}
+--   -> atom1 : {CausalTreeAtom id a | not (S.member (causalTreeAtomId atom1) (causalTreeIds x))}
+--   -> pid2 : id
+--   -> atoms2 : {[CausalTreeAtom id a] | idUniqueList atoms2 && not (S.member (causalTreeAtomId atom1) (pendingListIds atoms2)) && (S.null (S.intersection (pendingListIds atoms2) (causalTreeIds x)))}
+--   -> {op2 : CausalTreeOp id a |
+--         causalTreeOpParent op1 /= causalTreeOpParent op2 &&
+--         (compatible op1 op2 && compatibleState x op1 && compatibleState x op2) &&
+--         (Nothing == (insertInWeave (causalTreeWeave x) (causalTreeOpParent op1) (causalTreeOpAtom op1))) &&
+--         (isJust (insertInWeave (causalTreeWeave x) (causalTreeOpParent op2) (causalTreeOpAtom op2)))}
+--   -> {apply (apply x op1) op2 == apply (apply x op2) op1}
+--   / [causalTreePendingSize x, 1, List.length atoms2] @-}
+-- jfioew
 {-@ lawCommutativityNEqNJBoth :: Ord id =>
      x : CausalTree id a
   -> op1 : CausalTreeOp id a
@@ -441,7 +440,9 @@ lawCommutativityNEqJJ
     (Map.lookup id2 id1pending
     ==. Map.lookup id2 (Map.delete id1 pending)
     ==. Map.lookup id2 pending
-    *** QED) &&&    
+    *** QED) &&&
+    toProof (pid1 /= id2) &&&
+    toProof (pid2 /= id1) &&&    
     lemmaInsertInWeaveJustEq2
         (CausalTreeWeave ctAtom weaveChildren)
         pid2
