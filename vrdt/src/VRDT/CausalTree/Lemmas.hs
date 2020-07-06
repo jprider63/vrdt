@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-@ LIQUID "--reflection" @-}
+--{-@ LIQUID "--ple" @-}
 {-@ LIQUID "--ple-local" @-}
 {-@ LIQUID "--noadt" @-}
 module VRDT.CausalTree.Lemmas where
@@ -1001,6 +1002,7 @@ lemmaFoldlIds ct@(CausalTree weave pending) pid (a:as)
 --   -> {S.isSubsetOf (pendingIds (Map.delete k pending)) (pending) }@-}
 -- jfioew
 
+{-@ ple lemmaDeleteSubsetJust @-}
 {-@ lemmaDeleteSubsetJust :: Ord id
   => pending:Map.Map id [CausalTreeAtom id a]
   -> k:id
@@ -1046,6 +1048,7 @@ lemmaDeleteSubsetJust m@(Map.Map k v t) pid atoms ids
     ==. (idUniqueList v && S.null (S.intersection (pendingListIds v) (pendingIds t)) && idUniqueMap t)
     *** QED) &&&
     lemmaDeleteSubsetJust t pid atoms ids
+
 
 {-@ ple lemmaApplyAtomIds' @-}
 {-@ lemmaApplyAtomIds' :: Ord id
@@ -1154,7 +1157,7 @@ lemmaApplyAtomIds ct@(CausalTree weave pending) parentId atom
 
 
 
-
+{-@ ple lemmaDeleteShrink @-}
 {-@ lemmaDeleteShrink :: Ord id
   => x:Map.Map id [a]
   -> k:id
