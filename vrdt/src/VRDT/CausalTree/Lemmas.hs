@@ -944,9 +944,16 @@ lemmaInsertInWeaveJustNEqRel w@(CausalTreeWeave catom@(CausalTreeAtom cid _) ws)
   -> atoms:[CausalTreeAtom id a]
   -> {causalTreeIds (List.foldl' (applyAtomHelper pid) ct atoms) == S.union (causalTreeIds ct) (pendingListIds atoms) && causalTreePendingSize (List.foldl' (applyAtomHelper pid) ct atoms) <= causalTreePendingSize ct && S.isSubsetOf (weaveIds (causalTreeWeave ct)) (weaveIds (causalTreeWeave (List.foldl' (applyAtomHelper pid) ct atoms)))}
   / [causalTreePendingSize ct, 1, List.length atoms]  @-}
-lemmaFoldlIds :: Ord id => CausalTree id a -> id -> [CausalTreeAtom id a] -> ()
-lemmaFoldlIds ct pid _ = undefined
-lemmaFoldlIds ct pid [] = ()
+lemmaFoldlIds :: forall id a. Ord id => CausalTree id a -> id -> [CausalTreeAtom id a] -> ()
+lemmaFoldlIds ct pid [] =
+  (List.foldl' (applyAtomHelper pid) ct []
+  ==. ct
+  *** QED) &&&
+  (causalTreeIds ct *** QED) &&&
+  (causalTreePendingSize ct *** QED) &&&
+  (weaveIds (causalTreeWeave ct) *** QED) &&&
+  (pendingListIds ([] :: [CausalTreeAtom id a]) *** QED)
+
 
 -- surprisingly, this explicit destruction is necessary
 lemmaFoldlIds ct@(CausalTree weave pending) pid (a:_)
@@ -963,37 +970,41 @@ lemmaFoldlIds ct@(CausalTree weave pending) pid (a:as)
              ==. applyAtom ct pid a
              ==. CausalTree weave' pending 
              *** QED) &&&
-             assert (causalTreePendingSize (applyAtomHelper pid ct a) == causalTreePendingSize ct) &&&
-             assert (S.member pid (weaveIds (causalTreeWeave (applyAtomHelper pid ct a))));
+             toProof (causalTreePendingSize (applyAtomHelper pid ct a) == causalTreePendingSize ct) &&&
+             toProof (S.member pid (weaveIds (causalTreeWeave (applyAtomHelper pid ct a))));
       Just [] -> (Map.updateLookupWithKey constConstNothing aid pending
-                 ? constConstNothing aid []
+                 ? (constConstNothing aid [] ==. Nothing *** QED)
              ==. (Just [], Map.delete aid pending)
              *** QED) &&&
                ( applyAtomHelper pid ct a
+             ==. applyAtom ct pid a
              ==. List.foldl' (applyAtomHelper aid) (CausalTree weave' (Map.delete aid pending)) []
              ==. CausalTree weave' (Map.delete aid pending)
              *** QED) &&&
              lemmaDeleteShrink pending aid [] &&&
-             assert (causalTreePendingSize (applyAtomHelper pid ct a) == causalTreePendingSize ct) &&&
-             assert (S.member pid (weaveIds (causalTreeWeave (applyAtomHelper pid ct a))));
+             toProof (causalTreePendingSize (applyAtomHelper pid ct a) == causalTreePendingSize ct) &&&
+             toProof (S.member pid (weaveIds (causalTreeWeave (applyAtomHelper pid ct a))));
       Just pops@(_:_) -> (Map.updateLookupWithKey constConstNothing aid pending
-                         ? constConstNothing aid pops
+                         ? (constConstNothing aid pops ==. Nothing *** QED)
              ==. (Just pops, Map.delete aid pending)
              *** QED) &&&
                ( applyAtomHelper pid ct a
+             ==. applyAtom ct pid a
              ==. List.foldl' (applyAtomHelper aid) (CausalTree weave' (Map.delete aid pending)) pops
              ==. applyAtom ct pid a
              *** QED) &&&
              lemmaDeleteShrink pending aid pops &&&
-             assert (causalTreePendingSize (CausalTree weave' (Map.delete aid pending)) < causalTreePendingSize ct) &&&
+             toProof (causalTreePendingSize (CausalTree weave' (Map.delete aid pending)) < causalTreePendingSize ct) &&&
              lemmaFoldlIds (CausalTree weave' (Map.delete aid pending)) aid pops &&&
-             assert (causalTreePendingSize (applyAtomHelper pid ct a) <= causalTreePendingSize ct) &&&
-             assert (S.member pid (weaveIds (causalTreeWeave (applyAtomHelper pid ct a))))
+             toProof (causalTreePendingSize (applyAtomHelper pid ct a) <= causalTreePendingSize ct) &&&
+             toProof (S.member pid (weaveIds (causalTreeWeave (applyAtomHelper pid ct a))))
     } &&&
 
   -- common
   lemmaApplyAtomIds ct pid a &&&
-  lemmaFoldlIds (applyAtomHelper pid ct a) pid as
+  lemmaFoldlIds (applyAtomHelper pid ct a) pid as &&&
+  (causalTreeIds (List.foldl' (applyAtomHelper pid) ct (a:as)) ==. S.union (causalTreeIds ct) (pendingListIds (a:as)) *** QED) &&&
+  ()
   where aid = causalTreeAtomId a
 
 
