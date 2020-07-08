@@ -234,11 +234,21 @@ lawCommutativityNEqNJ
   x@(CausalTree ctw@(CausalTreeWeave ctAtom weaveChildren) pending)
   op1@(CausalTreeOp pid1 atom1@(CausalTreeAtom id1 l1))
   op2@(CausalTreeOp pid2 atom2@(CausalTreeAtom id2 l2))
+  | Just aaa <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
+  = Just aaa
+    ==. insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
+    ==. Nothing
+    *** QED
+  | Nothing <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
+  = Nothing
+  ==. insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
+  *** QED
   | Nothing  <- insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid1 (CausalTreeAtom id1 l1)
   , Just wop2 <-insertInWeave (CausalTreeWeave ctAtom weaveChildren) pid2 (CausalTreeAtom id2 l2)
   , Nothing <- Map.lookup id2 pending
   , pid1 /= id2
   = ( apply x op1
+  ==. applyAtom x pid1 atom1
   ==. CausalTree (CausalTreeWeave ctAtom weaveChildren) (insertPending pid1 (CausalTreeAtom id1 l1) pending)
   *** QED) &&&
   (   Map.updateLookupWithKey constConstNothing id2 pending
@@ -260,7 +270,11 @@ lawCommutativityNEqNJ
        ==. (Nothing, insertPending pid1 (CausalTreeAtom id1 l1) pending)
        *** QED)
   ==. CausalTree wop2 (insertPending pid1 (CausalTreeAtom id1 l1) pending)
+      ? compatible op1 op2
+      -- ? assert (id1 /= id2)
+      -- ? assert (pid1 /= id2)
       ? lemmaInsertInWeaveJustNEq (CausalTreeWeave ctAtom weaveChildren) pid1 pid2 wop2 (CausalTreeAtom id1 l1) (CausalTreeAtom id2 l2)
+  ==. applyAtom (CausalTree wop2 pending) pid1 atom1
   ==. apply (CausalTree wop2 pending) op1
   ==. apply (apply x op2) op1
   *** QED)
@@ -405,7 +419,7 @@ lawCommutativityNEqNJ
   assume (S.null (S.intersection (pendingListIds pops2) (causalTreeIds (CausalTree wop2 (Map.delete id2 pending))))) &&&
   assert (not (S.member id1 (pendingListIds pops2))) &&&
   lawCommutatiityNEqNJFoldl (CausalTree wop2 (Map.delete id2 pending)) pid1 atom1 id2 pops2
-  | otherwise = undefined
+
 
 
 {-@ lawCommutativityNEqJJ :: Ord id =>
