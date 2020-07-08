@@ -1020,7 +1020,7 @@ lemmaFoldlIds ct@(CausalTree weave pending) pid (a:as)
   -> k:id
   -> {atoms:[CausalTreeAtom id a] | Map.lookup k pending == Just atoms}
   -> {ids:S.Set id | S.isSubsetOf (pendingListIds atoms) ids}
-  -> {(S.union ids (pendingIds (Map.delete k pending)) == S.union ids (pendingIds pending)) && (idUniqueMap pending => idUniqueMap (Map.delete k pending)) && (S.isSubsetOf (pendingIds (Map.delete k pending)) (pendingIds pending))}
+  -> {(S.union ids (pendingIds (Map.delete k pending)) == S.union ids (pendingIds pending)) && (idUniqueMap pending => (idUniqueMap (Map.delete k pending) && S.null (S.intersection (pendingListIds atoms) (pendingIds (Map.delete k pending))))) && (S.isSubsetOf (pendingIds (Map.delete k pending)) (pendingIds pending))}
 @-}
 lemmaDeleteSubsetJust :: Ord id
   => Map.Map id [CausalTreeAtom id a]
@@ -1031,7 +1031,13 @@ lemmaDeleteSubsetJust :: Ord id
 lemmaDeleteSubsetJust Map.Tip _ _ _ = ()
 lemmaDeleteSubsetJust m@(Map.Map k v t) pid atoms ids
   | pid < k
-  = ()
+  = (Map.delete pid m
+  ==. m
+  *** QED) &&&
+  (Just atoms
+  ==. Map.lookup pid m
+  ==. Nothing
+  *** QED)
   | pid == k
   = (Map.delete k m
     ==. t
@@ -1059,7 +1065,9 @@ lemmaDeleteSubsetJust m@(Map.Map k v t) pid atoms ids
     (idUniqueMap m
     ==. (idUniqueList v && S.null (S.intersection (pendingListIds v) (pendingIds t)) && idUniqueMap t)
     *** QED) &&&
-    lemmaDeleteSubsetJust t pid atoms ids
+    lemmaDeleteSubsetJust t pid atoms ids &&&
+    lemmaLookupSubsetOf m pid atoms
+
 
 
 {-@ ple lemmaApplyAtomIds' @-}

@@ -408,6 +408,9 @@ lawCommutativityNEqNJ
   (compatibleState x op1
    ==. (idUniqueCausalTree x  && (not (id1 `S.member` causalTreeIds x)))
    *** QED) &&&
+  (compatibleState x op2
+   ==. (idUniqueCausalTree x  && (not (id2 `S.member` causalTreeIds x)))
+  *** QED) &&&
   (causalTreeIds x
   ==. S.union (weaveIds ctw) (pendingIds pending)
   *** QED) &&&
@@ -415,9 +418,13 @@ lawCommutativityNEqNJ
   toProof (idUniqueMap pending) &&&
   toProof (not (S.member pid1 (weaveIds wop2))) &&&
   toProof (idUniqueList pops2) &&&
-  -- need a more precise lemma: unique && delete => keys - deleted 
-  assume (S.null (S.intersection (pendingListIds pops2) (causalTreeIds (CausalTree wop2 (Map.delete id2 pending))))) &&&
-  assert (not (S.member id1 (pendingListIds pops2))) &&&
+  -- need a more precise lemma: unique && delete => keys - deleted
+  toProof (not (S.member id2 (pendingListIds pops2))) &&&
+  toProof (S.null (S.intersection (pendingListIds pops2) (weaveIds ctw))) &&&
+  toProof (S.null (S.intersection (pendingListIds pops2) (weaveIds wop2))) &&&
+  toProof (S.null (S.intersection (pendingListIds pops2) (pendingIds (Map.delete id2 pending)))) &&&
+  toProof (S.null (S.intersection (pendingListIds pops2) (causalTreeIds (CausalTree wop2 (Map.delete id2 pending))))) &&&
+  toProof (not (S.member id1 (pendingListIds pops2))) &&&
   lawCommutatiityNEqNJFoldl (CausalTree wop2 (Map.delete id2 pending)) pid1 atom1 id2 pops2
 
 
