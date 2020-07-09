@@ -256,7 +256,7 @@ lawCommutatiityNEqNJFoldl
     ==. applyAtom (List.foldl' (applyAtomHelper pid2) (applyAtomHelper pid2 ct atom2) atoms2) pid1 atom1
     ==. applyAtom (List.foldl' (applyAtomHelper pid2) ct (atom2:atoms2)) pid1 atom1
     *** QED)
-  | CausalTree wop2 _ <- applyAtom ct pid2 atom2
+  | CausalTree wop2 childrenop2 <- applyAtom ct pid2 atom2
   , Nothing <- insertInWeave wop2 pid1 atom1
   = (applyAtom ct pid1 atom1 ==. apply ct (CausalTreeOp pid1 atom1) *** QED) &&&
   (applyAtom ct pid2 atom2 ==. apply ct (CausalTreeOp pid2 atom2) *** QED) &&&
@@ -289,6 +289,8 @@ lawCommutatiityNEqNJFoldl
       ? lawCommutativityNEqNJBoth ct (CausalTreeOp pid1 atom1) (CausalTreeOp pid2 atom2)
     ==. List.foldl' (applyAtomHelper pid2) (applyAtom (applyAtom ct pid2 atom2) pid1 atom1) atoms2
       ? lemmaApplyAtomIds' ct pid2 atom2
+      ? (causalTreePendingSize (applyAtom ct pid2 atom2)  ==. pendingSize childrenop2)
+      ? toProof (pendingSize childrenop2 <= (causalTreePendingSize ct ==. pendingSize children))
       ? lawCommutatiityNEqNJFoldl (applyAtom ct pid2 atom2) pid1 atom1 pid2 atoms2
     ==. applyAtom (List.foldl' (applyAtomHelper pid2) (applyAtom ct pid2 atom2) atoms2) pid1 atom1
     ==. applyAtom (List.foldl' (applyAtomHelper pid2) (applyAtomHelper pid2 ct atom2) atoms2) pid1 atom1
@@ -306,7 +308,7 @@ lawCommutatiityNEqNJFoldl
         (Nothing == (insertInWeave (causalTreeWeave x) (causalTreeOpParent op1) (causalTreeOpAtom op1))) &&
         (isJust (insertInWeave (causalTreeWeave x) (causalTreeOpParent op2) (causalTreeOpAtom op2)))}
   -> {apply (apply x op1) op2 == apply (apply x op2) op1}
-  / [causalTreePendingSize x, 1] @-}
+  / [causalTreePendingSize x, 1, 0] @-}
 lawCommutativityNEqNJBoth :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
 lawCommutativityNEqNJBoth
   x@(CausalTree ctw@(CausalTreeWeave ctAtom weaveChildren) pending)
@@ -328,7 +330,7 @@ lawCommutativityNEqNJBoth
         (isJust (insertInWeave (causalTreeWeave x) (causalTreeOpParent op2) (causalTreeOpAtom op2))) &&
         (causalTreeOpParent op1 /= causalTreeAtomId (causalTreeOpAtom op2))}
   -> {apply (apply x op1) op2 == apply (apply x op2) op1}
-  / [causalTreePendingSize x, 0] @-}
+  / [causalTreePendingSize x, 0, 0] @-}
 lawCommutativityNEqNJ :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTreeOp id a -> ()
 lawCommutativityNEqNJ
   x@(CausalTree ctw@(CausalTreeWeave ctAtom weaveChildren) pending)
@@ -526,6 +528,12 @@ lawCommutativityNEqNJ
   toProof (S.null (S.intersection (pendingListIds pops2) (causalTreeIds (CausalTree wop2 (Map.delete id2 pending))))) &&&
   toProof (not (S.member id1 (pendingListIds pops2))) &&&
   lemmaDeleteShrink pending id2 pops2 &&&
+  (causalTreePendingSize x ==. pendingSize pending *** QED) &&&
+  (causalTreePendingSize (CausalTree wop2 (Map.delete id2 pending)) ==. pendingSize (Map.delete id2 pending) *** QED) &&&
+  toProof (pendingSize (Map.delete id2 pending) < pendingSize pending) &&&
+  toProof (idUniqueCausalTree (CausalTree wop2 (Map.delete id2 pending))
+  `cast`(idUniqueWeave wop2 && idUniqueMap (Map.delete id2 pending))
+  `cast` (pendingIds (Map.delete id2 pending))) &&&
   lawCommutatiityNEqNJFoldl (CausalTree wop2 (Map.delete id2 pending)) pid1 atom1 id2 pops2
 
 

@@ -17,7 +17,7 @@ import           Prelude                 hiding ( Maybe(..)
                                                 )
 
 import           VRDT.CausalTree.Lemmas
-import           VRDT.CausalTree.NEq
+import           VRDT.CausalTree.NEq (lemmaApplyAtomFoldNeq)
 import           Liquid.ProofCombinators
 import           ProofCombinators
 
