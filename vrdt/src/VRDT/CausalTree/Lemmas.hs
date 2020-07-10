@@ -6,6 +6,7 @@
 {-@ LIQUID "--noadt" @-}
 module VRDT.CausalTree.Lemmas where
 import           Liquid.Data.Maybe
+import qualified Liquid.Data.List as List
 import           Liquid.Data.Map                ( Map )
 import qualified Liquid.Data.Map               as Map
 import qualified Data.Set                      as S
@@ -20,6 +21,12 @@ import           Prelude                 hiding ( Maybe(..)
 import qualified Liquid.Data.List              as List
 import Liquid.ProofCombinators
 import ProofCombinators
+
+{-@ ple idUniqueListConcat @-}
+{-@ idUniqueListConcat :: Ord id => xs:[CausalTreeAtom id a] -> {ys:[CausalTreeAtom id a] | idUniqueList (List.concat xs ys)} -> {(S.union (pendingListIds xs) (pendingListIds ys) == pendingListIds (List.concat xs ys)) && idUniqueList xs && idUniqueList ys && S.null (S.intersection (pendingListIds xs) (pendingListIds ys))} @-}
+idUniqueListConcat :: Ord id => [CausalTreeAtom id a] -> [CausalTreeAtom id a] -> ()
+idUniqueListConcat [] _ = ()
+idUniqueListConcat (x@(CausalTreeAtom idx _):xs) ys = idUniqueListConcat xs ys
 
 {-@ ple atomGreaterThanAntiSym @-}
 {-@ atomGreaterThanAntiSym :: Ord id => x:CausalTreeAtom id a -> {y:CausalTreeAtom id a | atomGreaterThan x y} -> {not (atomGreaterThan y x)} @-}
