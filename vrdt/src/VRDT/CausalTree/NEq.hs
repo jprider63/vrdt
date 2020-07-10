@@ -567,10 +567,9 @@ lawCommutativityNEqNJ'
                    (List.foldl' (applyAtomHelper id2)
                      (CausalTree wop2 (Map.delete pid1 pending)) lts) [CausalTreeAtom id1 l1])
                  gts
-              -- ? eq lemma
-               -- ? assert (idUniqueList [CausalTreeAtom id1 l1])
-               ? assume (S.union (pendingListIds lts) (pendingListIds gts) == pendingListIds pops2)
-               ? assume (S.null (S.intersection (pendingListIds lts) (pendingListIds gts)))
+
+               ? (S.union (pendingListIds lts) (pendingListIds gts) == pendingListIds pops2)
+               ? (S.null (S.intersection (pendingListIds lts) (pendingListIds gts)))
                ? lemmaApplyAtomFoldEq
                       (List.foldl' (applyAtomHelper id2)
                         (CausalTree wop2 (Map.delete pid1 pending)) lts)
