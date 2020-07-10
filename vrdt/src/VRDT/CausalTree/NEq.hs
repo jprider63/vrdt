@@ -23,6 +23,86 @@ import           Liquid.ProofCombinators
 import           ProofCombinators
 import qualified Data.Set as S
 
+
+{-@ lawCommutativity :: Ord id
+  => x:CausalTree id a
+  -> op1: CausalTreeOp id a
+  -> op2: CausalTreeOp id a
+  -> {(compatibleState x op1 && compatibleState x op2 && compatible op1 op2) => (apply (apply x op1) op2 = apply (apply x op2) op1 && compatibleState (apply x op1) op2)} @-}
+lawCommutativity :: Ord id
+  => CausalTree id a
+  -> CausalTreeOp id a
+  -> CausalTreeOp id a
+  -> ()
+lawCommutativity x op1 op2
+  | compatibleState x op1 && compatibleState x op2 && compatible op1 op2
+  = lawCommutativity1 x op1 op2 &&& lawCommutativity2 x op1 op2
+  | otherwise
+  = ()
+
+{-@ lawCommutativity1 :: Ord id
+  => x:CausalTree id a
+  -> op1: {CausalTreeOp id a | compatibleState x op1}
+  -> {op2: CausalTreeOp id a | compatible op1 op2 && compatibleState x op2}
+  -> {apply (apply x op1) op2 == apply (apply x op2) op1}
+@-}
+lawCommutativity1 :: Ord id
+  => CausalTree id a
+  -> CausalTreeOp id a
+  -> CausalTreeOp id a
+  -> ()
+lawCommutativity1 x@(CausalTree w pending) op1@(CausalTreeOp pid1 atom1@(CausalTreeAtom id1 _)) op2@(CausalTreeOp pid2 atom2@(CausalTreeAtom id2 _))
+  | pid1 == pid2
+  = (compatible op1 op2
+    `cast` compatibleState x op1
+    `cast` compatibleState x op2
+    `cast` idUniqueCausalTree x
+    `cast` causalTreeIds x
+    `cast` pendingIds pending
+    `cast` weaveIds w
+    `cast` ()) &&&
+    lawCommutativityEq' x pid1 atom1 atom2 &&&
+    (apply x op1 === applyAtom x pid1 atom1 *** QED) &&&
+    (apply x op2 === applyAtom x pid2 atom2 *** QED) &&&
+    (apply (apply x op1) op2 === applyAtom (apply x op1) pid2 atom2 *** QED) &&&
+    (apply (apply x op2) op1 === applyAtom (apply x op2) pid1 atom1 *** QED)
+  | otherwise
+  = lawCommutativityNEq x op1 op2
+
+
+{-@ lawCommutativity2 :: Ord id
+  => x:CausalTree id a
+  -> op1: {CausalTreeOp id a | compatibleState x op1}
+  -> {op2: CausalTreeOp id a | compatible op1 op2 && compatibleState x op2}
+  -> {compatibleState (apply x op1) op2}
+@-}
+lawCommutativity2 :: Ord id
+  => CausalTree id a
+  -> CausalTreeOp id a
+  -> CausalTreeOp id a
+  -> ()
+lawCommutativity2 x@(CausalTree w pending) op1@(CausalTreeOp pid1 atom1@(CausalTreeAtom id1 _)) op2@(CausalTreeOp pid2 atom2@(CausalTreeAtom id2 _))
+  | xop1@(CausalTree wop1 pendingop1) <- (apply x op1 === applyAtom x pid1 atom1)
+  = (compatible op1 op2
+    `cast` compatibleState x op1
+    `cast` compatibleState x op2
+    `cast` idUniqueCausalTree x
+    `cast` causalTreeIds x
+    `cast` pendingIds pending
+    `cast` weaveIds w
+    `cast` causalTreeIds xop1
+    `cast` ()) &&&
+    applyAtomRespectsUniq x pid1 atom1 &&&
+    lemmaApplyAtomIds x pid1 atom1 &&&
+    assert (idUniqueCausalTree x) &&&
+    assert (idUniqueCausalTree xop1) &&&
+    (apply x op1 === applyAtom x pid1 atom1 *** QED) &&&
+    (apply x op2 === applyAtom x pid2 atom2 *** QED) &&&
+    (apply (apply x op1) op2 === applyAtom (apply x op1) pid2 atom2 *** QED) &&&
+    (apply (apply x op2) op1 === applyAtom (apply x op2) pid1 atom1 *** QED) &&&
+    (compatibleState (apply x op1) op2 *** QED) &&&
+    ()
+
 --{-@ ple lemmaApplyAtomFoldNeq @-}
 {-@ ple lawCommutativityNEqNN @-}
 {-@ lawCommutativityNEqNN :: Ord id =>
