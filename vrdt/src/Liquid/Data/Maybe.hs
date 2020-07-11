@@ -2,7 +2,7 @@
 
 module Liquid.Data.Maybe where 
 
-import Prelude hiding (Maybe(..), isJust, fromJust)
+import Prelude hiding (Maybe(..), isJust, fromJust, isNothing)
 
 {-@ data Maybe a = Just a | Nothing  @-}
 
@@ -13,6 +13,11 @@ data Maybe a = Just a | Nothing
 isJust :: Maybe a -> Bool 
 isJust (Just _) = True 
 isJust _        = False 
+
+{-@ measure isNothing @-}
+isNothing :: Maybe a -> Bool 
+isNothing (Just _) = False
+isNothing _        = True
 
 {-@ reflect maybe @-}
 maybe :: b -> (a -> b) -> Maybe a -> b
