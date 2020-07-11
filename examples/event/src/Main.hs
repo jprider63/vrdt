@@ -8,6 +8,7 @@ import qualified Data.Aeson as Aeson
 import           Data.Bifunctor
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
+import           Data.Semialign (align)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Zipper as Zipper
@@ -19,6 +20,7 @@ import           Reflex hiding (apply, Event)
 import qualified Reflex
 import           Reflex.Network
 import           Reflex.Vty hiding (apply, Event, mainWidget)
+import           System.Environment (getArgs)
 
 import qualified Kyowon.Client as Client
 import           Kyowon.Core.Types (UTCTimestamp(..), ClientId, createClient, UniqueId(..))
@@ -32,7 +34,7 @@ import           Kyowon.Reflex.Vty.Widget
 import           VRDT.Class
 import           VRDT.LWW (LWW(..))
 import qualified VRDT.LWW as LWW
-import           VRDT.MultiSet (MultiSet(..))
+import           VRDT.MultiSet (MultiSet(..), MultiSetOp(..))
 import           VRDT.TwoPMap (TwoPMap(..), TwoPMapOp(..))
 import qualified VRDT.TwoPMap
 import qualified VRDT.Types as VRDT
@@ -106,11 +108,18 @@ type EventId = UniqueId
 main :: IO ()
 main = do
   -- TODO: Load these from the file system.
+  name <- do
+    args <- getArgs
+    case args of
+      [name] -> return $ Text.pack name
+      _ -> do
+        error "usage: event <display name>"
+
   clientId <- createClient
   let nextId = zeroNextId
   mainWidget clientId nextId $ do
     inp <- input
-    app
+    app name
     return $ fforMaybe inp $ \case
       V.EvKey (V.KChar 'c') [V.MCtrl] -> Just ()
       _ -> Nothing
@@ -121,8 +130,8 @@ data View =
   | ViewEvent EventId
   | ViewEditEvent EventId Event
 
-app :: Widget t m ()
-app = do
+app :: Text -> Widget t m ()
+app name = do
   -- nav <- tabNavigation
   -- runLayout (pure Orientation_Column) 0 nav $ do
   clientId <- lift Reflex.getClientId
@@ -137,7 +146,7 @@ app = do
       out <- networkHold (events st) $ ffor (switchDyn (fst <$> out)) $ \case
           ViewCreateEvent -> createEvent clientId
           ViewEvents -> events st
-          ViewEvent eId -> event eId $ (Map.lookup eId . twoPMap) <$> st
+          ViewEvent eId -> event name eId $ (Map.lookup eId . twoPMap) <$> st
           ViewEditEvent eId e -> editEvent eId e
       
       let opsE = switchDyn (snd <$> out)
@@ -186,13 +195,13 @@ editEvent eId event = do
                 Just $ TwoPMapApply eId $ eventOp $ LWW (UTCTimestamp t clientId) v
           ) <$> a) t
 
-event :: EventId -> Dynamic t (Maybe Event) -> Widget t m (Reflex.Event t View, Reflex.Event t [StateOp])
-event eId eventMD = do
+event :: Text -> EventId -> Dynamic t (Maybe Event) -> Widget t m (Reflex.Event t View, Reflex.Event t [StateOp])
+event name eId eventMD = do
   nav <- tabNavigation
   runLayout (pure Orientation_Column) 0 nav $ do
     backE <- fixed 3 $ textButtonStatic def "Back"
 
-    editE' <- networkView $ ffor eventMD $ \case
+    widgetE' <- networkView $ ffor eventMD $ \case
         Nothing -> do
             fixed 1 $ text "Event does not exist."
 
@@ -216,15 +225,53 @@ event eId eventMD = do
             fixed 1 $ text "Location:"
             fixed 1 $ text $ pure $ lwwValue $ eventLocation e
 
-            return $ const e <$> editE
-    editE <- switchHold never editE'
+            stateE <- fmap EventRSVPsOp <$> displayRSVPs name (eventRSVPs e)
 
+            return $ align (const e <$> editE) stateE
+
+    widgetE <- switchHold never widgetE'
+    let (editE, stateE) = fanThese widgetE
 
     let viewE = leftmost [ ViewEvents <$ backE
                          , ViewEditEvent eId <$> editE
                          ]
 
-    return (viewE, never)
+    return (viewE, (pure . TwoPMapApply eId) <$> stateE)
+
+  where
+    displayRSVPs name (MultiSet posRSVPs negRSVPs) = do
+
+      fixed 1 $ text "RSVPs:"
+
+      let rsvps' = Map.toList posRSVPs
+      let nameCM = Map.lookup name negRSVPs
+      let rsvps = case nameCM of
+            Nothing -> rsvps'
+            Just 0 -> rsvps'
+            Just c -> (name, c):rsvps'
+
+      when (null rsvps) $
+        fixed 1 $ text "No RSVPs yet."
+
+      forM_ rsvps $ \(name, c) -> do
+        fixed 1 $ text $ pure $ name <> ": " <> Text.pack (show c)
+
+      -- Disable plus if c < 0
+      plusE <- if maybe False (< 0) nameCM then
+          return never
+        else
+          fixed 3 $ textButtonStatic def "+"
+
+      -- Disable minus if c <= 0
+      minusE <- if not (Map.member name posRSVPs) then
+          return never
+        else
+          fixed 3 $ textButtonStatic def "-"
+
+      return $ leftmost [
+          MultiSetOpAdd name 1 <$ plusE
+        , MultiSetOpRemove name 1 <$ minusE
+        ]
     
 
 events :: Dynamic t State -> Widget t m (Reflex.Event t View, Reflex.Event t [StateOp])
