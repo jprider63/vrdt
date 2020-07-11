@@ -21,15 +21,15 @@ import           Liquid.Data.Maybe
 import           Liquid.Data.Map (Map)
 import qualified Liquid.Data.Map as Map
 import           Liquid.Data.Map.Props
-import qualified Data.Set as S
+import           Liquid.ProofCombinators
 import           Prelude hiding (Maybe(..), isNothing, isJust, flip)
+import           ProofCombinators
 #endif
 import           Data.Maybe (mapMaybe)
+import qualified Data.Set as S
 import           Data.Time.Clock (UTCTime)
 import           VRDT.Types
 import           VRDT.Internal
-import           ProofCombinators
-import           Liquid.ProofCombinators
 
 -- Identifier for `CausalTree` is abstract, but you probably want to use `UTCTimestamp`.
 {-@ data CausalTree id a = CausalTree {
@@ -150,8 +150,15 @@ idUniqueList (CausalTreeAtom opid' _:xs) =
 
 {-@ reflect idUniqueMap @-}
 idUniqueMap :: Ord id => Map.Map id [CausalTreeAtom id a] -> Bool
+#if NotLiquid
+idUniqueMap = helper . Map.elems
+  where
+    helper [] = True
+    helper (xs:t) = idUniqueList xs && S.null (S.intersection (pendingListIds xs) (S.unions $ map pendingListIds t)) && helper t
+#else
 idUniqueMap Map.Tip = True
 idUniqueMap (Map.Map k xs t) = idUniqueList xs && S.null (S.intersection (pendingListIds xs) (pendingIds t)) && idUniqueMap t
+#endif
 
 
 {-@ reflect causalTreeIds @-}
@@ -166,17 +173,22 @@ pendingListIds (x:xs) = S.singleton (causalTreeAtomId x) `S.union` pendingListId
 
 {-@ reflect pendingIds @-}
 pendingIds :: Ord id => Map.Map id [CausalTreeAtom id a] -> S.Set id
+#if NotLiquid
+pendingIds = S.unions . map pendingListIds . Map.elems
+#else
 pendingIds Map.Tip = S.empty
 pendingIds (Map.Map k v t) = pendingListIds v `S.union` pendingIds t
+#endif
 
 {-@ reflect idUniqueWeave @-}
 {-@ idUniqueWeave :: Ord id => w:CausalTreeWeave id a -> Bool
    / [causalTreeWeaveLength w, 0] @-}
 idUniqueWeave :: Ord id => CausalTreeWeave id a -> Bool
 idUniqueWeave w@(CausalTreeWeave atom children) =
+#ifndef NotLiquid
   causalTreeWeaveLength w `cast`
   causalTreeWeaveLengthList children `cast`
-
+#endif
   not (S.member (causalTreeAtomId atom) (weaveListIds children)) &&
   idUniqueWeaveList children
 
@@ -186,8 +198,10 @@ idUniqueWeave w@(CausalTreeWeave atom children) =
 idUniqueWeaveList :: Ord id => [CausalTreeWeave id a] -> Bool
 idUniqueWeaveList [] = True
 idUniqueWeaveList (w:ws) =
+#ifndef NotLiquid
   causalTreeWeaveLength w `cast`
   causalTreeWeaveLengthList ws `cast`
+#endif
   idUniqueWeave w && S.null (S.intersection (weaveIds w) (weaveListIds ws)) && idUniqueWeaveList ws
 
 
@@ -196,8 +210,10 @@ idUniqueWeaveList (w:ws) =
    / [causalTreeWeaveLength w, 0] @-}
 weaveIds :: Ord id => CausalTreeWeave id a -> S.Set id
 weaveIds w@(CausalTreeWeave atom children) =
+#ifndef NotLiquid
   causalTreeWeaveLength w `cast`
   causalTreeWeaveLengthList children `cast`
+#endif
   S.singleton (causalTreeAtomId atom) `S.union` weaveListIds children
 
 {-@ reflect weaveListIds  @-}
@@ -206,8 +222,10 @@ weaveIds w@(CausalTreeWeave atom children) =
 weaveListIds :: Ord id => [CausalTreeWeave id a] -> S.Set id
 weaveListIds [] = S.empty
 weaveListIds (x:xs) =
+#ifndef NotLiquid
   causalTreeWeaveLength x `cast`
   causalTreeWeaveLengthList xs `cast`
+#endif
   weaveIds x `S.union` weaveListIds xs
 
 {-@ reflect idUniqueCausalTree @-}
@@ -239,6 +257,8 @@ compatible (CausalTreeOp pid (CausalTreeAtom id _)) (CausalTreeOp pid' (CausalTr
 apply :: Ord id => CausalTree id a -> CausalTreeOp id a -> CausalTree id a
 apply ct (CausalTreeOp parentId atom) = applyAtom ct parentId atom
 
+#ifndef NotLiquid
+
 {-@ reflect causalTreeSize @-}
 {-@ causalTreeSize :: Ord id => CausalTree id a -> Nat @-}
 causalTreeSize :: Ord id => CausalTree id a -> Int
@@ -265,6 +285,7 @@ pendingAtomSize (CausalTree _ pending) id
   | otherwise
   = 0
 
+#endif
 
 {-@ reflect constConstNothing @-}
 constConstNothing :: a -> b -> Maybe c
@@ -281,9 +302,9 @@ constConstNothing _ _ = Nothing
 / [pendingSize (causalTreePending ct), 1] @-}
 applyAtomHelper :: Ord id => id -> CausalTree id a -> CausalTreeAtom id a -> CausalTree id a
 applyAtomHelper opId ct atom =
--- #ifndef NotLiquid  
+#ifndef NotLiquid  
   pendingSize (causalTreePending ct) `cast`
--- #endif
+#endif
   applyAtom ct opId atom
 
 -- causalTreeIds vv == S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom))
@@ -361,8 +382,10 @@ insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
         let children = insertAtom currentChildren atom in
         Just $ CausalTreeWeave currentAtom children
     | otherwise =
+#ifndef NotLiquid
         causalTreeWeaveLength (CausalTreeWeave currentAtom currentChildren) `cast`
         causalTreeWeaveLengthList currentChildren `cast`
+#endif
         let childrenM = insertInWeaveChildren currentChildren parentId atom in
         -- CausalTreeWeave currentAtom <$> childrenM
         case childrenM of
@@ -374,9 +397,11 @@ insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
 insertInWeaveChildren :: Ord id => [CausalTreeWeave id a] ->  id -> CausalTreeAtom id a -> Maybe [CausalTreeWeave id a]
 insertInWeaveChildren [] _ _ = Nothing
 insertInWeaveChildren (w:ws) parentId atom =
+#ifndef NotLiquid
   causalTreeWeaveLength w `cast`
   causalTreeWeaveLengthList (w:ws) `cast`
   causalTreeWeaveLengthList ws `cast`
+#endif
   case insertInWeave w parentId atom of
     Nothing ->
         -- (w:) <$> insertInWeaveChildren ws parentId atom
@@ -416,6 +441,7 @@ atomGreaterThan (CausalTreeAtom _ CausalTreeLetterDelete) (CausalTreeAtom _ _)  
 atomGreaterThan (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2 (CausalTreeLetter _))     = a1 > a2
 atomGreaterThan (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2 _)                        = False
 
+#ifndef NotLiquid
 
 -- Lemmas
 -- some of them should not appear here
@@ -495,7 +521,7 @@ insertPendingRespectsUniq pid atom@(CausalTreeAtom aid _) (Map.Map k v t)
             Just xs -> insertList atom xs
 
 
-
+#endif
 
 
 -- TODO: move to CausalTree.hs

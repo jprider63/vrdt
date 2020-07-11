@@ -3,7 +3,17 @@
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
 {-@ LIQUID "--noadt" @-}
-module VRDT.CausalTree where
+module VRDT.CausalTree (
+    CT.CausalTree(..)
+  , CT.CausalTreeOp(..)
+  , CT.CausalTreeAtom(..)
+  , CT.CausalTreeLetter(..)
+  , CT.CausalTreeWeave(..)
+  , CT.extractLetter
+  , CT.rootAtomId
+  , CT.preorder
+  , CT.preorder'
+  ) where
 
 #if NotLiquid
 import           Data.Aeson (ToJSON(..), FromJSON(..), (.:), (.=))
@@ -27,10 +37,12 @@ import           Data.Maybe (mapMaybe)
 import           Data.Time.Clock (UTCTime)
 import           VRDT.Types
 import           VRDT.Internal
-import           ProofCombinators
 import qualified VRDT.CausalTree.Internal as CT
-import qualified VRDT.CausalTree.NEq as CT
 import           VRDT.Class
+#ifndef NotLiquid
+import           ProofCombinators
+import qualified VRDT.CausalTree.NEq as CT
+#endif
 
 {-@ assume coercAxiom0 :: {v : () | applyCausalTree ~~ CT.apply} @-}
 coercAxiom0 :: ()
@@ -63,7 +75,11 @@ instance Ord id => VRDT (CT.CausalTree id a) where
   apply x op = applyCausalTree x op
   compatible x y = compatibleCausalTree x y
   compatibleState x op = compatibleStateCausalTree x op
+#if NotLiquid
+  lawCommutativity x op1 op2 = ()
+#else
   lawCommutativity x op1 op2 = CT.lawCommutativity x op1 op2
+#endif
   lawCompatibilityCommutativity op1 op2 = CT.lawCompatibilityCommutativity op1 op2
 
   

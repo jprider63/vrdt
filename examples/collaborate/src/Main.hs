@@ -63,13 +63,6 @@ app = mdo
 
 
 
-
--- TODO: Move these to vrdt?
-instance Ord id => VRDT (CausalTree id a) where
-    type Operation (CausalTree id a) = CT.CausalTreeOp id a
-    -- enabled = CT.enabled
-    apply = CT.apply
-
 -- TODO: What should the init id be?
 instance VRDTInitial (CausalTree UTCTimestamp a) where
     initVRDT = CT.CausalTree (CT.CausalTreeWeave (CT.CausalTreeAtom initId CT.CausalTreeLetterRoot) []) mempty

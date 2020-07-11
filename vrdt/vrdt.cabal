@@ -29,6 +29,7 @@ library
   exposed-modules:
       -- ProofCombinators
       VRDT.CausalTree
+      VRDT.CausalTree.Internal
       VRDT.Class
       VRDT.Class.Proof
       VRDT.Class.TH
@@ -43,10 +44,13 @@ library
       VRDT.TwoPMap
       VRDT.TwoPMap.Internal
   other-modules:
+      -- TODO: Delete these.
       Liquid.ProofCombinators
+      Liquid.Data.List
       Liquid.Data.Maybe
       Liquid.Data.Map
       Liquid.Data.Map.Props
+      ProofCombinators
       Paths_vrdt
   hs-source-dirs:
       src
