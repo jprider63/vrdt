@@ -63,6 +63,11 @@ foldl' :: (b -> a -> b) -> b -> [a] -> b
 foldl' f acc [] = acc
 foldl' f acc (x:xs) = (foldl' f (f acc x) xs)
 
+{-@ reflect cons @-}
+cons :: a -> [a] -> [a]
+cons x xs = x:xs
+
+
 infixr 5 ++
 {-@ infixr 5 ++ @-}
 {-@ reflect ++ @-}

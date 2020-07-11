@@ -60,7 +60,7 @@ lemmaInsertListTwice x y (z:zs)
 
 
 -- finish up
-{-@ lemmaInsertPendingTwice :: Ord a => k:k -> x:a -> y:a -> xs:Map k [a] -> {insertPending k y (insertPending k x xs) == insertPending k x (insertPending k y xs)} @-}
+{-@ lemmaInsertPendingTwice :: (Ord a, Ord k) => k:k -> x:a -> y:a -> xs:Map k [a] -> {insertPending k y (insertPending k x xs) == insertPending k x (insertPending k y xs)} @-}
 lemmaInsertPendingTwice :: (Ord k, Ord a) => k -> a -> a -> Map k [a] -> ()
 lemmaInsertPendingTwice k x y m
   | Nothing <- Map.lookup k m
@@ -79,14 +79,14 @@ lemmaInsertPendingTwice k x y m
   ? Map.lemmaInsertTwice k (insertList x (insertList y zs)) (insertList y zs) m
 
 
-{-@ lemmaInsertPendingTwiceNEq :: Ord a => k:k -> {k':k | k /= k'} -> x:a -> y:a -> xs:Map k [a] ->
+{-@ lemmaInsertPendingTwiceNEq :: (Ord k,Ord a) => x:a -> y:a -> k:k -> {k':k | k /= k'} -> xs:Map k [a] ->
   {(insertPending k' y (insertPending k x xs) == insertPending k x (insertPending k' y xs))} @-}
-lemmaInsertPendingTwiceNEq :: (Ord k, Ord a) => k -> k -> a -> a -> Map k [a] -> ()
+lemmaInsertPendingTwiceNEq :: (Ord k, Ord a) => a -> a -> k -> k -> Map k [a] -> ()
 lemmaInsertPendingTwiceNEq k k' x y m = undefined
 
-{-@ lemmaInsertPendingLookup :: Ord a => k:k -> {k':k | k /= k'} -> y:a -> xs:Map k [a] ->
+{-@ lemmaInsertPendingLookup :: (Ord a, Ord k ) => y:a -> k:k -> {k':k | k /= k'} -> xs:Map k [a] ->
   {(Map.lookup k (insertPending k' y xs) == Map.lookup k xs)} @-}
-lemmaInsertPendingLookup :: (Ord k, Ord a) => k -> k -> a -> Map k [a] -> ()
+lemmaInsertPendingLookup :: (Ord k, Ord a) => a -> k -> k -> Map k [a] -> ()
 lemmaInsertPendingLookup k k' y m = undefined
 
 

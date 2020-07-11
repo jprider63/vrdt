@@ -41,7 +41,7 @@ atomGreaterThanAntiSym (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom 
 atomGreaterThanAntiSym (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2 _)                        = ()
 
 {-@ ple atomGreaterThanTotal @-}
-{-@ atomGreaterThanTotal :: Ord id => x:CausalTreeAtom id a -> {y: CausalTreeAtom id a | causalTreeAtomId x /= causalTreeAtomId y} -> {atomGreaterThan x y || atomGreaterThan y x} @-}
+{-@ atomGreaterThanTotal :: Ord id => x:CausalTreeAtom id a -> {y: CausalTreeAtom id a | causalTreeAtomId x /= causalTreeAtomId y} -> {not (atomGreaterThan x y) => atomGreaterThan y x} @-}
 atomGreaterThanTotal :: Ord id => CausalTreeAtom id a -> CausalTreeAtom id a -> ()
 atomGreaterThanTotal (CausalTreeAtom a1 CausalTreeLetterRoot) (CausalTreeAtom a2 CausalTreeLetterRoot)     = ()
 atomGreaterThanTotal a1@(CausalTreeAtom _ CausalTreeLetterRoot) a2@(CausalTreeAtom _ CausalTreeLetterDelete)    = assert (atomGreaterThan a1 a2) &&& assert (not (atomGreaterThan a2 a1))
