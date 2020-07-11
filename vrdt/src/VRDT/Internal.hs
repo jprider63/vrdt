@@ -82,12 +82,25 @@ lemmaInsertPendingTwice k x y m
 {-@ lemmaInsertPendingTwiceNEq :: (Ord k,Ord a) => x:a -> y:a -> k:k -> {k':k | k /= k'} -> xs:Map k [a] ->
   {(insertPending k' y (insertPending k x xs) == insertPending k x (insertPending k' y xs))} @-}
 lemmaInsertPendingTwiceNEq :: (Ord k, Ord a) => a -> a -> k -> k -> Map k [a] -> ()
-lemmaInsertPendingTwiceNEq k k' x y m = undefined
+lemmaInsertPendingTwiceNEq x y k k' m =
+  Map.lemmaLookupInsert2 m k k' pops2 &&&
+  Map.lemmaLookupInsert2 m k' k pops1 &&&
+  Map.lemmaInsert k pops1 k' pops2 m
+  where pops2 = case Map.lookup k' m of
+                 Nothing -> [y]
+                 Just ys -> insertList y ys
+        pops1 = case Map.lookup k m of
+                 Nothing -> [x]
+                 Just xs -> insertList x xs
 
 {-@ lemmaInsertPendingLookup :: (Ord a, Ord k ) => y:a -> k:k -> {k':k | k /= k'} -> xs:Map k [a] ->
   {(Map.lookup k (insertPending k' y xs) == Map.lookup k xs)} @-}
 lemmaInsertPendingLookup :: (Ord k, Ord a) => a -> k -> k -> Map k [a] -> ()
-lemmaInsertPendingLookup k k' y m = undefined
+lemmaInsertPendingLookup y k k' m =
+  Map.lemmaLookupInsert2 m k k' pops
+  where pops = case Map.lookup k' m of
+                 Nothing -> [y]
+                 Just ys -> insertList y ys
 
 
   
