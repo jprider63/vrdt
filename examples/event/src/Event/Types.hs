@@ -1,8 +1,6 @@
 {-@ LIQUID "--reflection" @-}
-{-@ LIQUID "--ple-local" @-}
+{-@ LIQUID "--ple" @-}
 {-@ LIQUID "--noadt" @-}
---{-@ LIQUID "--no-termination" @-}
--- {-@ LIQUID "--prune-unsorted" @-}
 
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -62,13 +60,38 @@ data EventOp
     EventRSVPsOp (Operation (MultiSet Text)) |
     EventStartTimeOp (Operation (LWWU UTCTime)) |
     EventTitleOp (Operation (LWWU Text))
---   = EventDescriptionOp (Operation (LWWU Text)) |
---     EventEndTimeOp (Operation (LWWU UTCTime)) |
---     EventLocationOp (Operation (LWWU Text)) |
---     EventRSVPsOp (Operation (MultiSet Text)) |
---     EventStartTimeOp (Operation (LWWU UTCTime)) |
---     EventTitleOp (Operation (LWWU Text))
-  -- deriving Generic
+
+{-@ assume coercAxiomApplyEvent :: {v : () | _applyEvent ~~ applyEvent} @-}
+coercAxiomApplyEvent :: ()
+coercAxiomApplyEvent = ()
+
+{-@ assume coercAxiomCompatibleEvent :: {v : () | _compatibleEvent ~~ compatibleEvent} @-}
+coercAxiomCompatibleEvent :: ()
+coercAxiomCompatibleEvent = ()
+
+{-@ assume coercAxiomCompatibleStateEvent :: {v : () | _compatibleStateEvent ~~ compatibleEventState} @-}
+coercAxiomCompatibleStateEvent :: ()
+coercAxiomCompatibleStateEvent = ()
+
+{-@ reflect _applyEvent @-}
+_applyEvent :: Event -> Operation Event -> Event
+_applyEvent = applyEvent
+
+{-@ reflect _compatibleEvent @-}
+_compatibleEvent :: Operation Event -> Operation Event -> Bool
+_compatibleEvent = compatibleEvent
+
+{-@ reflect _compatibleStateEvent @-}
+_compatibleStateEvent :: Event -> Operation Event -> Bool
+_compatibleStateEvent = compatibleEventState
+
+instance VRDT Event where
+  type Operation Event = EventOp
+  apply = _applyEvent
+  compatible = _compatibleEvent
+  compatibleState = _compatibleStateEvent
+  lawCommutativity x op1 op2 = lawCommutativityEvent x op1 op2
+  lawCompatibilityCommutativity op1 op2 = lawCompatibilityEventCommutativity op1 op2
 
 
 {-@ reflect compatibleEvent @-}
@@ -132,11 +155,11 @@ applyEvent v_adIu@(Event _eventTitle _ _ _ _ _) (EventTitleOp op_adIv)
 
 -- use v_adIu@Event{eventTitle=_eventTitle} will lead to case expansion issue
 
-{-@ ple lawCommutativityEvent @-}
-{-@ lawCommutativityEvent :: x:Event -> op1:EventOp -> {op2:EventOp | (compatibleEventState x op1 && compatibleEventState x op2 && compatibleEvent op1 op2)} -> { (applyEvent (applyEvent x op1) op2 = applyEvent (applyEvent x op2) op1) && compatibleEventState (applyEvent x op1) op2} @-}
+--{-@ ple lawCommutativityEvent @-}
+{-@ lawCommutativityEvent :: x:Event -> op1:EventOp -> op2:EventOp -> {(compatibleEventState x op1 && compatibleEventState x op2 && compatibleEvent op1 op2) => (applyEvent (applyEvent x op1) op2 = applyEvent (applyEvent x op2) op1) && compatibleEventState (applyEvent x op1) op2} @-}
 lawCommutativityEvent :: Event -> EventOp -> EventOp -> ()
 lawCommutativityEvent
-    v_adII@Event{eventDescription=_eventDescription}
+    v_adII@(Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs)
     op1@(EventDescriptionOp op1_adIJ)
     op2@(EventDescriptionOp op2_adIK)
     =  lawCommutativity _eventDescription op1_adIJ op2_adIK
@@ -170,6 +193,7 @@ lawCommutativityEvent
     op2@(EventTitleOp op2_adIN)
     = lawCommutativity _eventTitle op1_adIM op2_adIN
 lawCommutativityEvent (Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs) op1 op2 = ()
+
 
 {-@ lawCompatibilityEventCommutativity :: op1:EventOp -> op2:EventOp -> {compatibleEvent op1 op2 == compatibleEvent op2 op1} @-}
 lawCompatibilityEventCommutativity :: EventOp -> EventOp -> ()
