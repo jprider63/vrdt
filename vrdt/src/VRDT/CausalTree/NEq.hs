@@ -626,7 +626,7 @@ lawCommutativityNEqNJ'
                lemmaLookupSubsetOf pending id2 pops2 &&&
                lemmaDeleteSubsetJust pending id2 pops2 (pendingListIds pops2) &&&
                lemmaFoldlIds (CausalTree wop2 (Map.delete pid1 pending)) id2 lts &&&
-               (atom1:gts ==. atom1:List.concat [] gts ==. List.concat [atom1] gts *** QED) &&&
+               (List.cons atom1 gts ==. atom1:gts ==. atom1:List.concat [] gts ==. List.concat [atom1] gts *** QED) &&&
                idUniqueListConcat lts (List.concat [atom1] gts) &&&
                idUniqueListConcat [atom1] gts &&&
                applyAtomFoldlRespectsUniq (CausalTree wop2 (Map.delete pid1 pending)) id2 lts &&&
