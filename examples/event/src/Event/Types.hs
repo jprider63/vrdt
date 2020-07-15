@@ -64,144 +64,119 @@ data EventOp
 
 instance VRDT Event where
   type Operation Event = EventOp
-  apply = applyEvent
-  compatible = compatibleEvent
-  compatibleState = compatibleEventState
-  lawCommutativity x op1 op2 = lawCommutativityEvent x op1 op2
-  lawCompatibilityCommutativity op1 op2 = lawCompatibilityEventCommutativity op1 op2
+  apply v_adIk@(Event _ _eventDescription _ _ _ _) (EventDescriptionOp op_adIl)
+      = v_adIk{eventDescription = apply _eventDescription op_adIl}
+  apply v_adIm@(Event _ _ _ _eventEndTime _ _) (EventEndTimeOp op_adIn)
+      = v_adIm{eventEndTime = apply _eventEndTime op_adIn }
+  
+  apply v_adIo@(Event _ _ _ _ _eventLocation _) (EventLocationOp op_adIp)
+      = v_adIo
+          {eventLocation = (apply _eventLocation) op_adIp}
+  apply v_adIq@(Event _ _ _ _ _ _eventRSVPs) (EventRSVPsOp op_adIr)
+      = v_adIq
+          {eventRSVPs = (apply _eventRSVPs) op_adIr}
+  apply v_adIs@(Event _ _ _eventStartTime _ _ _) (EventStartTimeOp op_adIt)
+      = v_adIs
+          {eventStartTime = (apply _eventStartTime)
+                              op_adIt}
+  apply v_adIu@(Event _eventTitle _ _ _ _ _) (EventTitleOp op_adIv)
+      = v_adIu
+          {eventTitle = (apply _eventTitle) op_adIv}
 
+  compatible
+      (EventDescriptionOp op1_adIw)
+      (EventDescriptionOp op2_adIx)
+      = (compatible op1_adIw) op2_adIx
+  compatible
+      (EventEndTimeOp op1_adIy)
+      (EventEndTimeOp op2_adIz)
+      = (compatible op1_adIy) op2_adIz
+  compatible
+      (EventLocationOp op1_adIA)
+      (EventLocationOp op2_adIB)
+      = (compatible op1_adIA) op2_adIB
+  compatible
+      (EventRSVPsOp op1_adIC)
+      (EventRSVPsOp op2_adID)
+      = (compatible op1_adIC) op2_adID
+  compatible
+      (EventStartTimeOp op1_adIE)
+      (EventStartTimeOp op2_adIF)
+      = (compatible op1_adIE) op2_adIF
+  compatible
+      (EventTitleOp op1_adIG)
+      (EventTitleOp op2_adIH)
+      = (compatible op1_adIG) op2_adIH
+  compatible _ _ = True
 
-{-@ reflect compatibleEvent @-}
-compatibleEvent :: EventOp -> EventOp -> Bool
-compatibleEvent
-    (EventDescriptionOp op1_adIw)
-    (EventDescriptionOp op2_adIx)
-    = (compatible op1_adIw) op2_adIx
-compatibleEvent
-    (EventEndTimeOp op1_adIy)
-    (EventEndTimeOp op2_adIz)
-    = (compatible op1_adIy) op2_adIz
-compatibleEvent
-    (EventLocationOp op1_adIA)
-    (EventLocationOp op2_adIB)
-    = (compatible op1_adIA) op2_adIB
-compatibleEvent
-    (EventRSVPsOp op1_adIC)
-    (EventRSVPsOp op2_adID)
-    = (compatible op1_adIC) op2_adID
-compatibleEvent
-    (EventStartTimeOp op1_adIE)
-    (EventStartTimeOp op2_adIF)
-    = (compatible op1_adIE) op2_adIF
-compatibleEvent
-    (EventTitleOp op1_adIG)
-    (EventTitleOp op2_adIH)
-    = (compatible op1_adIG) op2_adIH
-compatibleEvent _ _ = True
+  compatibleState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventTitleOp op) = compatibleState eventTitle op
+  compatibleState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventDescriptionOp op) = compatibleState eventDescription op
+  compatibleState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventStartTimeOp op) = compatibleState eventStartTime op
+  compatibleState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventEndTimeOp op) = compatibleState eventEndTime op
+  compatibleState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventLocationOp op) = compatibleState eventLocation op
+  compatibleState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventRSVPsOp op) = compatibleState eventRSVPs op
 
-{-@ reflect compatibleEventState @-}
-compatibleEventState :: Event -> EventOp -> Bool
-compatibleEventState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventTitleOp op) = compatibleState eventTitle op
-compatibleEventState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventDescriptionOp op) = compatibleState eventDescription op
-compatibleEventState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventStartTimeOp op) = compatibleState eventStartTime op
-compatibleEventState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventEndTimeOp op) = compatibleState eventEndTime op
-compatibleEventState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventLocationOp op) = compatibleState eventLocation op
-compatibleEventState (Event eventTitle eventDescription eventStartTime eventEndTime eventLocation eventRSVPs) (EventRSVPsOp op) = compatibleState eventRSVPs op
-
-
-{-@ reflect applyEvent @-}
-applyEvent :: Event -> EventOp -> Event
-applyEvent v_adIk@(Event _ _eventDescription _ _ _ _) (EventDescriptionOp op_adIl)
-    = v_adIk{eventDescription = apply _eventDescription op_adIl}
-applyEvent v_adIm@(Event _ _ _ _eventEndTime _ _) (EventEndTimeOp op_adIn)
-    = v_adIm{eventEndTime = apply _eventEndTime op_adIn }
-
-applyEvent v_adIo@(Event _ _ _ _ _eventLocation _) (EventLocationOp op_adIp)
-    = v_adIo
-        {eventLocation = (apply _eventLocation) op_adIp}
-applyEvent v_adIq@(Event _ _ _ _ _ _eventRSVPs) (EventRSVPsOp op_adIr)
-    = v_adIq
-        {eventRSVPs = (apply _eventRSVPs) op_adIr}
-applyEvent v_adIs@(Event _ _ _eventStartTime _ _ _) (EventStartTimeOp op_adIt)
-    = v_adIs
-        {eventStartTime = (apply _eventStartTime)
-                            op_adIt}
-applyEvent v_adIu@(Event _eventTitle _ _ _ _ _) (EventTitleOp op_adIv)
-    = v_adIu
-        {eventTitle = (apply _eventTitle) op_adIv}
-
--- use v_adIu@Event{eventTitle=_eventTitle} will lead to case expansion issue
-
---{-@ ple lawCommutativityEvent @-}
-{-@ lawCommutativityEvent :: x:Event -> op1:EventOp -> op2:EventOp -> {(compatibleEventState x op1 && compatibleEventState x op2 && compatibleEvent op1 op2) => (applyEvent (applyEvent x op1) op2 = applyEvent (applyEvent x op2) op1) && compatibleEventState (applyEvent x op1) op2} @-}
-lawCommutativityEvent :: Event -> EventOp -> EventOp -> ()
-lawCommutativityEvent
+  lawCommutativity
     v_adII@(Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs)
     op1@(EventDescriptionOp op1_adIJ)
     op2@(EventDescriptionOp op2_adIK)
     =  lawCommutativity _eventDescription op1_adIJ op2_adIK
 
-lawCommutativityEvent
+  lawCommutativity
     v_adIL@(Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs)
     op1@(EventEndTimeOp op1_adIM)
     op2@(EventEndTimeOp op2_adIN)
     = lawCommutativity _eventEndTime op1_adIM op2_adIN
 
 
-lawCommutativityEvent
+  lawCommutativity
     v_adIL@(Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs)
     op1@(EventLocationOp op1_adIM)
     op2@(EventLocationOp op2_adIN)
     = lawCommutativity _eventLocation op1_adIM op2_adIN 
 
-lawCommutativityEvent
+  lawCommutativity
     v_adIL@(Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs)
     op1@(EventRSVPsOp op1_adIM)
     op2@(EventRSVPsOp op2_adIN)
     = lawCommutativity _eventRSVPs op1_adIM op2_adIN
-lawCommutativityEvent
+  lawCommutativity
     v_adIL@(Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs)
     op1@(EventStartTimeOp op1_adIM)
     op2@(EventStartTimeOp op2_adIN)
     = lawCommutativity _eventStartTime op1_adIM op2_adIN
-lawCommutativityEvent
+  lawCommutativity
     v_adIL@(Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs)
     op1@(EventTitleOp op1_adIM)
     op2@(EventTitleOp op2_adIN)
     = lawCommutativity _eventTitle op1_adIM op2_adIN
-lawCommutativityEvent (Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs) op1 op2 = ()
-
-
-{-@ lawCompatibilityEventCommutativity :: op1:EventOp -> op2:EventOp -> {compatibleEvent op1 op2 == compatibleEvent op2 op1} @-}
-lawCompatibilityEventCommutativity :: EventOp -> EventOp -> ()
-lawCompatibilityEventCommutativity
+  lawCommutativity (Event _eventTitle _eventDescription _eventStartTime _eventEndTime _eventLocation _eventRSVPs) op1 op2 = ()
+  
+  lawCompatibilityCommutativity
     (EventDescriptionOp op1_adJ0)
     (EventDescriptionOp op2_adJ1)
     = (lawCompatibilityCommutativity op1_adJ0) op2_adJ1
-lawCompatibilityEventCommutativity
+  lawCompatibilityCommutativity
     (EventEndTimeOp op1_adJ2)
     (EventEndTimeOp op2_adJ3)
     = (lawCompatibilityCommutativity op1_adJ2) op2_adJ3
-lawCompatibilityEventCommutativity
+  lawCompatibilityCommutativity
     (EventLocationOp op1_adJ4)
     (EventLocationOp op2_adJ5)
     = (lawCompatibilityCommutativity op1_adJ4) op2_adJ5
-lawCompatibilityEventCommutativity
+  lawCompatibilityCommutativity
     (EventRSVPsOp op1_adJ6)
     (EventRSVPsOp op2_adJ7)
     = (lawCompatibilityCommutativity op1_adJ6) op2_adJ7
-lawCompatibilityEventCommutativity
+  lawCompatibilityCommutativity
     (EventStartTimeOp op1_adJ8)
     (EventStartTimeOp op2_adJ9)
     = (lawCompatibilityCommutativity op1_adJ8) op2_adJ9
-lawCompatibilityEventCommutativity
+  lawCompatibilityCommutativity
     (EventTitleOp op1_adJa)
     (EventTitleOp op2_adJb)
-    -- = (lawCompatibilityCommutativity op1_adJa) op2_adJb
     = lawCompatibilityCommutativity op1_adJa op2_adJb
-lawCompatibilityEventCommutativity _ _ = ()
-
-
+  lawCompatibilityCommutativity _ _ = ()
 
 #endif
 
