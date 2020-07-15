@@ -4,10 +4,7 @@
 
 {-# LANGUAGE RecordWildCards #-}
 
-module VRDT.MultiSet (
-  module Internal
-  , apply'
-  ) where
+module VRDT.MultiSet where
 
 import VRDT.Class
 
@@ -18,17 +15,11 @@ import qualified VRDT.MultiSet.Internal as Internal
 import           VRDT.MultiSet.Internal (MultiSet(..), MultiSetOp(..))
 import           ProofCombinators
 
-{-@ reflect apply' @-}
-apply' :: Ord a => MultiSet a -> Operation (MultiSet a) -> MultiSet a
-apply' = Internal.apply
 
-{-@ assume coercAxiom0 :: {v : () | apply' ~~ Internal.apply} @-}
-coercAxiom0 :: ()
-coercAxiom0 = ()
 instance Ord a => VRDT (Internal.MultiSet a) where
     type Operation (Internal.MultiSet a) = Internal.MultiSetOp a
 
-    apply = apply'
+    apply = Internal.apply
 
     compatible _ _ = True
     compatibleState _ _ = True
