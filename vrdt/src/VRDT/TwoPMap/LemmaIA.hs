@@ -381,7 +381,7 @@ lemmaRemoveFirstPermutation' vd opsa1@(op1:ops1) ops1' opsa2@(op2:ops2) ops2'
   , Just _ <- removeFirst2
   , vd == op2
   = ()
-    ? isPermutation opsa1 (cons op2 ops2)
+    ? isPermutation opsa1 (List.cons op2 ops2)
     ? lemmaRemoveFirstPermutation op2 ops2 opsa1 ops1'
   | Just _ <- removeFirst1
   , Just _ <- removeFirst2
