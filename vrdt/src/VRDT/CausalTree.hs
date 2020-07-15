@@ -9,10 +9,12 @@ module VRDT.CausalTree (
   , CT.CausalTreeAtom(..)
   , CT.CausalTreeLetter(..)
   , CT.CausalTreeWeave(..)
+#ifdef NotLiquid
   , CT.extractLetter
   , CT.rootAtomId
   , CT.preorder
   , CT.preorder'
+#endif
   ) where
 
 #if NotLiquid
@@ -44,37 +46,12 @@ import           ProofCombinators
 import qualified VRDT.CausalTree.NEq as CT
 #endif
 
-{-@ assume coercAxiom0 :: {v : () | applyCausalTree ~~ CT.apply} @-}
-coercAxiom0 :: ()
-coercAxiom0 = ()
-
-{-@ assume coercAxiom1 :: {v : () | compatibleCausalTree ~~ CT.compatible} @-}
-coercAxiom1 :: ()
-coercAxiom1 = ()
-
-{-@ assume coercAxiom2 :: {v : () | compatibleStateCausalTree ~~ CT.compatibleState} @-}
-coercAxiom2 :: ()
-coercAxiom2 = ()
-
-
-{-@ reflect applyCausalTree @-}
-applyCausalTree :: Ord id => CT.CausalTree id a -> Operation (CT.CausalTree id a) -> CT.CausalTree id a
-applyCausalTree = CT.apply
-
-{-@ reflect compatibleCausalTree @-}
-compatibleCausalTree :: Ord id => Operation (CT.CausalTree id a) -> Operation (CT.CausalTree id a) -> Bool
-compatibleCausalTree = CT.compatible
-
-{-@ reflect compatibleStateCausalTree @-}
-compatibleStateCausalTree :: Ord id => CT.CausalTree id a -> Operation (CT.CausalTree id a) -> Bool
-compatibleStateCausalTree = CT.compatibleState
-
 
 instance Ord id => VRDT (CT.CausalTree id a) where
   type Operation (CT.CausalTree id a) = CT.CausalTreeOp id a
-  apply x op = applyCausalTree x op
-  compatible x y = compatibleCausalTree x y
-  compatibleState x op = compatibleStateCausalTree x op
+  apply x op = CT.apply x op
+  compatible x y = CT.compatible x y
+  compatibleState x op = CT.compatibleState x op
 #if NotLiquid
   lawCommutativity x op1 op2 = ()
 #else
