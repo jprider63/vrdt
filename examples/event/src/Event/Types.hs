@@ -61,35 +61,12 @@ data EventOp
     EventStartTimeOp (Operation (LWWU UTCTime)) |
     EventTitleOp (Operation (LWWU Text))
 
-{-@ assume coercAxiomApplyEvent :: {v : () | _applyEvent ~~ applyEvent} @-}
-coercAxiomApplyEvent :: ()
-coercAxiomApplyEvent = ()
-
-{-@ assume coercAxiomCompatibleEvent :: {v : () | _compatibleEvent ~~ compatibleEvent} @-}
-coercAxiomCompatibleEvent :: ()
-coercAxiomCompatibleEvent = ()
-
-{-@ assume coercAxiomCompatibleStateEvent :: {v : () | _compatibleStateEvent ~~ compatibleEventState} @-}
-coercAxiomCompatibleStateEvent :: ()
-coercAxiomCompatibleStateEvent = ()
-
-{-@ reflect _applyEvent @-}
-_applyEvent :: Event -> Operation Event -> Event
-_applyEvent = applyEvent
-
-{-@ reflect _compatibleEvent @-}
-_compatibleEvent :: Operation Event -> Operation Event -> Bool
-_compatibleEvent = compatibleEvent
-
-{-@ reflect _compatibleStateEvent @-}
-_compatibleStateEvent :: Event -> Operation Event -> Bool
-_compatibleStateEvent = compatibleEventState
 
 instance VRDT Event where
   type Operation Event = EventOp
-  apply = _applyEvent
-  compatible = _compatibleEvent
-  compatibleState = _compatibleStateEvent
+  apply = applyEvent
+  compatible = compatibleEvent
+  compatibleState = compatibleEventState
   lawCommutativity x op1 op2 = lawCommutativityEvent x op1 op2
   lawCompatibilityCommutativity op1 op2 = lawCompatibilityEventCommutativity op1 op2
 
