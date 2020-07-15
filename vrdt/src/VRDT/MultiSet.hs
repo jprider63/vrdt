@@ -4,7 +4,10 @@
 
 {-# LANGUAGE RecordWildCards #-}
 
-module VRDT.MultiSet where
+module VRDT.MultiSet
+  (module VRDT.MultiSet.Internal)
+where
+
 
 import VRDT.Class
 
