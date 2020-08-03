@@ -14,8 +14,8 @@ bug-reports:    https://github.com/jprider63/vrdt/issues
 author:         James Parker
 maintainer:     jp@jamesparker.me
 copyright:      2019 James Parker
-license:        TODO
-license-file:   LICENSE
+-- license:        TODO
+-- license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md

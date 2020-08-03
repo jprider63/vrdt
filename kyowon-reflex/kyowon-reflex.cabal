@@ -3,8 +3,8 @@ version: 0
 author: James Parker
 maintainer: jp@jamesparker.me
 copyright: 2019 James Parker
-license: BSD3
-license-file: LICENSE
+-- license: TODO
+-- license-file: LICENSE
 build-type: Simple
 cabal-version: >=1.10
 
