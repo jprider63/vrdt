@@ -43,6 +43,15 @@ let
   # function to bring devtools in to a package environment
   devtools = old: { nativeBuildInputs = old.nativeBuildInputs ++ [ nixpkgs.cabal-install nixpkgs.ghcid ]; }; # ghc and hpack are automatically included
   # use overridden-haskellPackages to call source
-  drv = haskellPackages.callCabal2nix "collaborate" ./examples/collaborate {};
+  executables = with nixpkgs.haskell.lib; [
+    (haskellPackages.callCabal2nix "kyowon-server" ./kyowon-server {})
+    (haskellPackages.callCabal2nix "collaborate" ./examples/collaborate {})
+    (
+      dontCheck # Spec.hs isn't checked into the repo
+        (haskellPackages.callCabal2nix "max" ./examples/max {})
+    )
+    #(haskellPackages.callCabal2nix "event" ./examples/event {}) # has a bug in the cabalfile
+  ];
+  drv = nixpkgs.buildEnv { name = "vrdt-project"; paths = executables; };
 in
-if nixpkgs.lib.inNixShell then (drv.envFunc { hoogle = true; }).overrideAttrs devtools else drv
+if nixpkgs.lib.inNixShell then (nixpkgs.lib.head executables).env.overrideAttrs devtools else drv
