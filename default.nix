@@ -11,25 +11,38 @@ let
   haskellPackages = nixpkgs.haskellPackages.override (
     old: {
       overrides = self: super: with nixpkgs.haskell.lib; {
+
         # add dependencies not on hackage
         kyowon-client = self.callCabal2nix "kyowon-client" ./kyowon-client {};
         kyowon-core = self.callCabal2nix "kyowon-core" ./kyowon-core {};
         kyowon-reflex =
-          dontCheck # the tests are missing language-extensions
-            (
-              dontHaddock # a commented application operator is a haddock parse error
-                (
-                  self.callCabal2nix "kyowon-reflex" ./kyowon-reflex {}
-                )
-            );
+          # the tests are missing language-extensions
+          dontCheck (
+            # a commented application operator is a haddock parse error
+            dontHaddock (
+              self.callCabal2nix "kyowon-reflex" ./kyowon-reflex {}
+            )
+          );
         vrdt =
-          dontCheck # Spec.hs isn't checked into the repo
-            (
-              dontHaddock # commented guard case is a haddock parse error 
-                (
-                  self.callCabal2nix "vrdt" ./vrdt {}
-                )
-            );
+          # Spec.hs isn't checked into the repo
+          dontCheck (
+            # commented guard case is a haddock parse error
+            dontHaddock (
+              self.callCabal2nix "vrdt" ./vrdt {}
+            )
+          );
+
+        # add executables also
+        kyowon-server = haskellPackages.callCabal2nix "kyowon-server" ./kyowon-server {};
+        example-collaborate = haskellPackages.callCabal2nix "collaborate" ./examples/collaborate {};
+        example-max =
+          # Spec.hs isn't checked into the repo
+          dontCheck (
+            haskellPackages.callCabal2nix "max" ./examples/max {}
+          );
+        # has a bug in the cabalfile
+        example-event = haskellPackages.callCabal2nix "event" ./examples/event {};
+
         # fix dependency versions
         patch = self.callHackage "patch" "0.0.2.0" {}; # version used in stack.yaml
         dependent-map = self.callHackage "dependent-map" "0.3" {}; # version used in stack.yaml
@@ -40,18 +53,29 @@ let
       };
     }
   );
-  # function to bring devtools in to a package environment
-  devtools = old: { nativeBuildInputs = old.nativeBuildInputs ++ [ nixpkgs.cabal-install nixpkgs.ghcid ]; }; # ghc and hpack are automatically included
-  # use overridden-haskellPackages to call source
-  executables = with nixpkgs.haskell.lib; [
-    (haskellPackages.callCabal2nix "kyowon-server" ./kyowon-server {})
-    (haskellPackages.callCabal2nix "collaborate" ./examples/collaborate {})
-    (
-      dontCheck # Spec.hs isn't checked into the repo
-        (haskellPackages.callCabal2nix "max" ./examples/max {})
-    )
-    #(haskellPackages.callCabal2nix "event" ./examples/event {}) # has a bug in the cabalfile
+  # specify the packages that we'll want to develop or build
+  packages = pkg: [
+    pkg.example-collaborate
+    #pkg.example-event
+    pkg.example-max
+    pkg.kyowon-client
+    pkg.kyowon-core
+    pkg.kyowon-reflex
+    pkg.kyowon-server
+    pkg.vrdt
   ];
-  drv = nixpkgs.buildEnv { name = "vrdt-project"; paths = executables; };
 in
-if nixpkgs.lib.inNixShell then (nixpkgs.lib.head executables).env.overrideAttrs devtools else drv
+if nixpkgs.lib.inNixShell
+then nixpkgs.stdenv.mkDerivation {
+  name = "stub";
+  buildInputs = [
+    (haskellPackages.ghcWithPackages packages)
+    haskellPackages.hpack
+    nixpkgs.cabal-install
+    nixpkgs.ghcid
+  ];
+}
+else nixpkgs.buildEnv {
+  name = "vrdt-project";
+  paths = packages haskellPackages;
+}
