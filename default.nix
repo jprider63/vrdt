@@ -7,20 +7,22 @@ let
       sha256 = "1f9ypp9q7r5p1bzm119yfg202fbm83csmlzwv33p1kf76m2p7mwd";
     }
   ) { inherit config; };
+  # function to respect gitignore files
+  ign = src: nixpkgs.nix-gitignore.gitignoreSource [] src;
   # override haskell compiler version, add and override dependencies in nixpkgs
   haskellPackages = nixpkgs.haskellPackages.override (
     old: {
       overrides = self: super: with nixpkgs.haskell.lib; {
 
         # add dependencies not on hackage
-        kyowon-client = self.callCabal2nix "kyowon-client" ./kyowon-client {};
-        kyowon-core = self.callCabal2nix "kyowon-core" ./kyowon-core {};
+        kyowon-client = self.callCabal2nix "kyowon-client" (ign ./kyowon-client) {};
+        kyowon-core = self.callCabal2nix "kyowon-core" (ign ./kyowon-core) {};
         kyowon-reflex =
           # the tests are missing language-extensions
           dontCheck (
             # a commented application operator is a haddock parse error
             dontHaddock (
-              self.callCabal2nix "kyowon-reflex" ./kyowon-reflex {}
+              self.callCabal2nix "kyowon-reflex" (ign ./kyowon-reflex) {}
             )
           );
         vrdt =
@@ -33,7 +35,7 @@ let
           );
 
         # add executables also
-        kyowon-server = haskellPackages.callCabal2nix "kyowon-server" ./kyowon-server {};
+        kyowon-server = haskellPackages.callCabal2nix "kyowon-server" (ign ./kyowon-server) {};
         example-collaborate = haskellPackages.callCabal2nix "collaborate" ./examples/collaborate {};
         example-max =
           # Spec.hs isn't checked into the repo
