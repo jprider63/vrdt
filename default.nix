@@ -1,4 +1,4 @@
-{ config ? { allowBroken = true; }, ... }:
+{ envFor ? null, config ? { allowBroken = true; }, ... }:
 let
   # fetch pinned version of nixpkgs
   nixpkgs = import (
@@ -67,17 +67,16 @@ let
     pkg.vrdt
   ];
 in
-if nixpkgs.lib.inNixShell
-then nixpkgs.stdenv.mkDerivation {
-  name = "stub";
-  buildInputs = [
-    (haskellPackages.ghcWithPackages packages)
-    haskellPackages.hpack
-    nixpkgs.cabal-install
-    nixpkgs.ghcid
-  ];
-}
-else nixpkgs.buildEnv {
+if envFor == null
+then nixpkgs.buildEnv {
   name = "vrdt-project";
   paths = packages haskellPackages;
 }
+else haskellPackages."${envFor}".env.overrideAttrs (
+  old: {
+    nativeBuildInputs = old.nativeBuildInputs ++ [
+      nixpkgs.cabal-install
+      nixpkgs.ghcid
+    ];
+  }
+)
