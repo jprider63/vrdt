@@ -11,9 +11,9 @@ import System.Random
 --   gen :: RandomGen g => g -> GenSt t -> (GenSt t, Operation t)
   
 data Generator t op st = Generator {
-    genInit :: st
+    genInit :: !st
   , gen :: forall g . RandomGen g => g -> st -> (g, st, op)
-  , initSt :: t
+  , initSt :: !t
   , app :: t -> op -> t
 }
 

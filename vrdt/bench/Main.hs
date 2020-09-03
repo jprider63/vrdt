@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Main where
 
 import Control.DeepSeq (force)
@@ -6,6 +7,7 @@ import Control.Monad (foldM)
 import Data.Fixed
 import Data.List (foldl', genericLength, transpose)
 import System.CPUTime
+import System.Mem
 import System.Random
 -- import System.TimeIt
 import Text.CSV
@@ -77,21 +79,26 @@ runBenchmark dx c n (LabeledGenerator label g) = do
       init <- evaluate $ force $ genInit g
 
       -- Generate (and force) operations.
-      -- opss <- evaluate $ force $ genOps dx c rng init (gen g)
-      let opss = genOps dx c rng init (gen g)
+      opss <- evaluate $ force $ genOps dx c rng init (gen g)
+      -- let opss = genOps dx c rng init (gen g)
 
       print $ map length opss
       -- print opss
 
       -- Benchmark applying (and forcing) each operation.
       s0 <- evaluate $ force $ initSt g
-      let app' = app g
+      app' <- evaluate $ force $ app g
       (reverse . snd) <$> foldM (\(st, acc) ops' -> do
-          ops <- evaluate $ force ops'
-          (runtime, st') <- timeItT $
+          -- ops <- evaluate $ force ops'
+          let ops = ops'
+
+          -- Force GC.
+          performMajorGC
+
+          (!runtime, !st') <- timeItT $
 
             -- Apply (and force) each operation.
-            foldM (\st op ->
+            foldM (\ !st !op ->
                 evaluate $ force $ app' st op
               ) st ops
 
@@ -106,14 +113,24 @@ runBenchmark dx c n (LabeledGenerator label g) = do
       tf <- getCPUTime
       return (MkFixed (tf-t0) :: Nano, res) -- Pico for seconds
 
-    genOps dx 0 rng st gen = []
-    genOps dx c rng st gen = 
-      -- Generate dx operations.
-      let (rng', st', ops) = foldl' (\(rng, st, acc) () -> 
-              let (rng', st', op) = gen rng st in
-              (rng', st', op:acc)
-            ) (rng, st, []) $ take dx $ repeat ()
-      in
+    -- genOps dx 0 rng st gen = []
+    genOps dx c rng st gen = helper dx c $ genOps' rng st gen
+    --   -- Generate dx operations.
+    --   let (rng', st', ops) = foldl' (\(rng, st, acc) () -> 
+    --           let (rng', st', op) = gen rng st in
+    --           (rng', st', op:acc)
+    --         ) (rng, st, []) $ take dx $ repeat ()
+    --   in
 
-      reverse ops:genOps dx (c-1) rng' st' gen
+    --   reverse ops:genOps dx (c-1) rng' st' gen
+
+    helper dx 0 ops = []
+    helper dx c ops = 
+      let (ops', rest) = splitAt dx ops in
+      ops':helper dx (c-1) rest
+
+    -- Generate an infinite list of ops.
+    genOps' rng st gen = 
+      let (rng', st', op) = gen rng st in
+      op:genOps' rng' st' gen
 
