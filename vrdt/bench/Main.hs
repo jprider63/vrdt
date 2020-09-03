@@ -25,6 +25,8 @@ main = do
     graph1 = [
         LabeledGenerator "Min" minGen
       , LabeledGenerator "Max" maxGen
+      , LabeledGenerator "LWW" lwwGen
+      , LabeledGenerator "Sum" sumGen
       ]
 
 benchmarkAndOutput :: [[LabeledGenerator]] -> IO ()
@@ -75,7 +77,8 @@ runBenchmark dx c n (LabeledGenerator label g) = do
       init <- evaluate $ force $ genInit g
 
       -- Generate (and force) operations.
-      opss <- evaluate $ force $ genOps dx c rng init (gen g)
+      -- opss <- evaluate $ force $ genOps dx c rng init (gen g)
+      let opss = genOps dx c rng init (gen g)
 
       print $ map length opss
       -- print opss
@@ -83,7 +86,8 @@ runBenchmark dx c n (LabeledGenerator label g) = do
       -- Benchmark applying (and forcing) each operation.
       s0 <- evaluate $ force $ initSt g
       let app' = app g
-      (reverse . snd) <$> foldM (\(st, acc) ops -> do
+      (reverse . snd) <$> foldM (\(st, acc) ops' -> do
+          ops <- evaluate $ force ops'
           (runtime, st') <- timeItT $
 
             -- Apply (and force) each operation.
