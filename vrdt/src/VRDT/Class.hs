@@ -44,11 +44,27 @@ class VRDT t where
     compatibleState :: t -> Operation t -> Bool
 
     -- | Commutativity law.
-    {-@ lawCommutativity :: x : t -> op1 : Operation t -> op2 : Operation t -> {(compatibleState x op1 && compatibleState x op2 && compatible op1 op2) => (apply (apply x op1) op2 = apply (apply x op2) op1 && compatibleState (apply x op1) op2)} @-}
+    {-@ lawCommutativity
+            :: x : t
+            -> op1 : Operation t
+            -> op2 : Operation t
+            -> {
+                ( compatibleState x op1
+                && compatibleState x op2
+                && compatible op1 op2
+                ) =>
+                    ( apply (apply x op1) op2 = apply (apply x op2) op1
+                    && compatibleState (apply x op1) op2
+                    )
+            }
+    @-}
     lawCommutativity :: t -> Operation t -> Operation t -> ()
 
     -- | `compatible` must be commutative.
-    {-@ lawCompatibilityCommutativity :: op1 : Operation t -> op2 : Operation t -> {compatible op1 op2 = compatible op2 op1} @-}
+    {-@ lawCompatibilityCommutativity
+       :: op1 : Operation t
+       -> op2 : Operation t
+       -> {compatible op1 op2 = compatible op2 op1} @-}
     lawCompatibilityCommutativity :: Operation t -> Operation t -> ()
 
 

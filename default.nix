@@ -33,6 +33,7 @@ let
               self.callCabal2nix "vrdt" ./vrdt {}
             )
           );
+        causal-vrdt = self.callCabal2nix "causal-vrdt" (ign ./causal-vrdt) {};
 
         # add executables also
         kyowon-server = haskellPackages.callCabal2nix "kyowon-server" (ign ./kyowon-server) {};
@@ -65,6 +66,7 @@ let
     pkg.kyowon-reflex
     pkg.kyowon-server
     pkg.vrdt
+    pkg.causal-vrdt
   ];
 in
 if envFor == null

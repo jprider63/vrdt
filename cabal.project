@@ -1,5 +1,6 @@
 packages:
     vrdt
+    causal-vrdt
     kyowon-core
     kyowon-client
     kyowon-server

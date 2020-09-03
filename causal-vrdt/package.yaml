@@ -1,0 +1,22 @@
+name: causal-vrdt
+
+dependencies:
+- base
+- containers
+- uuid
+- vector
+- vrdt
+- mtl
+- aeson
+
+library:
+    source-dirs: lib
+
+tests:
+    doctest:
+        main: Doctest.hs
+        ghc-options: -threaded -rtsopts -with-rtsopts=-N
+        dependencies:
+            - causal-vrdt
+            - doctest
+            - QuickCheck
