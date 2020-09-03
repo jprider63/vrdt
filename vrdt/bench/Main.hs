@@ -39,7 +39,7 @@ benchmarkGraph (graphNum, gens) = do
   -- Run benchmarks.
   let dx = 1000
   let c = 10
-  let n = 5 -- 20
+  let n = 20
   rs <- mapM (runBenchmark dx c n) gens
 
   -- Write to file
@@ -67,7 +67,7 @@ runBenchmark dx c n (LabeledGenerator label g) = do
 
   where
     -- https://stackoverflow.com/a/2377067/382462
-    average xs = sum xs / genericLength xs
+    average xs = sum xs / (genericLength xs * fromIntegral dx)
 
     run dx c g seed = do
       -- Set seed.
