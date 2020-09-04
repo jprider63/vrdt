@@ -43,6 +43,12 @@ data Causal a = Causal
     }
 deriving instance (Show a, Show (VRDT.Operation a)) => Show (Causal a)
 
+-- | Equality compares only the underlying VRDT values. This is because a
+-- hypothetical refined type for lawCommutativity would only care about
+-- observational equivalance.
+instance Eq a => Eq (Causal a) where
+    a == b = vrdt a == vrdt b
+
 -- | 'CausalOp' wraps the operations of the underlying 'VRDT' for reordering.
 type CausalOp a = CBCAST.Message NodeId Time (VRDT.Operation a)
 
@@ -90,14 +96,10 @@ instance (VRDT a, Show (VRDT.Operation a)) => VRDT (Causal a) where
     type Operation (Causal a) = CausalOp a
     apply = applyCausalOp
 
-    -- TODO: according to the paper we need to define compatible to indicate
-    -- when messages are concurrent? why?
-    compatible = undefined
-    -- TODO: according to the paper we need to define compatibleState to
-    -- indicate when the "current state is compatible with the given operation"
-    -- but it's not clear what that means; it's probably "always" since we
-    -- buffer operations that cannot be applied
-    compatibleState = undefined
+    -- All pairs of operations are compatible.
+    compatible _ _ = True
+    -- All messages are compatible with all states.
+    compatibleState _ _ = True
 
     -- TODO: provide proofs
     lawCommutativity = undefined
