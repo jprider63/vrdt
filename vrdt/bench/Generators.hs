@@ -1,7 +1,12 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 module Generators where
 
 import Control.DeepSeq (NFData(..))
+import Data.Set (Set)
+import qualified Data.Set as Set
 import GHC.Generics (Generic(..))
 import System.Random
 
@@ -11,6 +16,7 @@ import VRDT.LWW
 import VRDT.Max
 import VRDT.Min
 import VRDT.Sum
+import VRDT.TwoPMap
 
 minGen :: Generator (Min Int) (Min Int) ()
 minGen = Generator genInit gen initSt app
@@ -71,4 +77,55 @@ lwwGen = Generator genInit gen initSt app
 deriving instance (Show t, Show a) => Show (LWW t a)
 deriving instance Generic (LWW t a)
 deriving instance (NFData t, NFData a) => NFData (LWW t a)
+
+twoPMapGen :: Generator (TwoPMap Int (Sum Int)) (TwoPMapOp Int (Sum Int)) (Set Int, Int)
+twoPMapGen = Generator genInit gen initSt app
+  where
+    genInit = (mempty, 0)
+    gen :: RandomGen g => g -> (Set Int, Int) -> (g, (Set Int, Int), (TwoPMapOp Int (Sum Int)))
+    gen rng (keys, t) =
+      let (w, rng') = randomR (0,99) rng in
+      
+      -- 60% insert.
+      if (w :: Int) < 60 || Set.null keys then
+        let (i, rng'') = randomR (-10000, 10000) rng' in
+        let t' = t+1 in
+        let keys' = Set.insert t' keys in
+        (rng'', (keys', t'), TwoPMapInsert t' (Sum i))
+
+      -- 20% update.
+      else if w < 80 then
+        let (m, rng'') = randomR (-1000,1000) rng' in
+        let (i, rng''') = randomR (0, Set.size keys - 1) rng'' in
+        let k = Set.toList keys !! i in
+        (rng''', (keys, t), TwoPMapApply k (Sum m))
+
+      -- 10% delete.
+      else
+        let (i, rng') = randomR (0, Set.size keys - 1) rng in
+        let k = Set.toList keys !! i in
+        let keys' = Set.delete k keys in
+        (rng', (keys', t), TwoPMapDelete k)
+
+    initSt = initVRDT
+    app = apply
+
+deriving instance Eq t => Eq (Sum t)
+deriving instance Ord t => Ord (Sum t)
+instance (Show k, Show v, Show (Operation v)) => Show (TwoPMapOp k v) where
+  show (TwoPMapInsert k v) = "insert (" <> show k <> ", " <> show v <> ")"
+  show (TwoPMapApply k op) = "apply (" <> show k <> ", " <> show op <> ")"
+  show (TwoPMapDelete k) = "delete " <> show k
+instance (Show k, Show v) => Show (TwoPMap k v) where
+  show (TwoPMap m _ _) = show m
+deriving instance Generic (TwoPMap k v)
+deriving instance (NFData k, NFData v, NFData (Operation v)) => NFData (TwoPMap k v)
+-- deriving instance (Show k, Show v) => Show (TwoPMapOp k v)
+-- deriving instance Generic (TwoPMapOp k v)
+deriving instance (NFData k, NFData v, NFData (Operation v)) => NFData (TwoPMapOp k v)
+
+
+
+-- TODO: CausalTree, 2PMap, MultiSet
+
 

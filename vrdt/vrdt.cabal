@@ -90,6 +90,7 @@ benchmark vrdt-bench
   ghc-options: -threaded -O2 -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers
     , csv
     , deepseq
     , random

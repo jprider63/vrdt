@@ -20,15 +20,19 @@ main = do
   -- Benchmark each VRDT.
   benchmarkAndOutput [
       graph1
+    , graph2
     ]
   
   
   where
     graph1 = [
-        LabeledGenerator "Min" minGen
-      , LabeledGenerator "Max" maxGen
-      , LabeledGenerator "LWW" lwwGen
-      , LabeledGenerator "Sum" sumGen
+      --   LabeledGenerator "Min" minGen
+      -- , LabeledGenerator "Max" maxGen
+      -- , LabeledGenerator "LWW" lwwGen
+      -- , LabeledGenerator "Sum" sumGen
+      ]
+    graph2 = [
+        LabeledGenerator "TwoPMap" twoPMapGen
       ]
 
 benchmarkAndOutput :: [[LabeledGenerator]] -> IO ()
@@ -40,8 +44,8 @@ benchmarkGraph (graphNum, gens) = do
 
   -- Run benchmarks.
   let dx = 1000
-  let c = 10
-  let n = 20
+  let c = 100
+  let n = 1 -- 20
   rs <- mapM (runBenchmark dx c n) gens
 
   -- Write to file
