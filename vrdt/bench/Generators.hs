@@ -5,8 +5,8 @@
 module Generators where
 
 import Control.DeepSeq (NFData(..))
-import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Sequence (Seq, (|>))
+import qualified Data.Sequence as Seq
 import GHC.Generics (Generic(..))
 import System.Random
 
@@ -78,33 +78,33 @@ deriving instance (Show t, Show a) => Show (LWW t a)
 deriving instance Generic (LWW t a)
 deriving instance (NFData t, NFData a) => NFData (LWW t a)
 
-twoPMapGen :: Generator (TwoPMap Int (Sum Int)) (TwoPMapOp Int (Sum Int)) (Set Int, Int)
+twoPMapGen :: Generator (TwoPMap Int (Sum Int)) (TwoPMapOp Int (Sum Int)) (Seq Int, Int)
 twoPMapGen = Generator genInit gen initSt app
   where
     genInit = (mempty, 0)
-    gen :: RandomGen g => g -> (Set Int, Int) -> (g, (Set Int, Int), (TwoPMapOp Int (Sum Int)))
+    gen :: RandomGen g => g -> (Seq Int, Int) -> (g, (Seq Int, Int), (TwoPMapOp Int (Sum Int)))
     gen rng (keys, t) =
       let (w, rng') = randomR (0,99) rng in
       
       -- 60% insert.
-      if (w :: Int) < 60 || Set.null keys then
+      if (w :: Int) < 60 || Seq.null keys then
         let (i, rng'') = randomR (-10000, 10000) rng' in
         let t' = t+1 in
-        let keys' = Set.insert t' keys in
+        let keys' = keys |> t' in
         (rng'', (keys', t'), TwoPMapInsert t' (Sum i))
 
       -- 20% update.
       else if w < 80 then
         let (m, rng'') = randomR (-1000,1000) rng' in
-        let (i, rng''') = randomR (0, Set.size keys - 1) rng'' in
-        let k = Set.toList keys !! i in
+        let (i, rng''') = randomR (0, Seq.length keys - 1) rng'' in
+        let k = Seq.index keys i in
         (rng''', (keys, t), TwoPMapApply k (Sum m))
 
       -- 10% delete.
       else
-        let (i, rng') = randomR (0, Set.size keys - 1) rng in
-        let k = Set.toList keys !! i in
-        let keys' = Set.delete k keys in
+        let (i, rng') = randomR (0, Seq.length keys - 1) rng in
+        let k = Seq.index keys i in
+        let keys' = Seq.deleteAt i keys in
         (rng', (keys', t), TwoPMapDelete k)
 
     initSt = initVRDT
