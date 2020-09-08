@@ -5,6 +5,8 @@
 module Generators where
 
 import Control.DeepSeq (NFData(..))
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.Sequence (Seq, (|>))
 import qualified Data.Sequence as Seq
 import GHC.Generics (Generic(..))
@@ -126,7 +128,7 @@ twoPMapGen = Generator genInit gen initSt app
         let (rng''', k) = randomKey rng'' keyGen in
         (rng''', keyGen, TwoPMapApply k (Sum m))
 
-      -- 10% delete.
+      -- 20% delete.
       else
         let (rng', k, keyGen') = removeKey rng keyGen in
         (rng', keyGen', TwoPMapDelete k)
@@ -147,6 +149,36 @@ deriving instance (NFData k, NFData v, NFData (Operation v)) => NFData (TwoPMap 
 -- deriving instance (Show k, Show v) => Show (TwoPMapOp k v)
 -- deriving instance Generic (TwoPMapOp k v)
 deriving instance (NFData k, NFData v, NFData (Operation v)) => NFData (TwoPMapOp k v)
+
+mapGen :: Generator (Map Int (Sum Int)) (TwoPMapOp Int (Sum Int)) KeyGen
+mapGen = Generator genInit gen initSt app
+  where
+    genInit = (mempty, 0)
+    gen :: RandomGen g => g -> KeyGen -> (g, KeyGen, (TwoPMapOp Int (Sum Int)))
+    gen rng keyGen =
+      let (w, rng') = randomR (0,99) rng in
+      
+      -- 60% insert.
+      if (w :: Int) < 60 || isEmpty keyGen then
+        let (i, rng'') = randomR (-10000, 10000) rng' in
+        let (keyGen', t') = nextKey keyGen in
+        (rng'', keyGen', TwoPMapInsert t' (Sum i))
+
+      -- 20% update.
+      else if w < 80 then
+        let (m, rng'') = randomR (-1000,1000) rng' in
+        let (rng''', k) = randomKey rng'' keyGen in
+        (rng''', keyGen, TwoPMapApply k (Sum m))
+
+      -- 20% delete.
+      else
+        let (rng', k, keyGen') = removeKey rng keyGen in
+        (rng', keyGen', TwoPMapDelete k)
+
+    initSt = mempty
+    app m (TwoPMapInsert k v) = Map.insert k v m
+    app m (TwoPMapApply k op) = Map.adjust (flip apply op) k m
+    app m (TwoPMapDelete k)   = Map.delete k m
 
 
 
