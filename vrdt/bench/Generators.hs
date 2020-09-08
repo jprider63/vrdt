@@ -17,6 +17,7 @@ import VRDT.Class
 import VRDT.LWW
 import VRDT.Max
 import VRDT.Min
+import VRDT.MultiSet
 import VRDT.Sum
 import VRDT.TwoPMap
 
@@ -180,8 +181,36 @@ mapGen = Generator genInit gen initSt app
     app m (TwoPMapApply k op) = Map.adjust (flip apply op) k m
     app m (TwoPMapDelete k)   = Map.delete k m
 
+deriving instance (Show a) => Show (MultiSet a)
+deriving instance (Show a) => Show (MultiSetOp a)
+deriving instance (NFData a) => NFData (MultiSet a)
+deriving instance (NFData a) => NFData (MultiSetOp a)
+
+multisetGen :: Generator (MultiSet Int) (MultiSetOp Int) KeyGen
+multisetGen = Generator genInit gen initSt app
+  where
+    genInit = (mempty, 0)
+    gen rng keyGen = 
+      let (w, rng') = randomR (0,99) rng in
+
+      -- 60% insert.
+      if (w :: Int) < 60 || isEmpty keyGen then
+        let (i, rng'') = randomR (-10000, 10000) rng' in
+        let (keyGen', t') = nextKey keyGen in
+        (rng'', keyGen', MultiSetOpAdd t' i)
+
+      -- 40% update.
+      else 
+        let (m, rng'') = randomR (-1000,1000) rng' in
+        let (rng''', k) = randomKey rng'' keyGen in
+        (rng''', keyGen, MultiSetOpAdd k m)
 
 
--- TODO: CausalTree, 2PMap, MultiSet
+    initSt = initVRDT
+    app = apply
+
+
+-- TODO: CausalTree
+
 
 

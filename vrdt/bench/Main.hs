@@ -33,6 +33,7 @@ main = do
       ]
     graph2 = [
         LabeledGenerator "TwoPMap" twoPMapGen
+      , LabeledGenerator "MultiSet" multisetGen
       , LabeledGenerator "Baseline (Data.Map)" mapGen
       ]
 
