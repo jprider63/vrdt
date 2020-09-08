@@ -78,34 +78,58 @@ deriving instance (Show t, Show a) => Show (LWW t a)
 deriving instance Generic (LWW t a)
 deriving instance (NFData t, NFData a) => NFData (LWW t a)
 
-twoPMapGen :: Generator (TwoPMap Int (Sum Int)) (TwoPMapOp Int (Sum Int)) (Seq Int, Int)
+type KeyGen = (Seq Int, Int)
+
+
+-- TODO: 
+isEmpty :: KeyGen -> Bool
+isEmpty (ks, _) = Seq.null ks
+
+nextKey :: KeyGen -> (KeyGen, Int)
+nextKey (keys, t) = 
+  let t' = t+1 in
+  let keys' = keys |> t' in
+  ((keys', t'), t')
+
+removeKey :: RandomGen g => g -> KeyGen -> (g, Int, KeyGen)
+removeKey rng (keys, t) =
+  let (i, rng') = randomR (0, Seq.length keys - 1) rng in
+  let k = Seq.index keys i in
+  let keys' = Seq.deleteAt i keys in
+  (rng', k, (keys', t))
+
+randomKey :: RandomGen g => g -> KeyGen -> (g, Int)
+randomKey rng (keys, t) = 
+  let (i, rng') = randomR (0, Seq.length keys - 1) rng in
+  let k = Seq.index keys i in
+  (rng', k)
+  
+
+
+twoPMapGen :: Generator (TwoPMap Int (Sum Int)) (TwoPMapOp Int (Sum Int)) KeyGen
 twoPMapGen = Generator genInit gen initSt app
   where
     genInit = (mempty, 0)
-    gen :: RandomGen g => g -> (Seq Int, Int) -> (g, (Seq Int, Int), (TwoPMapOp Int (Sum Int)))
-    gen rng (keys, t) =
+    gen :: RandomGen g => g -> KeyGen -> (g, KeyGen, (TwoPMapOp Int (Sum Int)))
+    gen rng keyGen =
       let (w, rng') = randomR (0,99) rng in
       
       -- 60% insert.
-      if (w :: Int) < 60 || Seq.null keys then
+      if (w :: Int) < 60 || isEmpty keyGen then
         let (i, rng'') = randomR (-10000, 10000) rng' in
-        let t' = t+1 in
-        let keys' = keys |> t' in
-        (rng'', (keys', t'), TwoPMapInsert t' (Sum i))
+        let (keyGen', t') = nextKey keyGen in
+        (rng'', keyGen', TwoPMapInsert t' (Sum i))
 
       -- 20% update.
       else if w < 80 then
         let (m, rng'') = randomR (-1000,1000) rng' in
-        let (i, rng''') = randomR (0, Seq.length keys - 1) rng'' in
-        let k = Seq.index keys i in
-        (rng''', (keys, t), TwoPMapApply k (Sum m))
+        let (rng''', k) = randomKey rng'' keyGen in
+        (rng''', keyGen, TwoPMapApply k (Sum m))
 
       -- 10% delete.
       else
-        let (i, rng') = randomR (0, Seq.length keys - 1) rng in
-        let k = Seq.index keys i in
-        let keys' = Seq.deleteAt i keys in
-        (rng', (keys', t), TwoPMapDelete k)
+        let (rng', k, keyGen') = removeKey rng keyGen in
+        (rng', keyGen', TwoPMapDelete k)
 
     initSt = initVRDT
     app = apply
