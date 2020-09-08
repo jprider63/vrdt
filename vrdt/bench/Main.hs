@@ -21,20 +21,24 @@ main = do
   benchmarkAndOutput [
       graph1
     , graph2
+    , graph3
     ]
-  
   
   where
     graph1 = [
-      --   LabeledGenerator "Min" minGen
-      -- , LabeledGenerator "Max" maxGen
-      -- , LabeledGenerator "LWW" lwwGen
-      -- , LabeledGenerator "Sum" sumGen
+        LabeledGenerator "Min" minGen
+      , LabeledGenerator "Max" maxGen
+      , LabeledGenerator "LWW" lwwGen
+      , LabeledGenerator "Sum" sumGen
       ]
     graph2 = [
         LabeledGenerator "TwoPMap" twoPMapGen
       , LabeledGenerator "MultiSet" multisetGen
       , LabeledGenerator "Baseline (Data.Map)" mapGen
+      ]
+    graph3 = [
+        LabeledGenerator "CausalTree" causalTreeGen
+      -- , LabeledGenerator "Baseline (Data.List)" listGen
       ]
 
 benchmarkAndOutput :: [[LabeledGenerator]] -> IO ()
@@ -46,7 +50,7 @@ benchmarkGraph (graphNum, gens) = do
 
   -- Run benchmarks.
   let dx = 1000
-  let c = 100
+  let c = 10
   let n = 1 -- 20
   rs <- mapM (runBenchmark dx c n) gens
 

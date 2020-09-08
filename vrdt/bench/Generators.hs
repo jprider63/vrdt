@@ -13,6 +13,7 @@ import GHC.Generics (Generic(..))
 import System.Random
 
 import Types
+import VRDT.CausalTree
 import VRDT.Class
 import VRDT.LWW
 import VRDT.Max
@@ -209,8 +210,43 @@ multisetGen = Generator genInit gen initSt app
     initSt = initVRDT
     app = apply
 
+causalTreeGen :: Generator (CausalTree Int Char) (CausalTreeOp Int Char) KeyGen
+causalTreeGen = Generator genInit gen initSt app
+  where
+    genInit = (Seq.singleton initId, initId)
+    gen rng keyGen =
+      let (rng', parentK) = randomKey rng keyGen in
+      let (keyGen', k) = nextKey keyGen in
 
--- TODO: CausalTree
+      let (w, rng'') = randomR (0,99) rng' in
+      -- 70% insert.
+      if (w :: Int) < 70 || isEmpty keyGen then
+        let (c, rng''') = randomR ('a','z') rng'' in
+        let op = CausalTreeOp parentK (CausalTreeAtom k (CausalTreeLetter c)) in
+        (rng''', keyGen', op)
+
+      -- 30% delete.
+      else
+        let op = CausalTreeOp parentK (CausalTreeAtom k CausalTreeLetterDelete) in
+        (rng'', keyGen', op)
+
+    initSt = CausalTree (CausalTreeWeave (CausalTreeAtom initId CausalTreeLetterRoot) []) mempty
+    initId = 0
+
+    app = apply
+
+deriving instance Generic (CausalTree i c)
+deriving instance (NFData i, NFData c) => NFData (CausalTree i c)
+deriving instance Generic (CausalTreeOp i c)
+deriving instance (NFData i, NFData c) => NFData (CausalTreeOp i c)
+deriving instance Generic (CausalTreeWeave i c)
+deriving instance (NFData i, NFData c) => NFData (CausalTreeWeave i c)
+deriving instance Generic (CausalTreeLetter c)
+deriving instance (NFData c) => NFData (CausalTreeLetter c)
+deriving instance Generic (CausalTreeAtom i c)
+deriving instance (NFData i, NFData c) => NFData (CausalTreeAtom i c)
+
+-- TODO: List?
 
 
 
