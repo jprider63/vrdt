@@ -9,6 +9,8 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Sequence (Seq, (|>))
 import qualified Data.Sequence as Seq
+import Data.Set (Set)
+import qualified Data.Set as Set
 import GHC.Generics (Generic(..))
 import System.Random
 
@@ -82,18 +84,33 @@ deriving instance (Show t, Show a) => Show (LWW t a)
 deriving instance Generic (LWW t a)
 deriving instance (NFData t, NFData a) => NFData (LWW t a)
 
-type KeyGen = (Seq Int, Int)
+-- type KeyGen = (Seq Int, Int)
+type KeyGen = (Seq Int, Set Int)
 
 
 -- TODO: 
 isEmpty :: KeyGen -> Bool
 isEmpty (ks, _) = Seq.null ks
 
-nextKey :: KeyGen -> (KeyGen, Int)
-nextKey (keys, t) = 
-  let t' = t+1 in
+-- nextKey :: KeyGen -> (KeyGen, Int)
+-- nextKey (keys, t) = 
+--   let t' = t+1 in
+--   let keys' = keys |> t' in
+--   ((keys', t'), t')
+nextKey :: RandomGen g => g -> KeyGen -> (g, KeyGen, Int)
+nextKey rng (keys, keySet) = 
+  let (rng', t') = genKey rng in
   let keys' = keys |> t' in
-  ((keys', t'), t')
+  let keySet' = Set.insert t' keySet in
+  (rng', (keys', keySet'), t')
+
+  where
+    genKey rng =
+      let (k, rng') = random rng in
+      if Set.member k keySet then
+        genKey rng'
+      else
+        (rng', k)
 
 removeKey :: RandomGen g => g -> KeyGen -> (g, Int, KeyGen)
 removeKey rng (keys, t) =
@@ -113,7 +130,7 @@ randomKey rng (keys, t) =
 twoPMapGen :: Generator (TwoPMap Int (Sum Int)) (TwoPMapOp Int (Sum Int)) KeyGen
 twoPMapGen = Generator genInit gen initSt app
   where
-    genInit = (mempty, 0)
+    genInit = (mempty, mempty)
     gen :: RandomGen g => g -> KeyGen -> (g, KeyGen, (TwoPMapOp Int (Sum Int)))
     gen rng keyGen =
       let (w, rng') = randomR (0,99) rng in
@@ -121,8 +138,8 @@ twoPMapGen = Generator genInit gen initSt app
       -- 60% insert.
       if (w :: Int) < 60 || isEmpty keyGen then
         let (i, rng'') = randomR (-10000, 10000) rng' in
-        let (keyGen', t') = nextKey keyGen in
-        (rng'', keyGen', TwoPMapInsert t' (Sum i))
+        let (rng''', keyGen', t') = nextKey rng'' keyGen in
+        (rng''', keyGen', TwoPMapInsert t' (Sum i))
 
       -- 20% update.
       else if w < 80 then
@@ -155,7 +172,7 @@ deriving instance (NFData k, NFData v, NFData (Operation v)) => NFData (TwoPMapO
 mapGen :: Generator (Map Int (Sum Int)) (TwoPMapOp Int (Sum Int)) KeyGen
 mapGen = Generator genInit gen initSt app
   where
-    genInit = (mempty, 0)
+    genInit = (mempty, mempty)
     gen :: RandomGen g => g -> KeyGen -> (g, KeyGen, (TwoPMapOp Int (Sum Int)))
     gen rng keyGen =
       let (w, rng') = randomR (0,99) rng in
@@ -163,8 +180,8 @@ mapGen = Generator genInit gen initSt app
       -- 60% insert.
       if (w :: Int) < 60 || isEmpty keyGen then
         let (i, rng'') = randomR (-10000, 10000) rng' in
-        let (keyGen', t') = nextKey keyGen in
-        (rng'', keyGen', TwoPMapInsert t' (Sum i))
+        let (rng''', keyGen', t') = nextKey rng'' keyGen in
+        (rng''', keyGen', TwoPMapInsert t' (Sum i))
 
       -- 20% update.
       else if w < 80 then
@@ -190,15 +207,15 @@ deriving instance (NFData a) => NFData (MultiSetOp a)
 multisetGen :: Generator (MultiSet Int) (MultiSetOp Int) KeyGen
 multisetGen = Generator genInit gen initSt app
   where
-    genInit = (mempty, 0)
+    genInit = (mempty, mempty)
     gen rng keyGen = 
       let (w, rng') = randomR (0,99) rng in
 
       -- 60% insert.
       if (w :: Int) < 60 || isEmpty keyGen then
         let (i, rng'') = randomR (-10000, 10000) rng' in
-        let (keyGen', t') = nextKey keyGen in
-        (rng'', keyGen', MultiSetOpAdd t' i)
+        let (rng''', keyGen', t') = nextKey rng'' keyGen in
+        (rng''', keyGen', MultiSetOpAdd t' i)
 
       -- 40% update.
       else 
@@ -213,22 +230,22 @@ multisetGen = Generator genInit gen initSt app
 causalTreeGen :: Generator (CausalTree Int Char) (CausalTreeOp Int Char) KeyGen
 causalTreeGen = Generator genInit gen initSt app
   where
-    genInit = (Seq.singleton initId, initId)
+    genInit = (Seq.singleton initId, Set.singleton initId)
     gen rng keyGen =
       let (rng', parentK) = randomKey rng keyGen in
-      let (keyGen', k) = nextKey keyGen in
+      let (rng'', keyGen', k) = nextKey rng' keyGen in
 
-      let (w, rng'') = randomR (0,99) rng' in
+      let (w, rng''') = randomR (0,99) rng'' in
       -- 70% insert.
       if (w :: Int) < 70 || isEmpty keyGen then
-        let (c, rng''') = randomR ('a','z') rng'' in
+        let (c, rng'''') = randomR ('a','z') rng''' in
         let op = CausalTreeOp parentK (CausalTreeAtom k (CausalTreeLetter c)) in
-        (rng''', keyGen', op)
+        (rng'''', keyGen', op)
 
       -- 30% delete.
       else
         let op = CausalTreeOp parentK (CausalTreeAtom k CausalTreeLetterDelete) in
-        (rng'', keyGen', op)
+        (rng''', keyGen', op)
 
     initSt = CausalTree (CausalTreeWeave (CausalTreeAtom initId CausalTreeLetterRoot) []) mempty
     initId = 0
