@@ -263,7 +263,34 @@ deriving instance (NFData c) => NFData (CausalTreeLetter c)
 deriving instance Generic (CausalTreeAtom i c)
 deriving instance (NFData i, NFData c) => NFData (CausalTreeAtom i c)
 
--- TODO: List?
+data ListGenOp = ListInsert Int Char | ListDelete Int
+  deriving Show
+deriving instance Generic ListGenOp
+deriving instance NFData ListGenOp
+
+listGen :: Generator [Char] ListGenOp Int
+listGen = Generator genInit gen initSt app
+  where
+    genInit = 0
+    gen rng len =
+      let (w, rng') = randomR (0,99) rng in
+      -- 70% insert.
+      if (w :: Int) < 70 || len == 0 then
+        let (c, rng'') = randomR ('a','z') rng' in
+        let (pos, rng''') = randomR (0,len) rng'' in
+        (rng''', len + 1, ListInsert pos c)
+      else
+        let (pos, rng'') = randomR (0,len-1) rng' in
+        (rng'', len - 1, ListDelete pos)
+        
+    initSt = []
+    app ls (ListInsert 0 c) = c:ls
+    app [] (ListInsert i c) = error "unreachable insert"
+    app (h:t) (ListInsert i c) = h:app t (ListInsert (i-1) c)
+    app [] (ListDelete i) = error "unreachable delete"
+    app (_:t) (ListDelete 0) = t
+    app (h:t) (ListDelete i) = h:app t (ListDelete (i-1))
+
 
 
 
