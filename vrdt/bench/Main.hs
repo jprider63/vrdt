@@ -4,8 +4,9 @@ module Main where
 import Control.DeepSeq (force)
 import Control.Exception (evaluate)
 import Control.Monad (foldM)
+import qualified Data.Char as Char
 import Data.Fixed
-import Data.List (foldl', genericLength, transpose)
+import Data.List (foldl', genericLength, transpose, sort)
 import System.CPUTime
 import System.Mem
 import System.Random
@@ -38,7 +39,7 @@ main = do
       ]
     graph3 = [
         LabeledGenerator "CausalTree" causalTreeGen
-      -- , LabeledGenerator "Baseline (Data.List)" listGen
+      , LabeledGenerator "Baseline (Data.List)" listGen
       ]
 
 benchmarkAndOutput :: [[LabeledGenerator]] -> IO ()
@@ -49,38 +50,67 @@ benchmarkGraph (graphNum, gens) = do
   putStrLn $ "Generating graph " <> show graphNum
 
   -- Run benchmarks.
-  let dx = 1000
-  let c = 10
-  let n = 1 -- 20
-  rs <- mapM (runBenchmark dx c n) gens
+  rs <- flip mapM gens $ \gen -> do
+    (label, rs) <- runBenchmark dx c n gen
 
-  -- Write to file
-  let filename = "graph" <> show graphNum <> ".csv"
-  let header = "":map (show . (dx*)) [1..c]
+    -- Write raw output to file.
+    writeRaw graphNum label rs
 
-  writeFile filename $ printCSV $ header:rs
+    return (label, transpose rs)
+
+  
+  -- Write average, median, quartile 1, quartile 3.
+  writeStatistic "mean" average rs
+  writeStatistic "median" median rs
+  writeStatistic "quartile_1" quartile1 rs
+  writeStatistic "quartile_3" quartile3 rs
+  
+
+  where
+    dx = 1000
+    c = 50
+    n = 11
+
+    writeRaw :: Int -> String -> [[Nano]] -> IO ()
+    writeRaw graphNum label rs = do
+      let filename = "raw_" <> show graphNum <> "_" <> labelToName label <> ".csv"
+      let header = label:map (show . (dx*)) [1..c]
+
+      let rs' = map (\(trial, r) -> ("Trial " <> show trial):map show r) $ zip [1..] rs
+    
+      writeFile filename $ printCSV $ header:rs'
+
+    writeStatistic name statF rs = do
+      let filename = "graph" <> show graphNum <> "_" <> name <> ".csv"
+      let header = name:map (show . (dx*)) [1..c]
+
+      let rs' = map (\(label, rs) -> 
+              label:map (show . statF) rs 
+            ) rs
+  
+      writeFile filename $ printCSV $ header:rs'
+
+    -- https://stackoverflow.com/a/2377067/382462
+    average xs = sum xs / (genericLength xs * fromIntegral dx)
+    median xs = sort xs !! (genericLength xs `div` 2)
+    quartile1 xs = sort xs !! (genericLength xs `div` 4)
+    quartile3 xs = sort xs !! ((genericLength xs * 3) `div` 4)
 
 
+labelToName :: String -> String
+labelToName = map (\c -> if c == ' ' then '_' else Char.toLower c)
 
 -- Output std dev too?
--- runBenchmark :: Int -> Int -> Generator t op st -> [String] -- (String, [Double])
-runBenchmark :: Int -> Int -> Int -> LabeledGenerator -> IO [String] -- (String, [Double])
+-- runBenchmark :: Int -> Int -> Int -> LabeledGenerator -> IO [String]
+runBenchmark :: Int -> Int -> Int -> LabeledGenerator -> IO (String, [[Nano]])
 runBenchmark dx c n (LabeledGenerator label g) = do
   -- Run n times.
   rs <- mapM (run dx c g) [0..n-1]
-  mapM_ print rs
+  -- mapM_ print rs
+
+  return (label, rs)
   
-  -- Compute averages.
-  let avgs = map average $ transpose rs
-
-  -- stdev??
-
-  return $ label:map show avgs
-
   where
-    -- https://stackoverflow.com/a/2377067/382462
-    average xs = sum xs / (genericLength xs * fromIntegral dx)
-
     run dx c g seed = do
       -- Set seed.
       let rng = mkStdGen seed
@@ -92,7 +122,7 @@ runBenchmark dx c n (LabeledGenerator label g) = do
       opss <- evaluate $ force $ genOps dx c rng init (gen g)
       -- let opss = genOps dx c rng init (gen g)
 
-      print $ map length opss
+      -- print $ map length opss
       -- print opss
 
       -- Benchmark applying (and forcing) each operation.
@@ -112,7 +142,7 @@ runBenchmark dx c n (LabeledGenerator label g) = do
                 evaluate $ force $ app' st op
               ) st ops
 
-          print st'
+          -- print st'
           return (st', runtime:acc)
         ) (s0,[]) opss
 
