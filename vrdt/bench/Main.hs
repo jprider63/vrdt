@@ -20,12 +20,20 @@ main :: IO ()
 main = do
   -- Benchmark each VRDT.
   benchmarkAndOutput [
-      graph1
-    , graph2
-    , graph3
+      graph0
+    --   graph1
+    -- , graph2
+    -- , graph3
     ]
   
   where
+    graph0 = [
+        LabeledGenerator "TwoPMap" twoPMapGen
+      , LabeledGenerator "MultiSet" multisetGen
+      , LabeledGenerator "Baseline (Data.Map)" mapGen
+      , LabeledGenerator "CausalTree" causalTreeGen
+      , LabeledGenerator "Baseline (Data.List)" listGen
+      ]
     graph1 = [
         LabeledGenerator "Min" minGen
       , LabeledGenerator "Max" maxGen
