@@ -163,7 +163,7 @@ lemmaLookupInsert2 (Map k _ m)   x k' v
 
 lemmaLookupInsert :: Ord k => Map k v -> k -> v -> () 
 {-@ lemmaLookupInsert :: Ord k => m:Map k v -> k:k -> v:v
-  -> {lookup k (insert k v m) == Just v } @-}
+      -> {lookup k (insert k v m) == Just v } @-}
 lemmaLookupInsert  Tip _ _ = () 
 lemmaLookupInsert (Map k _ m)   k' x
   | k == k'   = lemmaLookupInsert m k' x 
@@ -172,7 +172,7 @@ lemmaLookupInsert (Map k _ m)   k' x
 
 lemmaLookupDelete2 :: Ord k => Map k v -> k ->  k -> () 
 {-@ lemmaLookupDelete2 :: Ord k => m:Map k v -> x:k -> kd:k
-   -> { (kd /= x => lookup x (delete kd m) == lookup x m) } @-}
+      -> { (kd /= x => lookup x (delete kd m) == lookup x m) } @-}
 lemmaLookupDelete2 Tip _ _        = ()
 lemmaLookupDelete2 (Map k v m) x kd
   | k < kd    = lemmaLookupDelete2 m x kd 

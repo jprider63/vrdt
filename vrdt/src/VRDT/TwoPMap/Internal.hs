@@ -47,9 +47,9 @@ data TwoPMap k v = TwoPMap {
 -- TODO: Invariant that keys are disjoint.
 
 {-@ data TwoPMapOp k v = 
-    TwoPMapInsert {twoPMapOpIKey :: k, twoPMapOpV :: v}
-  | TwoPMapApply {twoPMapOpAKey :: k,  twoPMapOpOp :: (Operation v)}
-  | TwoPMapDelete {twoPMapOpDKey :: k}
+        TwoPMapInsert {twoPMapOpIKey :: k, twoPMapOpV :: v}
+      | TwoPMapApply {twoPMapOpAKey :: k,  twoPMapOpOp :: (Operation v)}
+      | TwoPMapDelete {twoPMapOpDKey :: k}
 @-}
 
 data TwoPMapOp k v = 
@@ -123,8 +123,8 @@ lemmaAllCompatibleInsert (op:ops) v0 v1
 
 {-@ ple lemma1 @-}
 {-@ lemma1 :: (Ord (Operation v), VRDT v) => op:Operation v -> ops:[Operation v] ->
-  {v:v | allCompatibleState v ops && compatibleState v op} -> 
-  {allCompatibleState v (insertList op ops)} @-}
+      {v:v | allCompatibleState v ops && compatibleState v op} -> 
+      {allCompatibleState v (insertList op ops)} @-}
 lemma1 :: (Ord (Operation v), VRDT v) => Operation v -> [Operation v] -> v -> ()
 lemma1 op [] v = ()
 lemma1 op (op':ops) v
@@ -196,7 +196,7 @@ aupdate apply op _ v = Just (apply v op)
 
 {-@ ple updateAupdateEqSize  @-}
 {-@ updateAupdateEqSize :: Ord k => apply: (a -> b -> a) -> op:b -> k:k -> m:Map k a ->
-  {Map.keys m == Map.keys (msnd (Map.updateLookupWithKey (aupdate apply op) k m))} @-}
+      {Map.keys m == Map.keys (msnd (Map.updateLookupWithKey (aupdate apply op) k m))} @-}
 updateAupdateEqSize :: Ord k => (a -> b -> a) -> b -> k -> Map k a -> ()
 #if NotLiquid
 updateAupdateEqSize apply op k m = ()
@@ -219,9 +219,10 @@ doubleConstNothing _ _ = Nothing
 
 {-@ reflect applyTwoPMap @-}
 {-@ applyTwoPMap :: (Ord k, Ord (Operation v), VRDT v) => x:TwoPMap k v ->
-   op:TwoPMapOp k v -> {vv:TwoPMap k v |
-     Set.isSubsetOf (twoPMapTombstone x) (twoPMapTombstone vv)
-  && (not (isDelete op) => Set.isSubsetOf (Map.keys (twoPMap x)) (Map.keys (twoPMap vv)))} @-}
+      op:TwoPMapOp k v -> {vv:TwoPMap k v |
+           Set.isSubsetOf (twoPMapTombstone x) (twoPMapTombstone vv)
+        && (not (isDelete op) => Set.isSubsetOf (Map.keys (twoPMap x)) (Map.keys (twoPMap vv)))}
+@-}
 applyTwoPMap :: (Ord k, Ord (Operation v), VRDT v) => TwoPMap k v -> TwoPMapOp k v -> TwoPMap k v
 applyTwoPMap (TwoPMap m p t) (TwoPMapInsert k v) = 
     -- Check if deleted.

@@ -144,9 +144,9 @@ disjoint m1 m2 = S.null (S.intersection (keys m1) (keys m2))
 
 {-@ reflect updateLookupWithKey @-}
 {-@ updateLookupWithKey :: Ord k => f:(k -> a -> Maybe a) -> k:k -> m:Map k a ->
-  {p:({vv:Maybe a | isJust vv <=> S.member k (keys m)}
-  , Map k a) | if (isJust (mfst p)) then
-                (if (isJust (f k (fromJust (mfst p)))) then (keys m == (keys (msnd p))) else (keys (msnd p) == S.difference (keys m) (S.singleton k))) else (msnd p == m) } @-}
+      {p:({vv:Maybe a | isJust vv <=> S.member k (keys m)}
+      , Map k a) | if (isJust (mfst p)) then
+                    (if (isJust (f k (fromJust (mfst p)))) then (keys m == (keys (msnd p))) else (keys (msnd p) == S.difference (keys m) (S.singleton k))) else (msnd p == m) } @-}
 updateLookupWithKey :: Ord k => (k -> a -> Maybe a) -> k -> Map k a -> (Maybe a, Map k a)
 updateLookupWithKey f k m = case lookup k m of
   Nothing -> (Nothing, m)

@@ -36,7 +36,7 @@ insertList v (h:t)
   | otherwise = h:insertList v t
 
 {-@ insertListDestruct :: Ord a => x:a -> xs:[a] ->
-  (lts::[a], {gts:[a] | (concat lts gts == xs) && (concat lts (cons x gts) == insertList x xs)}) @-}
+      (lts::[a], {gts:[a] | (concat lts gts == xs) && (concat lts (cons x gts) == insertList x xs)}) @-}
 insertListDestruct :: Ord a => a -> [a] -> ([a],[a])
 insertListDestruct v [] = ([],[])
 insertListDestruct v (h:t)
@@ -80,7 +80,7 @@ lemmaInsertPendingTwice k x y m
 
 
 {-@ lemmaInsertPendingTwiceNEq :: (Ord k,Ord a) => x:a -> y:a -> k:k -> {k':k | k /= k'} -> xs:Map k [a] ->
-  {(insertPending k' y (insertPending k x xs) == insertPending k x (insertPending k' y xs))} @-}
+      {(insertPending k' y (insertPending k x xs) == insertPending k x (insertPending k' y xs))} @-}
 lemmaInsertPendingTwiceNEq :: (Ord k, Ord a) => a -> a -> k -> k -> Map k [a] -> ()
 lemmaInsertPendingTwiceNEq x y k k' m =
   Map.lemmaLookupInsert2 m k k' pops2 &&&
@@ -94,7 +94,7 @@ lemmaInsertPendingTwiceNEq x y k k' m =
                  Just xs -> insertList x xs
 
 {-@ lemmaInsertPendingLookup :: (Ord a, Ord k ) => y:a -> k:k -> {k':k | k /= k'} -> xs:Map k [a] ->
-  {(Map.lookup k (insertPending k' y xs) == Map.lookup k xs)} @-}
+      {(Map.lookup k (insertPending k' y xs) == Map.lookup k xs)} @-}
 lemmaInsertPendingLookup :: (Ord k, Ord a) => a -> k -> k -> Map k [a] -> ()
 lemmaInsertPendingLookup y k k' m =
   Map.lemmaLookupInsert2 m k k' pops

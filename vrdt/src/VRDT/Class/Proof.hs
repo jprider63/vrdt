@@ -61,7 +61,7 @@ allCompatibleState x (h:t) = compatibleState x h && allCompatibleState x t
 {-@ reflect allCompatible @-}
 {-@ ple allCompatible @-}
 {-@ allCompatible :: VRDT a => xs:[Operation a] ->
-  {vv:Bool | (vv && len xs > 0) => allCompatible (List.tail xs)} @-}
+      {vv:Bool | (vv && len xs > 0) => allCompatible (List.tail xs)} @-}
 allCompatible :: VRDT a => [Operation a] -> Bool
 allCompatible [] = True
 allCompatible (op1:ops) = allCompatible' op1 ops
@@ -92,8 +92,8 @@ isPermutation (op1:ops1') ops2 = case removeFirst op1 ops2 of
 {-@ reflect removeFirst @-}
 {-@ ple removeFirst @-}
 {-@ removeFirst :: Eq o => x:o -> xs:[o] ->
-   {vv:Maybe [o] | (isJust vv => 1 + len (fromJust vv) == len xs) &&
-                   (List.elem' x xs <=> isJust vv)} @-}
+      {vv:Maybe [o] | (isJust vv => 1 + len (fromJust vv) == len xs) &&
+                      (List.elem' x xs <=> isJust vv)} @-}
 removeFirst :: Eq o => o -> [o] -> Maybe [o]
 removeFirst o [] = Nothing
 removeFirst o (h:t) = 
@@ -207,11 +207,11 @@ lemmaRemoveFirstAllCompatible op (o:os) rs
 
 {-@ ple lemmaRemoveFirstAllCompatibleState @-}
 {-@ lemmaRemoveFirstAllCompatibleState :: (Eq (Operation a), VRDT a) => 
-    x:a -> 
-    op:Operation a -> 
-    {os:[Operation a] | allCompatibleState x os && allCompatible os} -> 
-    {rs:[Operation a] | removeFirst op os == Just rs} -> 
-    {allCompatibleState (apply x op) rs} 
+      x:a -> 
+      op:Operation a -> 
+      {os:[Operation a] | allCompatibleState x os && allCompatible os} -> 
+      {rs:[Operation a] | removeFirst op os == Just rs} -> 
+      {allCompatibleState (apply x op) rs} 
 @-}
 lemmaRemoveFirstAllCompatibleState :: (Eq (Operation a), VRDT a) => a -> Operation a -> [Operation a] -> [Operation a] -> ()
 lemmaRemoveFirstAllCompatibleState x op1 ops [] = ()
