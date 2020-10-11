@@ -53,8 +53,7 @@ atomGreaterThanTotal (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2
 atomGreaterThanTotal (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2 _)                        = ()
 
 {-@ ple lemmaInsertAtomTwice @-}
-{-@ lemmaInsertAtomTwice :: Ord id => cts:[CausalTreeWeave id a] -> a1:CausalTreeAtom id a -> {a2:CausalTreeAtom id a | causalTreeAtomId a2 /= causalTreeAtomId a1} ->
-   {insertAtom (insertAtom cts a1) a2 == insertAtom (insertAtom cts a2) a1} @-}
+{-@ lemmaInsertAtomTwice :: Ord id => cts:[CausalTreeWeave id a] -> a1:CausalTreeAtom id a -> {a2:CausalTreeAtom id a | causalTreeAtomId a2 /= causalTreeAtomId a1} ->   {insertAtom (insertAtom cts a1) a2 == insertAtom (insertAtom cts a2) a1} @-}
 lemmaInsertAtomTwice
   :: Ord id => [CausalTreeWeave id a] -> CausalTreeAtom id a -> CausalTreeAtom id a -> ()
 lemmaInsertAtomTwice xs a1 a2
@@ -64,8 +63,7 @@ lemmaInsertAtomTwice xs a1 a2
   = atomGreaterThanTotal a1 a2 &&& lemmaInsertAtomTwice' xs a2 a1
 
 {-@ ple lemmaInsertAtomTwice' @-}
-{-@ lemmaInsertAtomTwice' :: Ord id => cts:[CausalTreeWeave id a] -> a1:CausalTreeAtom id a -> {a2:CausalTreeAtom id a | causalTreeAtomId a2 /= causalTreeAtomId a1 && atomGreaterThan a1 a2} ->
-   {insertAtom (insertAtom cts a1) a2 == insertAtom (insertAtom cts a2) a1} @-}
+{-@ lemmaInsertAtomTwice' :: Ord id => cts:[CausalTreeWeave id a] -> a1:CausalTreeAtom id a -> {a2:CausalTreeAtom id a | causalTreeAtomId a2 /= causalTreeAtomId a1 && atomGreaterThan a1 a2} ->   {insertAtom (insertAtom cts a1) a2 == insertAtom (insertAtom cts a2) a1} @-}
 lemmaInsertAtomTwice'
   :: Ord id => [CausalTreeWeave id a] -> CausalTreeAtom id a -> CausalTreeAtom id a -> ()
 lemmaInsertAtomTwice' [] a1 a2 =
@@ -96,9 +94,7 @@ lemmaInsertAtomTwice' (x:xs) a1 a2
 
 
 {-@ ple lemmaInsertInWeaveNothingEq  @-}
-{-@ lemmaInsertInWeaveNothingEq :: Ord id => w:CausalTreeWeave id a -> pid:id ->
-  {op1:CausalTreeAtom id a | insertInWeave w pid op1 == Nothing} -> op2:CausalTreeAtom id a ->
-  {insertInWeave w pid op2 == Nothing} @-}
+{-@ lemmaInsertInWeaveNothingEq :: Ord id => w:CausalTreeWeave id a -> pid:id ->  {op1:CausalTreeAtom id a | insertInWeave w pid op1 == Nothing} -> op2:CausalTreeAtom id a ->  {insertInWeave w pid op2 == Nothing} @-}
 lemmaInsertInWeaveNothingEq
   :: Ord id
   => CausalTreeWeave id a
@@ -115,13 +111,7 @@ lemmaInsertInWeaveNothingEq w pid op1 op2
   = ()
 
 
-{-@ applyAtomFoldlRespectsUniq ::
-  Ord id
-=> {ct:CausalTree id a | idUniqueCausalTree ct}
--> {pid:id | S.member pid (weaveIds (causalTreeWeave ct))}
--> {atoms:[CausalTreeAtom id a] | idUniqueList atoms && S.null (S.intersection (pendingListIds atoms) (causalTreeIds ct))}
--> {idUniqueCausalTree (List.foldl' (applyAtomHelper pid) ct atoms)}
-  / [causalTreePendingSize ct, 1, List.length atoms]
+{-@ applyAtomFoldlRespectsUniq ::  Ord id=> {ct:CausalTree id a | idUniqueCausalTree ct}-> {pid:id | S.member pid (weaveIds (causalTreeWeave ct))}-> {atoms:[CausalTreeAtom id a] | idUniqueList atoms && S.null (S.intersection (pendingListIds atoms) (causalTreeIds ct))}-> {idUniqueCausalTree (List.foldl' (applyAtomHelper pid) ct atoms)}  / [causalTreePendingSize ct, 1, List.length atoms]
 @-}
 applyAtomFoldlRespectsUniq ::
     Ord id
@@ -174,14 +164,7 @@ applyAtomFoldlRespectsUniq ct@(CausalTree weave pending) pid (atom@(CausalTreeAt
   applyAtomFoldlRespectsUniq (applyAtom ct pid atom) pid atoms
 
 
-{-@ applyAtomRespectsUniq ::
-   Ord id
-=> {ct:CausalTree id a | idUniqueCausalTree ct}
--> pid:id
--> {atom:CausalTreeAtom id a | not (S.member (causalTreeAtomId atom) (causalTreeIds ct))}
--> {idUniqueCausalTree (applyAtom ct pid atom)}
- / [causalTreePendingSize ct, 0, 0]
-@-}
+{-@ applyAtomRespectsUniq ::   Ord id=> {ct:CausalTree id a | idUniqueCausalTree ct}-> pid:id-> {atom:CausalTreeAtom id a | not (S.member (causalTreeAtomId atom) (causalTreeIds ct))}-> {idUniqueCausalTree (applyAtom ct pid atom)} / [causalTreePendingSize ct, 0, 0]@-}
 applyAtomRespectsUniq :: forall id a. 
      Ord id
   => CausalTree id a
@@ -303,14 +286,7 @@ applyAtomRespectsUniq ct@(CausalTree weave pending) pid atom@(CausalTreeAtom aid
     applyAtomFoldlRespectsUniq (CausalTree weave' (Map.delete aid pending)) aid pops
 
 
-{-@ lemmaInsertInWeaveListJustEq :: Ord id =>
-  ws:[CausalTreeWeave id a] ->
-  pid:id ->
-  wop1 : [CausalTreeWeave id a] ->
-  wop2 : [CausalTreeWeave id a] -> 
-  {op1:CausalTreeAtom id a | insertInWeaveChildren ws pid op1 == Just wop1} -> {op2:CausalTreeAtom id a | (insertInWeaveChildren ws pid op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2)} ->
-  {insertInWeaveChildren wop1 pid op2 == insertInWeaveChildren wop2 pid op1 && isJust (insertInWeaveChildren wop1 pid op2)}
-  / [causalTreeWeaveLengthList ws, List.length ws]@-}
+{-@ lemmaInsertInWeaveListJustEq :: Ord id =>  ws:[CausalTreeWeave id a] ->  pid:id ->  wop1 : [CausalTreeWeave id a] ->  wop2 : [CausalTreeWeave id a] ->   {op1:CausalTreeAtom id a | insertInWeaveChildren ws pid op1 == Just wop1} -> {op2:CausalTreeAtom id a | (insertInWeaveChildren ws pid op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2)} ->  {insertInWeaveChildren wop1 pid op2 == insertInWeaveChildren wop2 pid op1 && isJust (insertInWeaveChildren wop1 pid op2)}  / [causalTreeWeaveLengthList ws, List.length ws]@-}
 lemmaInsertInWeaveListJustEq
   :: Ord id
   => [CausalTreeWeave id a]
@@ -412,10 +388,7 @@ lemmaInsertInWeaveListJustEq
     ==. Just (w:wsop2op1')
     *** QED)
     
-{-@ lemmaInsertInWeaveJustEq :: Ord id => w:CausalTreeWeave id a -> pid:id -> wop1 : CausalTreeWeave id a ->
-  wop2 : CausalTreeWeave id a -> 
-  {op1:CausalTreeAtom id a | insertInWeave w pid op1 == Just wop1} -> {op2:CausalTreeAtom id a | (insertInWeave w pid op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2)} ->
-  {insertInWeave wop1 pid op2 == insertInWeave wop2 pid op1 && isJust (insertInWeave wop1 pid op2)} / [causalTreeWeaveLength w, 0] @-}
+{-@ lemmaInsertInWeaveJustEq :: Ord id => w:CausalTreeWeave id a -> pid:id -> wop1 : CausalTreeWeave id a ->  wop2 : CausalTreeWeave id a ->   {op1:CausalTreeAtom id a | insertInWeave w pid op1 == Just wop1} -> {op2:CausalTreeAtom id a | (insertInWeave w pid op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2)} ->  {insertInWeave wop1 pid op2 == insertInWeave wop2 pid op1 && isJust (insertInWeave wop1 pid op2)} / [causalTreeWeaveLength w, 0] @-}
 lemmaInsertInWeaveJustEq
   :: Ord id
   => CausalTreeWeave id a
@@ -494,14 +467,7 @@ lemmaInsertInWeaveJustEq
   = ()
 
 --{-@ ple lemmaInsertAtomInsertInWeaveChildren @-}
-{-@ lemmaInsertAtomInsertInWeaveChildren :: Ord id
-  => ws:[CausalTreeWeave id a]
-  -> atom1:CausalTreeAtom id a
-  -> {pid2:id | pid2 /= causalTreeAtomId atom1}
-  -> {atom2:CausalTreeAtom id a | causalTreeAtomId atom1 /= causalTreeAtomId atom2}
-  -> {wsop2:[CausalTreeWeave id a] | insertInWeaveChildren ws pid2 atom2 == Just wsop2}
-  -> {Just (insertAtom wsop2 atom1) == insertInWeaveChildren (insertAtom ws atom1) pid2 atom2}
-@-}
+{-@ lemmaInsertAtomInsertInWeaveChildren :: Ord id  => ws:[CausalTreeWeave id a]  -> atom1:CausalTreeAtom id a  -> {pid2:id | pid2 /= causalTreeAtomId atom1}  -> {atom2:CausalTreeAtom id a | causalTreeAtomId atom1 /= causalTreeAtomId atom2}  -> {wsop2:[CausalTreeWeave id a] | insertInWeaveChildren ws pid2 atom2 == Just wsop2}  -> {Just (insertAtom wsop2 atom1) == insertInWeaveChildren (insertAtom ws atom1) pid2 atom2}@-}
 lemmaInsertAtomInsertInWeaveChildren :: Ord id
   => [CausalTreeWeave id a]
   -> CausalTreeAtom id a
@@ -630,16 +596,7 @@ lemmaInsertAtomInsertInWeaveChildren
   | Nothing <- insertInWeaveChildren ws pid2 atom2
   = Nothing === insertInWeaveChildren ws pid2 atom2 === Just wsop2 *** QED
 
-{-@ lemmaInsertInWeaveChildrenJustEq2 :: Ord id
-  => w:[CausalTreeWeave id a]
-  -> pid1:id
-  -> pid2:id
-  -> wop1 : [CausalTreeWeave id a]
-  -> wop2 : [CausalTreeWeave id a]
-  -> {op1:CausalTreeAtom id a | (insertInWeaveChildren w pid1 op1 == Just wop1) && (causalTreeAtomId op1 /= pid2)}
-  -> {op2:CausalTreeAtom id a | (insertInWeaveChildren w pid2 op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2) && (causalTreeAtomId op2 /= pid1)}
-  -> {insertInWeaveChildren wop1 pid2 op2 == insertInWeaveChildren wop2 pid1 op1 && isJust (insertInWeaveChildren wop1 pid2 op2)}
-/ [causalTreeWeaveLengthList w, List.length w, 0]@-}
+{-@ lemmaInsertInWeaveChildrenJustEq2 :: Ord id  => w:[CausalTreeWeave id a]  -> pid1:id  -> pid2:id  -> wop1 : [CausalTreeWeave id a]  -> wop2 : [CausalTreeWeave id a]  -> {op1:CausalTreeAtom id a | (insertInWeaveChildren w pid1 op1 == Just wop1) && (causalTreeAtomId op1 /= pid2)}  -> {op2:CausalTreeAtom id a | (insertInWeaveChildren w pid2 op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2) && (causalTreeAtomId op2 /= pid1)}  -> {insertInWeaveChildren wop1 pid2 op2 == insertInWeaveChildren wop2 pid1 op1 && isJust (insertInWeaveChildren wop1 pid2 op2)}/ [causalTreeWeaveLengthList w, List.length w, 0]@-}
 lemmaInsertInWeaveChildrenJustEq2
   :: Ord id
   => [CausalTreeWeave id a]
@@ -777,16 +734,7 @@ lemmaInsertInWeaveChildrenJustEq2
     ==. Just (w':wsop1')
     *** QED)
 
-{-@ lemmaInsertInWeaveJustEq2 :: Ord id
-  => w:CausalTreeWeave id a
-  -> pid1:id
-  -> pid2:id
-  -> wop1 : CausalTreeWeave id a
-  -> wop2 : CausalTreeWeave id a
-  -> {op1:CausalTreeAtom id a | (insertInWeave w pid1 op1 == Just wop1) && (causalTreeAtomId op1 /= pid2)}
-  -> {op2:CausalTreeAtom id a | (insertInWeave w pid2 op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2) && (causalTreeAtomId op2 /= pid1)}
-  -> {insertInWeave wop1 pid2 op2 == insertInWeave wop2 pid1 op1 && isJust (insertInWeave wop1 pid2 op2)}
-/ [causalTreeWeaveLength w, 0, if (pid1 == (causalTreeAtomId (causalTreeWeaveAtom w))) then 0 else 1]@-}
+{-@ lemmaInsertInWeaveJustEq2 :: Ord id  => w:CausalTreeWeave id a  -> pid1:id  -> pid2:id  -> wop1 : CausalTreeWeave id a  -> wop2 : CausalTreeWeave id a  -> {op1:CausalTreeAtom id a | (insertInWeave w pid1 op1 == Just wop1) && (causalTreeAtomId op1 /= pid2)}  -> {op2:CausalTreeAtom id a | (insertInWeave w pid2 op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2) && (causalTreeAtomId op2 /= pid1)}  -> {insertInWeave wop1 pid2 op2 == insertInWeave wop2 pid1 op1 && isJust (insertInWeave wop1 pid2 op2)}/ [causalTreeWeaveLength w, 0, if (pid1 == (causalTreeAtomId (causalTreeWeaveAtom w))) then 0 else 1]@-}
 lemmaInsertInWeaveJustEq2
   :: Ord id
   => CausalTreeWeave id a
@@ -872,15 +820,7 @@ lemmaInsertInWeaveJustEq2
     lemmaInsertInWeaveJustEq2  w pid2 pid1 wop2 wop1 atom2 atom1
 
 --{-@ ple lemmaInsertInWeaveJustNEq @-}
-{-@ lemmaInsertInWeaveJustNEq :: Ord id
-  => w:CausalTreeWeave id a
-  -> pid1:id
-  -> {pid2:id | pid1 /= pid2}
-  -> wop2 : CausalTreeWeave id a
-  -> {op1:CausalTreeAtom id a | (insertInWeave w pid1 op1 == Nothing) }
-  -> {op2:CausalTreeAtom id a | (insertInWeave w pid2 op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2) && (pid1 /= causalTreeAtomId op2)}
-  -> {insertInWeave wop2 pid1 op1 == Nothing}
-   @-}
+{-@ lemmaInsertInWeaveJustNEq :: Ord id  => w:CausalTreeWeave id a  -> pid1:id  -> {pid2:id | pid1 /= pid2}  -> wop2 : CausalTreeWeave id a  -> {op1:CausalTreeAtom id a | (insertInWeave w pid1 op1 == Nothing) }  -> {op2:CausalTreeAtom id a | (insertInWeave w pid2 op2 == Just wop2) && (causalTreeAtomId op1 /= causalTreeAtomId op2) && (pid1 /= causalTreeAtomId op2)}  -> {insertInWeave wop2 pid1 op1 == Nothing}   @-}
 lemmaInsertInWeaveJustNEq
   :: Ord id
   => CausalTreeWeave id a
@@ -906,17 +846,7 @@ lemmaInsertInWeaveJustNEq w@(CausalTreeWeave catom@(CausalTreeAtom cid _) ws) pi
   
 
 -- -- 1 is dependent on 2
-{-@ lemmaInsertInWeaveJustNEqRel :: Ord id
-  => w:CausalTreeWeave id a
-  -> pid1:id
-  -> {pid2:id | pid1 /= pid2}
-  -> wop2 : CausalTreeWeave id a
-  -> {op1:CausalTreeAtom id a | (insertInWeave w pid1 op1 == Nothing)}
-  -> {op2:CausalTreeAtom id a | (insertInWeave w pid2 op2 == Just wop2) &&
-                                (causalTreeAtomId op1 /= causalTreeAtomId op2) &&
-                                (pid1 == causalTreeAtomId op2)}
-  -> {isJust (insertInWeave wop2 pid1 op1)}
-   @-}
+{-@ lemmaInsertInWeaveJustNEqRel :: Ord id  => w:CausalTreeWeave id a  -> pid1:id  -> {pid2:id | pid1 /= pid2}  -> wop2 : CausalTreeWeave id a  -> {op1:CausalTreeAtom id a | (insertInWeave w pid1 op1 == Nothing)}  -> {op2:CausalTreeAtom id a | (insertInWeave w pid2 op2 == Just wop2) &&                                (causalTreeAtomId op1 /= causalTreeAtomId op2) &&                                (pid1 == causalTreeAtomId op2)}  -> {isJust (insertInWeave wop2 pid1 op1)}   @-}
 lemmaInsertInWeaveJustNEqRel
   :: Ord id
   => CausalTreeWeave id a
@@ -945,12 +875,7 @@ lemmaInsertInWeaveJustNEqRel w@(CausalTreeWeave catom@(CausalTreeAtom cid _) ws)
 
 -- i think i messed up this one. lemmaFoldIds is supposed to be trivial.
 --{-@ ple lemmaFoldlIds @-}
-{-@ lemmaFoldlIds :: Ord id
-  => ct:CausalTree id a
-  -> {pid:id | S.member pid (weaveIds (causalTreeWeave ct))}
-  -> atoms:[CausalTreeAtom id a]
-  -> {causalTreeIds (List.foldl' (applyAtomHelper pid) ct atoms) == S.union (causalTreeIds ct) (pendingListIds atoms) && causalTreePendingSize (List.foldl' (applyAtomHelper pid) ct atoms) <= causalTreePendingSize ct && S.isSubsetOf (weaveIds (causalTreeWeave ct)) (weaveIds (causalTreeWeave (List.foldl' (applyAtomHelper pid) ct atoms)))}
-  / [causalTreePendingSize ct, 1, List.length atoms]  @-}
+{-@ lemmaFoldlIds :: Ord id  => ct:CausalTree id a  -> {pid:id | S.member pid (weaveIds (causalTreeWeave ct))}  -> atoms:[CausalTreeAtom id a]  -> {causalTreeIds (List.foldl' (applyAtomHelper pid) ct atoms) == S.union (causalTreeIds ct) (pendingListIds atoms) && causalTreePendingSize (List.foldl' (applyAtomHelper pid) ct atoms) <= causalTreePendingSize ct && S.isSubsetOf (weaveIds (causalTreeWeave ct)) (weaveIds (causalTreeWeave (List.foldl' (applyAtomHelper pid) ct atoms)))}  / [causalTreePendingSize ct, 1, List.length atoms]  @-}
 lemmaFoldlIds :: forall id a. Ord id => CausalTree id a -> id -> [CausalTreeAtom id a] -> ()
 lemmaFoldlIds ct pid [] =
   (List.foldl' (applyAtomHelper pid) ct []
@@ -1022,13 +947,7 @@ lemmaFoldlIds ct@(CausalTree weave pending) pid (a:as)
 -- jfioew
 
 {-@ ple lemmaDeleteSubsetJust @-}
-{-@ lemmaDeleteSubsetJust :: Ord id
-  => pending:Map.Map id [CausalTreeAtom id a]
-  -> k:id
-  -> {atoms:[CausalTreeAtom id a] | Map.lookup k pending == Just atoms}
-  -> {ids:S.Set id | S.isSubsetOf (pendingListIds atoms) ids}
-  -> {(S.union ids (pendingIds (Map.delete k pending)) == S.union ids (pendingIds pending)) && (idUniqueMap pending => (idUniqueMap (Map.delete k pending) && S.null (S.intersection (pendingListIds atoms) (pendingIds (Map.delete k pending))))) && (S.isSubsetOf (pendingIds (Map.delete k pending)) (pendingIds pending))}
-@-}
+{-@ lemmaDeleteSubsetJust :: Ord id  => pending:Map.Map id [CausalTreeAtom id a]  -> k:id  -> {atoms:[CausalTreeAtom id a] | Map.lookup k pending == Just atoms}  -> {ids:S.Set id | S.isSubsetOf (pendingListIds atoms) ids}  -> {(S.union ids (pendingIds (Map.delete k pending)) == S.union ids (pendingIds pending)) && (idUniqueMap pending => (idUniqueMap (Map.delete k pending) && S.null (S.intersection (pendingListIds atoms) (pendingIds (Map.delete k pending))))) && (S.isSubsetOf (pendingIds (Map.delete k pending)) (pendingIds pending))}@-}
 lemmaDeleteSubsetJust :: Ord id
   => Map.Map id [CausalTreeAtom id a]
   -> id
@@ -1078,23 +997,13 @@ lemmaDeleteSubsetJust m@(Map.Map k v t) pid atoms ids
 
 
 {-@ ple lemmaApplyAtomIds' @-}
-{-@ lemmaApplyAtomIds' :: Ord id
-  => {ct:CausalTree id a | idUniqueCausalTree ct}
-  -> {id:id | S.member id (weaveIds (causalTreeWeave ct))}
-  -> {atom:CausalTreeAtom id a | not (S.member (causalTreeAtomId atom) (causalTreeIds ct))}
-  -> {(causalTreePendingSize (applyAtom ct id atom) <= causalTreePendingSize ct) && (S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom)) == causalTreeIds (applyAtom ct id atom)) && (S.isSubsetOf (weaveIds (causalTreeWeave ct)) (weaveIds (causalTreeWeave (applyAtom ct id atom)))) && (idUniqueCausalTree (applyAtom ct id atom))}
-@-}
+{-@ lemmaApplyAtomIds' :: Ord id  => {ct:CausalTree id a | idUniqueCausalTree ct}  -> {id:id | S.member id (weaveIds (causalTreeWeave ct))}  -> {atom:CausalTreeAtom id a | not (S.member (causalTreeAtomId atom) (causalTreeIds ct))}  -> {(causalTreePendingSize (applyAtom ct id atom) <= causalTreePendingSize ct) && (S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom)) == causalTreeIds (applyAtom ct id atom)) && (S.isSubsetOf (weaveIds (causalTreeWeave ct)) (weaveIds (causalTreeWeave (applyAtom ct id atom)))) && (idUniqueCausalTree (applyAtom ct id atom))}@-}
 lemmaApplyAtomIds' :: forall id a. Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> ()
 lemmaApplyAtomIds' ct parentId atom = lemmaApplyAtomIds ct parentId atom &&& applyAtomRespectsUniq ct parentId atom
 
 
 --{-@ ple lemmaApplyAtomIds  @-}
-{-@ lemmaApplyAtomIds :: Ord id
-  => ct:CausalTree id a
-  -> id:id
-  -> atom:CausalTreeAtom id a
-  -> {S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom)) == causalTreeIds (applyAtom ct id atom) && (S.isSubsetOf (weaveIds (causalTreeWeave ct)) (weaveIds (causalTreeWeave (applyAtom ct id atom)))) && (S.member id (weaveIds (causalTreeWeave ct)) => (causalTreePendingSize ct >= causalTreePendingSize (applyAtom ct id atom))) }
-  / [causalTreePendingSize ct, 0, 0] @-}
+{-@ lemmaApplyAtomIds :: Ord id  => ct:CausalTree id a  -> id:id  -> atom:CausalTreeAtom id a  -> {S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom)) == causalTreeIds (applyAtom ct id atom) && (S.isSubsetOf (weaveIds (causalTreeWeave ct)) (weaveIds (causalTreeWeave (applyAtom ct id atom)))) && (S.member id (weaveIds (causalTreeWeave ct)) => (causalTreePendingSize ct >= causalTreePendingSize (applyAtom ct id atom))) }  / [causalTreePendingSize ct, 0, 0] @-}
 lemmaApplyAtomIds :: forall id a. Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> ()
 lemmaApplyAtomIds ct@(CausalTree weave pending) parentId atom@(CausalTreeAtom aid _)
   | Nothing <- insertInWeave weave parentId atom
@@ -1216,11 +1125,7 @@ lemmaApplyAtomIds ct@(CausalTree weave pending) parentId atom@(CausalTreeAtom ai
 
 
 {-@ ple lemmaDeleteShrink @-}
-{-@ lemmaDeleteShrink :: Ord id
-  => x:Map.Map id [a]
-  -> k:id
-  -> {pops:[a] | Just pops == Map.lookup k x }
-  -> {if (List.length pops /= 0) then (pendingSize (Map.delete k x) < pendingSize x) else (pendingSize (Map.delete k x) == pendingSize x) }  @-}
+{-@ lemmaDeleteShrink :: Ord id  => x:Map.Map id [a]  -> k:id  -> {pops:[a] | Just pops == Map.lookup k x }  -> {if (List.length pops /= 0) then (pendingSize (Map.delete k x) < pendingSize x) else (pendingSize (Map.delete k x) == pendingSize x) }  @-}
 lemmaDeleteShrink :: Ord id
   => Map.Map id [a]
   -> id

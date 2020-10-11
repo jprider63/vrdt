@@ -181,8 +181,7 @@ pendingIds (Map.Map k v t) = pendingListIds v `S.union` pendingIds t
 #endif
 
 {-@ reflect idUniqueWeave @-}
-{-@ idUniqueWeave :: Ord id => w:CausalTreeWeave id a -> Bool
-   / [causalTreeWeaveLength w, 0] @-}
+{-@ idUniqueWeave :: Ord id => w:CausalTreeWeave id a -> Bool   / [causalTreeWeaveLength w, 0] @-}
 idUniqueWeave :: Ord id => CausalTreeWeave id a -> Bool
 idUniqueWeave w@(CausalTreeWeave atom children) =
 #ifndef NotLiquid
@@ -193,8 +192,7 @@ idUniqueWeave w@(CausalTreeWeave atom children) =
   idUniqueWeaveList children
 
 {-@ reflect idUniqueWeaveList @-}
-{-@ idUniqueWeaveList :: Ord id => w:[CausalTreeWeave id a] -> Bool
-   / [causalTreeWeaveLengthList w, List.length w] @-}
+{-@ idUniqueWeaveList :: Ord id => w:[CausalTreeWeave id a] -> Bool   / [causalTreeWeaveLengthList w, List.length w] @-}
 idUniqueWeaveList :: Ord id => [CausalTreeWeave id a] -> Bool
 idUniqueWeaveList [] = True
 idUniqueWeaveList (w:ws) =
@@ -206,8 +204,7 @@ idUniqueWeaveList (w:ws) =
 
 
 {-@ reflect weaveIds  @-}
-{-@ weaveIds :: Ord id => w:CausalTreeWeave id a -> S.Set id
-   / [causalTreeWeaveLength w, 0] @-}
+{-@ weaveIds :: Ord id => w:CausalTreeWeave id a -> S.Set id   / [causalTreeWeaveLength w, 0] @-}
 weaveIds :: Ord id => CausalTreeWeave id a -> S.Set id
 weaveIds w@(CausalTreeWeave atom children) =
 #ifndef NotLiquid
@@ -217,8 +214,7 @@ weaveIds w@(CausalTreeWeave atom children) =
   S.singleton (causalTreeAtomId atom) `S.union` weaveListIds children
 
 {-@ reflect weaveListIds  @-}
-{-@ weaveListIds :: Ord id => w:[CausalTreeWeave id a] -> S.Set id
-   / [causalTreeWeaveLengthList w, List.length w] @-}
+{-@ weaveListIds :: Ord id => w:[CausalTreeWeave id a] -> S.Set id   / [causalTreeWeaveLengthList w, List.length w] @-}
 weaveListIds :: Ord id => [CausalTreeWeave id a] -> S.Set id
 weaveListIds [] = S.empty
 weaveListIds (x:xs) =
@@ -294,12 +290,7 @@ constConstNothing _ _ = Nothing
 -- causalTreeIds vv == S.union (causalTreeIds ct) (S.singleton (causalTreeAtomId atom))
 --{-@ lazy applyAtomHelper @-}
 {-@ reflect applyAtomHelper @-}
-{-@ applyAtomHelper :: Ord id
-  => id:id
-  -> ct:CausalTree id a
-  -> atom:CausalTreeAtom id a
-  -> {vv:CausalTree id a | True}
-/ [pendingSize (causalTreePending ct), 1] @-}
+{-@ applyAtomHelper :: Ord id  => id:id  -> ct:CausalTree id a  -> atom:CausalTreeAtom id a  -> {vv:CausalTree id a | True}/ [pendingSize (causalTreePending ct), 1] @-}
 applyAtomHelper :: Ord id => id -> CausalTree id a -> CausalTreeAtom id a -> CausalTree id a
 applyAtomHelper opId ct atom =
 #ifndef NotLiquid  
@@ -347,9 +338,7 @@ flip :: (a -> b -> c) -> b -> a -> c
 flip f x y = f y x
 {-@ lazy applyAtom @-}
 {-@ reflect applyAtom @-}
-{-@ applyAtom :: Ord id => ct:CausalTree id a -> id:id -> atom:CausalTreeAtom id a ->
-  {vv:CausalTree id a | True  }
-/ [pendingSize (causalTreePending ct), 0] @-}
+{-@ applyAtom :: Ord id => ct:CausalTree id a -> id:id -> atom:CausalTreeAtom id a ->  {vv:CausalTree id a | True  } / [pendingSize (causalTreePending ct), 0] @-}
 applyAtom :: Ord id => CausalTree id a -> id -> CausalTreeAtom id a -> CausalTree id a
 applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave parentId atom of
     Nothing -> 
@@ -373,8 +362,7 @@ applyAtom (CausalTree !weave !pending) parentId atom = case insertInWeave weave 
 
 
 {-@ reflect insertInWeave @-}
-{-@ insertInWeave :: Ord id => w:CausalTreeWeave id a -> k:id -> atom:CausalTreeAtom id a ->
-  {vvm:Maybe ({vv:CausalTreeWeave id a| (weaveIds vv == S.union (S.singleton (causalTreeAtomId atom)) (weaveIds w))  && ((idUniqueWeave w && (not (S.member (causalTreeAtomId atom) (weaveIds w)))) => idUniqueWeave vv)}) | (isJust vvm == S.member k (weaveIds w))} / [causalTreeWeaveLength w, 0]@-}
+{-@ insertInWeave :: Ord id => w:CausalTreeWeave id a -> k:id -> atom:CausalTreeAtom id a ->  {vvm:Maybe ({vv:CausalTreeWeave id a| (weaveIds vv == S.union (S.singleton (causalTreeAtomId atom)) (weaveIds w))  && ((idUniqueWeave w && (not (S.member (causalTreeAtomId atom) (weaveIds w)))) => idUniqueWeave vv)}) | (isJust vvm == S.member k (weaveIds w))} / [causalTreeWeaveLength w, 0]@-}
 insertInWeave :: Ord id => CausalTreeWeave id a -> id -> CausalTreeAtom id a -> Maybe (CausalTreeWeave id a)
 insertInWeave (CausalTreeWeave currentAtom currentChildren) parentId atom
     -- Is the current atom the target parent?
@@ -416,11 +404,7 @@ insertInWeaveChildren (w:ws) parentId atom =
 
 
 {-@ reflect insertAtom @-}
-{-@ insertAtom :: Ord id
-  => ws:[CausalTreeWeave id a]
-  -> atom:CausalTreeAtom id a
-  -> {vv:[CausalTreeWeave id a] |
-      (weaveListIds vv == S.union (S.singleton (causalTreeAtomId atom)) (weaveListIds ws)) && ((idUniqueWeaveList ws && (not (S.member (causalTreeAtomId atom) (weaveListIds ws)))) => idUniqueWeaveList vv) }@-}
+{-@ insertAtom :: Ord id  => ws:[CausalTreeWeave id a]  -> atom:CausalTreeAtom id a  -> {vv:[CausalTreeWeave id a] |      (weaveListIds vv == S.union (S.singleton (causalTreeAtomId atom)) (weaveListIds ws)) && ((idUniqueWeaveList ws && (not (S.member (causalTreeAtomId atom) (weaveListIds ws)))) => idUniqueWeaveList vv) }@-}
 insertAtom :: Ord id => [CausalTreeWeave id a] -> CausalTreeAtom id a -> [CausalTreeWeave id a]
 insertAtom [] atom = [CausalTreeWeave atom []]
 insertAtom l@(w:ws) atom 
@@ -447,11 +431,7 @@ atomGreaterThan (CausalTreeAtom a1 (CausalTreeLetter _)) (CausalTreeAtom a2 _)  
 -- some of them should not appear here
 -- due to a bug in LH, the data invariant is somehow lost in
 -- Lemmas.hs. I have to do the proofs here
-{-@ lemmaLookupSubsetOf :: Ord id
-  => pending:Map.Map id [CausalTreeAtom id a]
-  -> k:id
-  -> {atoms:[CausalTreeAtom id a] | Map.lookup k pending == Just atoms}
-  -> {S.isSubsetOf (pendingListIds atoms) (pendingIds pending) && (idUniqueMap pending => idUniqueList atoms && S.null (S.intersection (pendingIds (Map.delete k pending)) (pendingListIds atoms)))} @-}
+{-@ lemmaLookupSubsetOf :: Ord id  => pending:Map.Map id [CausalTreeAtom id a]  -> k:id  -> {atoms:[CausalTreeAtom id a] | Map.lookup k pending == Just atoms}  -> {S.isSubsetOf (pendingListIds atoms) (pendingIds pending) && (idUniqueMap pending => idUniqueList atoms && S.null (S.intersection (pendingIds (Map.delete k pending)) (pendingListIds atoms)))} @-}
 lemmaLookupSubsetOf :: Ord id
   => Map.Map id [CausalTreeAtom id a]
   -> id
