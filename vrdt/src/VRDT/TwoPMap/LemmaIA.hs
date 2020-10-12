@@ -365,14 +365,21 @@ lemmaRemoveFirst2' o od (os_head:os_tail) os_od
   | od == os_head = ()
   | Just os_tail_od <- removeFirst od os_tail
   = lemmaRemoveFirst2' o od os_tail os_tail_od
-{-@ ple lemmaRemoveFirstPermutation' @-}
+-- {-@ ple lemmaRemoveFirstPermutation' @-}
 {-@ lemmaRemoveFirstPermutation' :: Eq a => v:a -> ops1:[a] -> {ops1':[a] | removeFirst v ops1 == Just ops1'} -> ops2:[a] -> {ops2':[a] | removeFirst v ops2 == Just ops2'} -> {isPermutation ops1 ops2 => isPermutation ops1' ops2'} @-}
 lemmaRemoveFirstPermutation' :: Eq a => a -> [a] -> [a] -> [a] -> [a] -> ()
 lemmaRemoveFirstPermutation' vd ops1 ops1' ops2 ops2'
   | not (isPermutation ops1 ops2) = ()
-lemmaRemoveFirstPermutation' vd [] ops1' _ ops2' = ()
+lemmaRemoveFirstPermutation' vd [] ops1' ops2 ops2' =
+  assert (isPermutation [] ops2)
+  &&& toProof (removeFirst vd [])
+  &&& assert (isPermutation ops1' ops2')
 lemmaRemoveFirstPermutation' vd _ ops1' [] ops2' = ()
 lemmaRemoveFirstPermutation' vd opsa1@(op1:ops1) ops1' opsa2@(op2:ops2) ops2'
+  | Nothing <- removeFirst1
+  = ()
+  | Nothing <- removeFirst2
+  = ()
   | Just _ <- removeFirst1
   , Just _ <- removeFirst2
   , vd == op1
@@ -395,24 +402,51 @@ lemmaRemoveFirstPermutation' vd opsa1@(op1:ops1) ops1' opsa2@(op2:ops2) ops2'
   , Just ops2'' <- removeFirstvdops2
   , op1EqOp2
   =   isPermutation opsa1 opsa2
+    -- ? toProof (op1 == op2)
+    -- ? toProof (removeFirst1 == removeFirst2)
   ==. isPermutation (op1:ops1) (op2:ops2)
+    ? (removeFirst op1 (op2:ops2) == Just ops2)
   ==. isPermutation ops1 ops2
-  ? lemmaRemoveFirstPermutation' vd ops1 ops1'' ops2 ops2''
+  -- ==. isPermutation (op1:ops1'') ops2
+    ? (isPermutation ops1 ops2)
+    ? lemmaRemoveFirstPermutation' vd ops1 ops1'' ops2 ops2''
+  ==. isPermutation ops1'' ops2''
+    ? (removeFirst  op1 (op2:ops2'') == Just ops2'')
+    ? (removeFirst  vd (op1:ops1)
+       ==. Just (op1:ops1'')
+       ==. Just ops1'
+      *** QED)
+    ? (removeFirst  vd (op2:ops2)
+       ==. Just (op2:ops2'')
+       ==. Just ops2'
+      *** QED)
+  ==. isPermutation (op1:ops1'') (op2:ops2'')
+
   ==. isPermutation ops1' ops2'
+  --   ? assert (isPermutation ops1' ops2')
   *** QED
   | Just _ <- removeFirst1
   , Just _ <- removeFirst2
   , Just ops1_vd <- removeFirstvdops1
   , Just ops2_vd <- removeFirstvdops2
+  , vd /= op1
+  , vd /= op2
   , not (op1EqOp2)
-  =
-  (() ? isPermutation opsa1 opsa2) &&&
+  = (() ? isPermutation opsa1 opsa2) &&&
   (() ? removeFirst op1 (op2:ops2)) &&&
+  (() ? removeFirst vd (op1:ops1)) &&&
+  (() ? removeFirst vd (op2:ops2)) &&&
   (() ? isJust (removeFirst op1 ops2)) &&&
   let Just ops2_op1 = removeFirst op1 ops2 in
   lemmaRemoveFirst2 ops2 vd ops2_vd op1 ops2_op1 &&&
   let Just ops2_op1_vd = removeFirst vd ops2_op1 in
-  lemmaRemoveFirstPermutation' vd ops1 ops1_vd (op2:ops2_op1) (op2:ops2_op1_vd)
+  toProof (removeFirst vd (op2:ops2_op1)) &&&
+  toProof (isPermutation ops1 (op2:ops2_op1)) &&&
+  lemmaRemoveFirstPermutation' vd ops1 ops1_vd (op2:ops2_op1) (op2:ops2_op1_vd) &&&
+  toProof (isPermutation ops1_vd (op2:ops2_op1_vd)) &&&
+  toProof (removeFirst op1 (op2:ops2_vd) ) &&&
+  toProof (isPermutation (op1:ops1_vd) (op2:ops2_vd)) &&&
+  toProof (isPermutation ops1' ops2')
   where removeFirst1 = removeFirst vd opsa1
         removeFirst2 = removeFirst vd opsa2
         removeFirstvdops1 = removeFirst vd ops1
@@ -451,54 +485,54 @@ lemmaPermutationContainsElem'' op (op1:ops1) ops2
     lemmaPermutationContainsElem'' op ops1 ops2_op1
 
 
--- --{-@ ple lemmaPermutationCommutative @-}
--- {-@ lemmaPermutationCommutative :: Eq a => ops1:[a] -> ops2:[a] -> {isPermutation ops1 ops2 => isPermutation ops2 ops1} / [len ops2] @-}
--- lemmaPermutationCommutative :: Eq a => [a] -> [a] -> ()
--- lemmaPermutationCommutative ops1@[] ops2@[] =
---   toProof $ isPermutation ops1 ops2
--- lemmaPermutationCommutative ops1  ops2@[] =
---   toProof $ isPermutation ops1 ops2
--- lemmaPermutationCommutative ops1@[] ops2  =
---   toProof $ isPermutation ops1 ops2
--- lemmaPermutationCommutative ops1 ops2 | not (isPermutation ops1 ops2) = ()
--- lemmaPermutationCommutative ops1 ops2@(h2:t2)
---   | Nothing <- removeFirst h2 ops1 =
---         toProof (List.elem' h2 ops2)
---     &&& toProof (isPermutation ops1 ops2)
---     &&& toProof (isPermutation ops1 ops2)
---     -- &&& toProof (List.cons h2 t2)
---     &&& toProof (isPermutation ops1 (List.cons h2 t2))
---     &&& toProof (isPermutation ops1 (h2:t2))
---     &&& lemmaPermutationContainsElem'' h2 ops1 t2
---     &&& toProof (List.elem' h2 ops1)
---   | Just ops1' <- removeFirst h2 ops1 =
---         toProof (isPermutation ops1 (h2:t2))
---     &&& toProof (isPermutation (h2:ops1') (h2:t2))
---     &&& toProof (isPermutation ops1' t2)
---     &&& lemmaRemoveFirstPermutation h2 t2 ops1 ops1'
---     &&& lemmaPermutationCommutative ops1' t2
---     &&& toProof (isPermutation t2 ops1')
---     &&& toProof (isPermutation ops2 ops1)
-
--- diverges
-{-@ ple lemmaPermutationCommutative @-}
 {-@ lemmaPermutationCommutative :: Eq a => ops1:[a] -> ops2:[a] -> {isPermutation ops1 ops2 => isPermutation ops2 ops1} / [len ops2] @-}
 lemmaPermutationCommutative :: Eq a => [a] -> [a] -> ()
-lemmaPermutationCommutative [] [] = ()
-lemmaPermutationCommutative _  [] = ()
-lemmaPermutationCommutative [] _  = ()
+lemmaPermutationCommutative ops1@[] ops2@[] =
+  toProof $ isPermutation ops1 ops2
+lemmaPermutationCommutative ops1  ops2@[] =
+  toProof $ isPermutation ops1 ops2
+lemmaPermutationCommutative ops1@[] ops2  =
+  toProof $ isPermutation ops1 ops2
 lemmaPermutationCommutative ops1 ops2 | not (isPermutation ops1 ops2) = ()
-lemmaPermutationCommutative ops1 ops2@(h2:t2) = case removeFirst h2 ops1 of
-  Nothing ->
+lemmaPermutationCommutative ops1 ops2@(h2:t2)
+  | Nothing <- removeFirst h2 ops1 =
         toProof (List.elem' h2 ops2)
+    &&& toProof (isPermutation ops1 ops2)
+    &&& toProof (isPermutation ops1 ops2)
+    -- &&& toProof (List.cons h2 t2)
+    &&& toProof (isPermutation ops1 (List.cons h2 t2))
+    &&& toProof (isPermutation ops1 (h2:t2))
     &&& lemmaPermutationContainsElem'' h2 ops1 t2
     &&& toProof (List.elem' h2 ops1)
-
-  Just ops1' -> 
-        lemmaRemoveFirstPermutation h2 t2 ops1 ops1'
-    &&& toProof (isPermutation ops1 (h2:t2))
+  | Just ops1' <- removeFirst h2 ops1 =
+        toProof (isPermutation ops1 (h2:t2))
     &&& toProof (isPermutation (h2:ops1') (h2:t2))
     &&& toProof (isPermutation ops1' t2)
+    &&& toProof (isPermutation ops1 (List.cons h2 t2))
+    &&& lemmaRemoveFirstPermutation h2 t2 ops1 ops1'
     &&& lemmaPermutationCommutative ops1' t2
     &&& toProof (isPermutation t2 ops1')
     &&& toProof (isPermutation ops2 ops1)
+
+-- diverges
+-- {-@ ple lemmaPermutationCommutative @-}
+-- {-@ lemmaPermutationCommutative :: Eq a => ops1:[a] -> ops2:[a] -> {isPermutation ops1 ops2 => isPermutation ops2 ops1} / [len ops2] @-}
+-- lemmaPermutationCommutative :: Eq a => [a] -> [a] -> ()
+-- lemmaPermutationCommutative [] [] = ()
+-- lemmaPermutationCommutative _  [] = ()
+-- lemmaPermutationCommutative [] _  = ()
+-- lemmaPermutationCommutative ops1 ops2 | not (isPermutation ops1 ops2) = ()
+-- lemmaPermutationCommutative ops1 ops2@(h2:t2) = case removeFirst h2 ops1 of
+--   Nothing ->
+--         toProof (List.elem' h2 ops2)
+--     &&& lemmaPermutationContainsElem'' h2 ops1 t2
+--     &&& toProof (List.elem' h2 ops1)
+
+--   Just ops1' -> 
+--         lemmaRemoveFirstPermutation h2 t2 ops1 ops1'
+--     &&& toProof (isPermutation ops1 (h2:t2))
+--     &&& toProof (isPermutation (h2:ops1') (h2:t2))
+--     &&& toProof (isPermutation ops1' t2)
+--     &&& lemmaPermutationCommutative ops1' t2
+--     &&& toProof (isPermutation t2 ops1')
+--     &&& toProof (isPermutation ops2 ops1)
