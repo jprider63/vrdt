@@ -50,8 +50,8 @@ lawCommutativityIAEq' x@(TwoPMap m p t) k v  vop'
 
 
 {-@ lemma0 :: (Ord (Operation v), VRDT v) => ops:[Operation v] -> vop:Operation v ->
-  {v:v | allCompatibleState v ops && compatibleState v vop && allCompatible' vop ops} ->
-  {compatibleState (List.foldr (flip apply) v ops) vop} @-}
+      {v:v | allCompatibleState v ops && compatibleState v vop && allCompatible' vop ops} ->
+      {compatibleState (List.foldr (flip apply) v ops) vop} @-}
 lemma0 :: (Ord (Operation v), VRDT v) => [Operation v] -> Operation v -> v -> ()
 lemma0 [] _ _ = ()
 lemma0 (op:ops) vop v =

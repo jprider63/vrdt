@@ -55,9 +55,9 @@ instance Ord id => VRDT (CT.CausalTree id a) where
 #if NotLiquid
   lawCommutativity x op1 op2 = ()
 #else
-  lawCommutativity x op1 op2 = CT.lawCommutativity x op1 op2
+  lawCommutativity x op1 op2 = CT.lawCommutativity x op1 op2 `cast` ()
 #endif
-  lawCompatibilityCommutativity op1 op2 = CT.lawCompatibilityCommutativity op1 op2
+  lawCompatibilityCommutativity op1 op2 = CT.lawCompatibilityCommutativity op1 op2 `cast` ()
 
   
 

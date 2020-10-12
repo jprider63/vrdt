@@ -53,8 +53,8 @@ instance (Ord k, Ord (Operation v), VRDT v) => VRDT (TwoPMap k v) where
   apply x op = applyTwoPMap x op
   compatible x y = compatibleTwoPMap x y
   compatibleState x y = compatibleStateTwoPMap x y
-  lawCommutativity x op1 op2 = lawCommutativityTwoPMap x op1 op2
-  lawCompatibilityCommutativity op1 op2 = lawCompatibilitycommutativityTwoPMap op1 op2
+  lawCommutativity x op1 op2 = lawCommutativityTwoPMap x op1 op2 `cast` ()
+  lawCompatibilityCommutativity op1 op2 = lawCompatibilitycommutativityTwoPMap op1 op2 `cast` ()
 
 #if NotLiquid
 instance (Ord k, VRDT v, Ord (Operation v)) => VRDTInitial (TwoPMap k v) where

@@ -176,7 +176,7 @@ lemmaApplyAll v1 ops =
 
 {-@ ple lemmaApplyAll' @-}
 {-@ lemmaApplyAll' :: VRDT a => ops:[Operation a] -> ops':[Operation a] -> v:a ->
-  {applyAll v (List.concat ops ops') == applyAll (applyAll v ops) ops'} @-}
+                       {applyAll v (List.concat ops ops') == applyAll (applyAll v ops) ops'} @-}
 lemmaApplyAll' :: VRDT a => [Operation a] -> [Operation a] -> a -> ()
 lemmaApplyAll' [] _ _ = ()
 lemmaApplyAll' (op':ops) ops'  v = lemmaApplyAll' ops ops' (apply v op')
@@ -239,7 +239,7 @@ lemmaPermutation vop2 ops@(h:ops') ops2
 
 {-@ ple lemmaElemConcat @-}
 {-@ lemmaElemConcat :: Eq a => x:a -> xs:[a] -> ys:[a] ->
-  {((List.elem' x (List.concat xs ys)) <=> not (not (List.elem' x xs) && not (List.elem' x ys)))} @-}
+      {((List.elem' x (List.concat xs ys)) <=> not (not (List.elem' x xs) && not (List.elem' x ys)))} @-}
 lemmaElemConcat :: Eq a => a -> [a] -> [a] -> ()
 lemmaElemConcat x [] _ = ()
 lemmaElemConcat x (y:ys) zs
@@ -259,7 +259,7 @@ lemmaReverseElem x (y:ys)
 
 {-@ ple lemmaPermutationHeadTailNotElem @-}
 {-@ lemmaPermutationHeadTailNotElem :: Eq a => h:a -> {ops:[a] | not (List.elem' h ops)} ->
-  {isPermutation (cons h ops) (List.concat ops (cons h List.empty)) } @-}
+      {isPermutation (cons h ops) (List.concat ops (cons h List.empty)) } @-}
 lemmaPermutationHeadTailNotElem :: Eq a => a -> [a] -> ()
 lemmaPermutationHeadTailNotElem _ [] = ()
 lemmaPermutationHeadTailNotElem h (x:xs) = lemmaPermutationHeadTailNotElem h xs
@@ -267,7 +267,7 @@ lemmaPermutationHeadTailNotElem h (x:xs) = lemmaPermutationHeadTailNotElem h xs
 
 {-@ ple lemmaPermutationHeadTailElem @-}
 {-@ lemmaPermutationHeadTailElem :: Eq a => h:a -> {ops:[a] | List.elem' h ops} ->
-  {isPermutation (cons h ops) (List.concat ops (cons h List.empty)) } @-}
+      {isPermutation (cons h ops) (List.concat ops (cons h List.empty)) } @-}
 lemmaPermutationHeadTailElem :: Eq a => a -> [a] -> ()
 lemmaPermutationHeadTailElem _ [] = ()
 lemmaPermutationHeadTailElem h (op:ops)
@@ -279,7 +279,7 @@ lemmaPermutationHeadTailElem h (op:ops)
 
 {-@ ple lemmaPReverse0 @-}
 {-@ lemmaPReverse0 :: Eq a => h:a -> ops:[a] -> {ops':[a] | Just ops' == removeFirst h (List.concat ops (cons h List.empty))}
-  -> {isPermutation ops ops'} @-}
+      -> {isPermutation ops ops'} @-}
 lemmaPReverse0 :: Eq a => a -> [a] -> [a] -> ()
 lemmaPReverse0 _ [] _ = ()
 lemmaPReverse0 h (op:ops) []
@@ -339,8 +339,8 @@ lemmaPermutationTransitive ops1@(h1:t1) ops2@(h2:t2) ops3 = case removeFirst h1 
 -- not quite reusable/general but gets the job done, hopefully
 {-@ ple lemmaRemoveFirst2 @-}
 {-@ lemmaRemoveFirst2 :: Eq o => os:[o] ->  {o0:o | List.elem' o0 os} ->
-  {os_o0:[o] | removeFirst o0 os == Just os_o0} -> {o1:o | o1 /= o0 && List.elem' o1 os} ->
-  {os_o1:[o] | removeFirst o1 os == Just os_o1} -> {isJust (removeFirst o1 os_o0) && (removeFirst o1 os_o0 == removeFirst o0 os_o1)} @-}
+       {os_o0:[o] | removeFirst o0 os == Just os_o0} -> {o1:o | o1 /= o0 && List.elem' o1 os} ->
+       {os_o1:[o] | removeFirst o1 os == Just os_o1} -> {isJust (removeFirst o1 os_o0) && (removeFirst o1 os_o0 == removeFirst o0 os_o1)} @-}
 lemmaRemoveFirst2 :: Eq o => [o] ->  o  -> [o] -> o -> [o] -> ()
 lemmaRemoveFirst2 [] _ _ _ _ = ()
 lemmaRemoveFirst2 os@(o:os') o0 os_o0 o1 os_o1
@@ -357,8 +357,8 @@ lemmaRemoveFirst2 os@(o:os') o0 os_o0 o1 os_o1
 
 {-@ ple lemmaRemoveFirst2' @-}
 {-@ lemmaRemoveFirst2' :: Eq o => o:o -> od:o -> os:[o] ->
-  {os_od:[o] | removeFirst od os == Just os_od} ->
-  {List.elem' o os_od => List.elem' o os} @-}
+                            {os_od:[o] | removeFirst od os == Just os_od} ->
+                            {List.elem' o os_od => List.elem' o os} @-}
 lemmaRemoveFirst2' :: Eq o => o -> o -> [o] -> [o] -> ()
 lemmaRemoveFirst2' o od [] os_od  = ()
 lemmaRemoveFirst2' o od (os_head:os_tail) os_od
