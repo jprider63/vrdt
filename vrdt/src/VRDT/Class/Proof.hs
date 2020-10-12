@@ -109,12 +109,12 @@ removeFirst o (h:t) =
 
 -- Lemmas
 
-{-@ reflect cons @-}
-cons :: a -> [a] -> [a]
-cons a as = a:as
+-- {-@ reflect cons @-}
+-- cons :: a -> [a] -> [a]
+-- cons a as = a:as
 
 {-@ ple lemmaPermutationContainsElem @-}
-{-@ lemmaPermutationContainsElem :: Eq a => op2:a -> ops2':[a] -> {ops1:[a] | isPermutation ops1 (cons op2 ops2')} -> {List.elem' op2 ops1} @-}
+{-@ lemmaPermutationContainsElem :: Eq a => op2:a -> ops2':[a] -> {ops1:[a] | isPermutation ops1 (List.cons op2 ops2')} -> {List.elem' op2 ops1} @-}
 lemmaPermutationContainsElem :: Eq a => a -> [a] -> [a] -> ()
 
 lemmaPermutationContainsElem op2 _ [] = ()
@@ -129,13 +129,13 @@ lemmaPermutationContainsElem op2 (op2':ops2) ops1@(op1:ops1')
 
 
 {-@ ple lemmaAllCompatibleTail @-}
-{-@ lemmaAllCompatibleTail :: VRDT a => op:Operation a -> {ops:[Operation a] | allCompatible (cons op ops)} -> {allCompatible ops} @-}
+{-@ lemmaAllCompatibleTail :: VRDT a => op:Operation a -> {ops:[Operation a] | allCompatible (List.cons op ops)} -> {allCompatible ops} @-}
 lemmaAllCompatibleTail :: VRDT a => Operation a -> [Operation a] -> ()
 lemmaAllCompatibleTail op [] = ()
 lemmaAllCompatibleTail op (_:ops) = lemmaAllCompatibleTail op ops
 
 {-@ ple lemmaAllCompatibleStateTail @-}
-{-@ lemmaAllCompatibleStateTail :: VRDT a => x:a -> op:Operation a -> {ops:[Operation a] | allCompatibleState x (cons op ops) && allCompatible (cons op ops)} -> {allCompatibleState (apply x op) ops} @-}
+{-@ lemmaAllCompatibleStateTail :: VRDT a => x:a -> op:Operation a -> {ops:[Operation a] | allCompatibleState x (List.cons op ops) && allCompatible (List.cons op ops)} -> {allCompatibleState (apply x op) ops} @-}
 lemmaAllCompatibleStateTail :: VRDT a => a -> Operation a -> [Operation a] -> ()
 lemmaAllCompatibleStateTail _ _ [] = ()
 lemmaAllCompatibleStateTail x op1 (op2:ops) = 
@@ -154,7 +154,7 @@ lemmaAllCompatibleStateTail x op1 (op2:ops) =
 
 
 {-@ ple lemmaRemoveFirstPermutation @-}
-{-@ lemmaRemoveFirstPermutation :: Eq a => op2:a -> ops2':[a] -> {ops1:[a] | isPermutation ops1 (cons op2 ops2')} -> {rs:[a] | removeFirst op2 ops1 == Just rs} -> {isPermutation rs ops2'} @-}
+{-@ lemmaRemoveFirstPermutation :: Eq a => op2:a -> ops2':[a] -> {ops1:[a] | isPermutation ops1 (List.cons op2 ops2')} -> {rs:[a] | removeFirst op2 ops1 == Just rs} -> {isPermutation rs ops2'} @-}
 lemmaRemoveFirstPermutation :: Eq a => a -> [a] -> [a] -> [a] -> ()
 lemmaRemoveFirstPermutation op2 ops2 [] rs = ()
 lemmaRemoveFirstPermutation op2 [] (op1:ops1) rs

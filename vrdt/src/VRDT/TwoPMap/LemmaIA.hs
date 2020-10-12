@@ -213,7 +213,7 @@ lemmaPermutationId [] = ()
 lemmaPermutationId (x:xs) = lemmaPermutationId xs
 
 {-@ ple lemmaPermutation @-}
-{-@ lemmaPermutation :: Ord a => vop2:a -> ops:[a] -> {ops2:[a] | insertList vop2 ops = ops2} -> {isPermutation (cons vop2 ops) ops2} @-}
+{-@ lemmaPermutation :: Ord a => vop2:a -> ops:[a] -> {ops2:[a] | insertList vop2 ops = ops2} -> {isPermutation (List.cons vop2 ops) ops2} @-}
 lemmaPermutation :: Ord a => a -> [a] -> [a] -> ()
 lemmaPermutation _ [] [] = ()
 lemmaPermutation _ [] _ = ()
@@ -259,7 +259,7 @@ lemmaReverseElem x (y:ys)
 
 {-@ ple lemmaPermutationHeadTailNotElem @-}
 {-@ lemmaPermutationHeadTailNotElem :: Eq a => h:a -> {ops:[a] | not (List.elem' h ops)} ->
-      {isPermutation (cons h ops) (List.concat ops (cons h List.empty)) } @-}
+      {isPermutation (List.cons h ops) (List.concat ops (List.cons h List.empty)) } @-}
 lemmaPermutationHeadTailNotElem :: Eq a => a -> [a] -> ()
 lemmaPermutationHeadTailNotElem _ [] = ()
 lemmaPermutationHeadTailNotElem h (x:xs) = lemmaPermutationHeadTailNotElem h xs
@@ -267,7 +267,7 @@ lemmaPermutationHeadTailNotElem h (x:xs) = lemmaPermutationHeadTailNotElem h xs
 
 {-@ ple lemmaPermutationHeadTailElem @-}
 {-@ lemmaPermutationHeadTailElem :: Eq a => h:a -> {ops:[a] | List.elem' h ops} ->
-      {isPermutation (cons h ops) (List.concat ops (cons h List.empty)) } @-}
+      {isPermutation (List.cons h ops) (List.concat ops (List.cons h List.empty)) } @-}
 lemmaPermutationHeadTailElem :: Eq a => a -> [a] -> ()
 lemmaPermutationHeadTailElem _ [] = ()
 lemmaPermutationHeadTailElem h (op:ops)
@@ -278,7 +278,7 @@ lemmaPermutationHeadTailElem h (op:ops)
 
 
 {-@ ple lemmaPReverse0 @-}
-{-@ lemmaPReverse0 :: Eq a => h:a -> ops:[a] -> {ops':[a] | Just ops' == removeFirst h (List.concat ops (cons h List.empty))}
+{-@ lemmaPReverse0 :: Eq a => h:a -> ops:[a] -> {ops':[a] | Just ops' == removeFirst h (List.concat ops (List.cons h List.empty))}
       -> {isPermutation ops ops'} @-}
 lemmaPReverse0 :: Eq a => a -> [a] -> [a] -> ()
 lemmaPReverse0 _ [] _ = ()
@@ -438,7 +438,7 @@ lemmaPermutationContainsElem' op (op1:ops1) ops2
       lemmaRemoveFirst2' op op1 ops2 ops2_op1
 
 {-@ ple lemmaPermutationContainsElem'' @-}
-{-@ lemmaPermutationContainsElem'' :: Eq a => op:a -> ops1:[a] -> {ops2:[a] | isPermutation ops1 (cons op ops2)} -> {isJust (removeFirst op ops1)} @-}
+{-@ lemmaPermutationContainsElem'' :: Eq a => op:a -> ops1:[a] -> {ops2:[a] | isPermutation ops1 (List.cons op ops2)} -> {isJust (removeFirst op ops1)} @-}
 lemmaPermutationContainsElem'' :: Eq a => a -> [a] -> [a] -> ()
 lemmaPermutationContainsElem'' _ [] _ = ()
 lemmaPermutationContainsElem'' op (op1:ops1) ops2
@@ -451,6 +451,36 @@ lemmaPermutationContainsElem'' op (op1:ops1) ops2
     lemmaPermutationContainsElem'' op ops1 ops2_op1
 
 
+-- --{-@ ple lemmaPermutationCommutative @-}
+-- {-@ lemmaPermutationCommutative :: Eq a => ops1:[a] -> ops2:[a] -> {isPermutation ops1 ops2 => isPermutation ops2 ops1} / [len ops2] @-}
+-- lemmaPermutationCommutative :: Eq a => [a] -> [a] -> ()
+-- lemmaPermutationCommutative ops1@[] ops2@[] =
+--   toProof $ isPermutation ops1 ops2
+-- lemmaPermutationCommutative ops1  ops2@[] =
+--   toProof $ isPermutation ops1 ops2
+-- lemmaPermutationCommutative ops1@[] ops2  =
+--   toProof $ isPermutation ops1 ops2
+-- lemmaPermutationCommutative ops1 ops2 | not (isPermutation ops1 ops2) = ()
+-- lemmaPermutationCommutative ops1 ops2@(h2:t2)
+--   | Nothing <- removeFirst h2 ops1 =
+--         toProof (List.elem' h2 ops2)
+--     &&& toProof (isPermutation ops1 ops2)
+--     &&& toProof (isPermutation ops1 ops2)
+--     -- &&& toProof (List.cons h2 t2)
+--     &&& toProof (isPermutation ops1 (List.cons h2 t2))
+--     &&& toProof (isPermutation ops1 (h2:t2))
+--     &&& lemmaPermutationContainsElem'' h2 ops1 t2
+--     &&& toProof (List.elem' h2 ops1)
+--   | Just ops1' <- removeFirst h2 ops1 =
+--         toProof (isPermutation ops1 (h2:t2))
+--     &&& toProof (isPermutation (h2:ops1') (h2:t2))
+--     &&& toProof (isPermutation ops1' t2)
+--     &&& lemmaRemoveFirstPermutation h2 t2 ops1 ops1'
+--     &&& lemmaPermutationCommutative ops1' t2
+--     &&& toProof (isPermutation t2 ops1')
+--     &&& toProof (isPermutation ops2 ops1)
+
+-- diverges
 {-@ ple lemmaPermutationCommutative @-}
 {-@ lemmaPermutationCommutative :: Eq a => ops1:[a] -> ops2:[a] -> {isPermutation ops1 ops2 => isPermutation ops2 ops1} / [len ops2] @-}
 lemmaPermutationCommutative :: Eq a => [a] -> [a] -> ()
@@ -460,19 +490,15 @@ lemmaPermutationCommutative [] _  = ()
 lemmaPermutationCommutative ops1 ops2 | not (isPermutation ops1 ops2) = ()
 lemmaPermutationCommutative ops1 ops2@(h2:t2) = case removeFirst h2 ops1 of
   Nothing ->
-        assert (List.elem' h2 ops2)
+        toProof (List.elem' h2 ops2)
     &&& lemmaPermutationContainsElem'' h2 ops1 t2
-    &&& assert (List.elem' h2 ops1)
+    &&& toProof (List.elem' h2 ops1)
 
   Just ops1' -> 
         lemmaRemoveFirstPermutation h2 t2 ops1 ops1'
-    &&& assert (isPermutation ops1 (h2:t2))
-    &&& assert (isPermutation (h2:ops1') (h2:t2))
-    &&& assert (isPermutation ops1' t2)
+    &&& toProof (isPermutation ops1 (h2:t2))
+    &&& toProof (isPermutation (h2:ops1') (h2:t2))
+    &&& toProof (isPermutation ops1' t2)
     &&& lemmaPermutationCommutative ops1' t2
-    &&& assert (isPermutation t2 ops1')
-    &&& assert (isPermutation ops2 ops1)
-
-
-
-
+    &&& toProof (isPermutation t2 ops1')
+    &&& toProof (isPermutation ops2 ops1)
