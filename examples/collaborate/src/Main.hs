@@ -58,7 +58,7 @@ app = mdo
 
 
   where
-    storeRef = Reflex.StoreRef (Client.Server "http://ent.jamesparker.me:3001") (Client.StoreId "TODO")
+    storeRef = Reflex.StoreRef (Client.Server "http://128.8.130.12:5001") (Client.StoreId "TODO")
 
 
 

@@ -154,7 +154,7 @@ app name = do
   return ()
 
   where
-    storeRef = Reflex.StoreRef (Client.Server "http://ent.jamesparker.me:3000") (Client.StoreId "TODO")
+    storeRef = Reflex.StoreRef (Client.Server "http://128.8.130.12:5000") (Client.StoreId "TODO")
 
 editEvent :: forall t m . EventId -> Event -> Widget t m (Reflex.Event t View, Reflex.Event t [StateOp])
 editEvent eId event = do
